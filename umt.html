@@ -1,0 +1,1522 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset=utf-8 />
+<title>Ultimate Music Toy</title>
+<link rel="stylesheet" href="jquery-ui.css" />
+<script src="jquery-1.9.1.js"></script>
+<script src="jquery-ui.js"></script>
+<link rel="stylesheet" href="style.css" />
+
+<script src="mt19937class.js" ></script>
+<script>
+
+/* (C) 2011-2013 Wayne Radinsky */
+
+/*jslint browser: true */
+
+/* have to pre-declare some globals to pass jslint */
+var g_umt;
+/*global MersenneTwister19937 */
+/*global console */
+/*global jQuery */
+
+/* notes about terminology:
+lpnum -- loop number
+vcnum -- voice number
+"cursor" -- various cursors point to the end of an array + 1 (point where new notes will be added)
+inst_params -- instrument parameters -- not used yet but will hold instrument-specific parameters
+fpt -- "floating-point" -- floating point value of pitches for scale notes (notes are expressed as both a ratio, num/dnom, and a floating-point value where 2^fpt is proportional to the pitch
+pitch values in g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].pitch are RAW pitches and in floating-point format.
+*/
+
+/* umt_jsabort, umt_cx, and umt_ctstr are debugging functions that will be REMOVED from the final product */
+
+function umt_jsabort(msg) {
+    "use strict";
+    window.alert(msg);
+    throw new Error('Aborting javascript: ' + msg);
+}
+
+function umt_cx(stringparameter) {
+    "use strict";
+    /* this function exists just so I don't have to type 'console.log' over and over (was originally just 'cx', the 'umt_' prefix made it longer, d'oh!), plus prevents output from changing! */
+    console.log(stringparameter);
+}
+
+function umt_ctstr(anyparameter) {
+    "use strict";
+    /* a supposedly simple function to make a string from a var for debug dumps, that has gotten way complicated over time... */
+    var x, rv, z, name, is_arr;
+    if (typeof anyparameter === 'object') {
+        if (anyparameter === null) {
+            return 'null';
+        }
+        name = '';
+        is_arr = false;
+        /* if (typeof anyparameter.constructor !== 'undefined') { */
+        /* apc = anyparameter.constructor; * so we can examine in debugger */
+        if (anyparameter.constructor !== undefined) {
+            name = anyparameter.constructor.toString();
+        }
+        if (name === 'function Object() { [native code] }') {
+            name = '';
+        }
+        if (name === 'function Array() { [native code] }') {
+            name = '';
+            is_arr = true;
+        }
+        if (name === 'function AudioContext() { [native code] }') {
+            return 'object AudioContext';
+        }
+        if (name === '') {
+            rv = '';
+            for (z in anyparameter) {
+                if (anyparameter.hasOwnProperty(z)) {
+                    rv = rv + ', ' + z + ': ' + umt_ctstr(anyparameter[z]);
+                }
+            }
+            if (is_arr) {
+                return 'array [ ' + rv.substring(2) + ' ]';
+            }
+            return 'object { ' + rv.substring(2) + ' }';
+        }
+        return '{[Code Object]}';
+    }
+    if (typeof anyparameter === 'number') {
+        return 'number ' + anyparameter.toString();
+    }
+    if (typeof anyparameter === 'string') {
+        return 'string "' + anyparameter + '"';
+    }
+    if (typeof anyparameter === 'boolean') {
+        return 'boolean ' + anyparameter.toString();
+    }
+    x = typeof anyparameter;
+    window.alert(x);
+    console.log('x', x);
+    umt_jsabort('typeof returned an undefined value');
+}
+
+function umt_get_audio_context() {
+    "use strict";
+    if (!window.AudioContext) {
+        if (!window.webkitAudioContext) {
+            window.alert("Your browser does not support Audio API (HTML5).\nPlease use a compatible browser e.g. Chrome with Audio API enabled in page about:flags");
+            return;
+        }
+        window.AudioContext = window.webkitAudioContext;
+    }
+    var ctx = new window.AudioContext();
+    return ctx;
+}
+
+function umt_generate_a_note(frequency, duration, amplitude) {
+    "use strict";
+    /* consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html */
+    var num_samples, the_buffer, buf_data, i, fade;
+    num_samples = duration * g_umt.SAMPLE_RATE;
+    the_buffer = g_umt.global_ctx.createBuffer(1, num_samples, g_umt.SAMPLE_RATE); /* numberOfChannels,length,sampleRate */
+    buf_data = the_buffer.getChannelData(0);
+    for (i = 0; i <= num_samples; i = i + 1) {
+        fade = 1 - (i / num_samples);
+        buf_data[i] = Math.sin((g_umt.TAU * i * frequency) / g_umt.SAMPLE_RATE) * ((amplitude * fade) / 2);
+        // buf_data[i] = Math.sin((g_umt.TAU * i * frequency) / g_umt.SAMPLE_RATE) * (amplitude / 2);
+    }
+    return the_buffer;
+}
+
+function umt_que_up_a_note(from_moment, frequency, start_time, duration, amplitude, inst_specific_params) {
+    "use strict";
+    var idxname, the_buffer, node, our_start, start_mmt;
+    idxname = inst_specific_params; /* delete_me */
+    idxname = frequency + "x" + duration + "x" + amplitude;
+    if (g_umt.cached_notes.hasOwnProperty(idxname)) {
+        the_buffer = g_umt.cached_notes[idxname];
+    } else {
+        the_buffer = umt_generate_a_note(frequency, duration, amplitude);
+        g_umt.cached_notes[idxname] = the_buffer;
+    }
+    node = g_umt.global_ctx.createBufferSource();
+    node.buffer = the_buffer;
+    node.connect(g_umt.global_ctx.destination);
+    our_start = Number(start_time);
+    start_mmt = from_moment + our_start;
+    node.noteOn(start_mmt);
+}
+
+function umt_get_rando(seed_num) {
+    "use strict";
+    var mt1, init_ary, x;
+    mt1 = new MersenneTwister19937();
+    init_ary = [0x123, 0x234, 0x345, 0x456];
+    mt1.init_by_array(init_ary, 4);
+    for (x = 0; x < (seed_num * 32); x = x + 1) {
+        mt1.genrand_int32();
+    }
+    return mt1;
+}
+
+function umt_clear_loop(lpnum, x_tempo, center_note, x_scale) {
+    "use strict";
+    g_umt.loop[lpnum] = { score: {tempo: x_tempo, centernote_log: (Math.log(center_note) / g_umt.LOG2) - 5, scale: x_scale, playback_time_offset: 0, voice: [] } };
+}
+
+function umt_add_voice(lpnum, idx) {
+    "use strict";
+    g_umt.loop[lpnum].score.parts = idx + 1;
+    g_umt.loop[lpnum].score.voice[idx] = { instrument: 'tuningfork', selection: 0, cursor: 0, next_start: 0, range_top: 6.0, range_bottom: 4.0, notes: [], rand_rhythm: umt_get_rando(idx * 40), rand_pitch: umt_get_rando(idx * 40 + 1), rand_rests: umt_get_rando(idx * 40 + 2), rand_syms: umt_get_rando(idx * 40 + 3) };
+    /* BUGBUG: range_top and range_bottom are currently IGNORED */
+}
+
+function umt_add_note(lpnum, voicenum, rest, pitch, duration, amplitude, inst_params) {
+    "use strict";
+    var idx, cursorval;
+    idx = voicenum;
+    cursorval = g_umt.loop[lpnum].score.voice[idx].cursor;
+    g_umt.loop[lpnum].score.voice[idx].notes[cursorval] = { starttime: g_umt.loop[lpnum].score.voice[idx].next_start, rest: rest, pitch: pitch, duration: duration, amplitude: amplitude, inst_params: inst_params, harm_octave: -1, harm_num: -1, harm_dnom: -1 };
+    cursorval = cursorval + 1;
+    g_umt.loop[lpnum].score.voice[idx].cursor = cursorval;
+    g_umt.loop[lpnum].score.voice[idx].next_start += duration;
+}
+
+function umt_play_raw_score(lpnum) {
+    "use strict";
+    var from_moment, center, tempo_scalar, num_voices, voicenum, notenum, pitch, duration, amplitude, frequency, start_time, inst_specific_params;
+    from_moment = g_umt.global_ctx.currentTime + 1;
+    center = g_umt.loop[lpnum].score.centernote_log;
+    tempo_scalar = 60 / g_umt.loop[lpnum].score.tempo;
+    num_voices = g_umt.loop[lpnum].score.parts;
+    for (voicenum = 0; voicenum < num_voices; voicenum = voicenum + 1) {
+        for (notenum = 0; notenum < g_umt.loop[lpnum].score.voice[voicenum].cursor; notenum = notenum + 1) {
+            if (g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].rest === false) {
+                pitch = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].pitch;
+                duration = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].duration * tempo_scalar;
+                amplitude = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].amplitude;
+                amplitude = amplitude / num_voices;
+                inst_specific_params = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].inst_params;
+                frequency = Math.exp((pitch + center) * g_umt.LOG2);
+                start_time = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].starttime * tempo_scalar;
+                umt_que_up_a_note(from_moment, frequency, start_time, duration, amplitude, inst_specific_params);
+            }
+        }
+    }
+}
+
+function umt_exec_play_raw_score() {
+    "use strict";
+    umt_play_raw_score(0);
+}
+
+/* cheat sheet for scales
+ratio  interval  example key of C  logarithm  nearest equal temperment (logarithm)
+1/1    P1        C                 0.000      0.000
+16/15  m2        C#                0.093      0.083
+10/9   M2-alt    D-alt             0.152      0.166
+9/8    M2-reg    D-reg             0.170      0.166
+6/5    m3        Eb                0.263      0.250
+5/4    M3        E                 0.322      0.333
+4/3    P4        F                 0.415      0.417
+3/2    P5        G                 0.585      0.583
+8/5    m6        Ab                0.678      0.667
+5/3    M6        A                 0.737      0.750
+16/9   m7-alt    Bb-alt            0.830      0.833
+9/5    m7-reg    Bb-reg            0.848      0.833
+15/8   M7        B                 0.907      0.917
+2/1    P8        C                 1.000      1.000
+*/
+
+function umt_get_scale13_chromatic() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 9, dnom: 5}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umt_get_scale11_chromatic_reg_reg() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 9, dnom: 5}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umt_get_scale11_chromatic_alt_reg() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 10, dnom: 9}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 9, dnom: 5}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umt_get_scale11_chromatic_reg_alt() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umt_get_scale11_chromatic_alt_alt() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 10, dnom: 9}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umt_get_scale7_major_reg() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umt_get_scale7_major_alt() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 10, dnom: 9}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umt_get_scale7_minor_natural_reg_reg() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 9, dnom: 5} ];
+    return scale;
+}
+
+function umt_get_scale7_minor_natural_alt_reg() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 10, dnom: 9}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 9, dnom: 5} ];
+    return scale;
+}
+
+function umt_get_scale7_minor_natural_reg_alt() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 16, dnom: 9} ];
+    return scale;
+}
+
+function umt_get_scale7_minor_natural_alt_alt() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 10, dnom: 9}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 16, dnom: 9} ];
+    return scale;
+}
+
+function umt_get_scale7_minor_harmonic_reg() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umt_get_scale7_minor_harmonic_alt() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 10, dnom: 9}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umt_get_scale7_minor_melodic_reg() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umt_get_scale7_minor_melodic_alt() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 10, dnom: 9}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umt_get_scale7_arabicish_major() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umt_get_scale7_arabicish_minor() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umt_get_scale5_pentatonic_2_3_reg() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3} ];
+    return scale;
+}
+
+function umt_get_scale5_pentatonic_2_3_alt() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 10, dnom: 9}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3} ];
+    return scale;
+}
+
+function umt_get_scale5_pentatonic_3_2_reg() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 5, dnom: 4}, {num: 3, dnom: 2}, {num: 5, dnom: 3} ];
+    return scale;
+}
+
+function umt_get_scale5_pentatonic_3_2_alt() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 10, dnom: 9}, {num: 5, dnom: 4}, {num: 3, dnom: 2}, {num: 5, dnom: 3} ];
+    return scale;
+}
+
+function umt_get_scale4_quadtonic() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3} ];
+    return scale;
+}
+
+function umt_get_scale3_tritonic() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 4, dnom: 3}, {num: 3, dnom: 2} ];
+    return scale;
+}
+
+function umt_add_floats_to_scale(original_scale) {
+    "use strict";
+    var num, dnom, x, new_scale, i;
+    new_scale = [];
+    for (i = 0; i < original_scale.length; i = i + 1) {
+        num = original_scale[i].num;
+        dnom = original_scale[i].dnom;
+        x = num / dnom;
+        x = Math.log(x) / g_umt.LOG2;
+        new_scale[i] = {num: num, dnom: dnom, fpt: x};
+    }
+    return new_scale;
+}
+
+function umt_gauss_gcd(a, b) {
+    "use strict";
+    /* Gauss's GCD algorithm */
+    var c, d, e, r;
+    c = a;
+    d = b;
+    r = 1;
+    while (r !== 0) {
+        if (d > c) {
+            e = c;
+            c = d;
+            d = e;
+        }
+        r = (c % d);
+        if (r !== 0) {
+            c = d;
+            d = r;
+        }
+    }
+    return d;
+}
+
+/* we are using Euclid's GCD algorithm because it should be faster for small numbers. Gauss's should be faster for large numbers */
+function umt_euclid_gcd(a, b) {
+    "use strict";
+    /* Euclid's GCD algorithm */
+    while (a !== b) {
+        if (a > b) {
+            a = a - b;
+        } else {
+            b = b - a;
+        }
+    }
+    return a;
+}
+
+function umt_reduce_fraction(num, dnom) {
+    "use strict";
+    var g, rv;
+    g = umt_euclid_gcd(num, dnom);
+    if (g !== 1) {
+        num = num / g;
+        dnom = dnom / g;
+    }
+    rv = {num: num, dnom: dnom};
+    return rv;
+}
+
+function umt_is_consonant(low_num, low_dnom, high_num, high_dnom) {
+    "use strict";
+    var ratio_num, ratio_dnom, red;
+    ratio_num = high_num * low_dnom;
+    ratio_dnom = high_dnom * low_num;
+    red = umt_reduce_fraction(ratio_num, ratio_dnom);
+    if (red.dnom > 6) {
+        return false;
+    }
+    ratio_num = 2 * low_num * high_dnom;
+    ratio_dnom = low_dnom * high_num;
+    red = umt_reduce_fraction(ratio_num, ratio_dnom);
+    if (red.dnom > 6) {
+        return false;
+    }
+    return true;
+}
+
+function umt_test_is_consonant() {
+    "use strict";
+    var what;
+    what = umt_is_consonant(6, 5, 7, 5);
+    if (what !== false) {
+        umt_jsabort('dissonance test 1 failed');
+    }
+    what = umt_is_consonant(6, 5, 8, 5);
+    if (what !== true) {
+        umt_jsabort('dissonance test 2 failed');
+    }
+    what = umt_is_consonant(6, 5, 9, 5);
+    if (what !== true) {
+        umt_jsabort('dissonance test 3 failed');
+    }
+    what = umt_is_consonant(6, 5, 5, 4);
+    if (what !== false) {
+        umt_jsabort('dissonance test 4 failed');
+    }
+    what = umt_is_consonant(6, 5, 7, 4);
+    if (what !== false) {
+        umt_jsabort('dissonance test 5 failed');
+    }
+    what = umt_is_consonant(6, 5, 4, 3);
+    if (what !== false) {
+        umt_jsabort('dissonance test 6 failed');
+    }
+    what = umt_is_consonant(6, 5, 5, 3);
+    if (what !== false) {
+        umt_jsabort('dissonance test 7 failed');
+    }
+    what = umt_is_consonant(6, 5, 3, 2);
+    if (what !== true) {
+        umt_jsabort('dissonance test 8 failed');
+    }
+    what = umt_is_consonant(5, 4, 4, 3);
+    if (what !== false) {
+        umt_jsabort('dissonance test 9 failed');
+    }
+    what = umt_is_consonant(5, 4, 5, 3);
+    if (what !== true) {
+        umt_jsabort('dissonance test 10 failed');
+    }
+    what = umt_is_consonant(5, 4, 3, 2);
+    if (what !== true) {
+        umt_jsabort('dissonance test 11 failed');
+    }
+    what = umt_is_consonant(4, 3, 3, 2);
+    if (what !== false) {
+        umt_jsabort('dissonance test 12 failed');
+    }
+    console.log('dissonance tests passed.');
+}
+
+function umt_fract_subtract(first_num, first_dnom, second_num, second_dnom) {
+    "use strict";
+    /* this function does not reduce the result! */
+    var g, s, x_f_num, x_f_dnom, x_s_num, x_s_dnom, rv;
+    g = umt_euclid_gcd(first_dnom, second_dnom);
+    s = second_dnom / g;
+    x_f_num = first_num * s;
+    x_f_dnom = first_dnom * s;
+    s = first_dnom / g;
+    x_s_num = second_num * s;
+    x_s_dnom = second_dnom * s;
+    if (x_f_dnom !== x_s_dnom) {
+        umt_jsabort('denominators are not the same');
+    }
+    rv = { num: x_f_num - x_s_num, dnom: x_f_dnom };
+    return rv;
+}
+
+function umt_is_cons_order_ind(xnum, xdnom, ynum, ydnom) {
+    "use strict";
+    var diff;
+    /* is consonant? order independent */
+    diff = umt_fract_subtract(xnum, xdnom, ynum, ydnom);
+    if (diff.num < 0) {
+        /* y is bigger */
+        return umt_is_consonant(xnum, xdnom, ynum, ydnom);
+    }
+    /* x is bigger */
+    return umt_is_consonant(ynum, ydnom, xnum, xdnom);
+}
+
+function umt_determine_if_fits(num, dnom, list_of_notes_already_playing) {
+    "use strict";
+    var lx, i, diff;
+    lx = list_of_notes_already_playing.length;
+    for (i = 0; i < lx; i = i + 1) {
+        diff = umt_fract_subtract(num, dnom, list_of_notes_already_playing[i].num, list_of_notes_already_playing[i].dnom);
+        if (diff.num < 0) {
+            /* already playing is bigger */
+            if (umt_is_consonant(num, dnom, list_of_notes_already_playing[i].num, list_of_notes_already_playing[i].dnom) === false) {
+                return false;
+            }
+        } else {
+            /* num/dom is bigger */
+            if (umt_is_consonant(list_of_notes_already_playing[i].num, list_of_notes_already_playing[i].dnom, num, dnom) === false) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+function umt_find_most_harmonic_note(pitch, scale, list_of_notes_already_playing) {
+    "use strict";
+    var octave, min, i, dist, rv, original_full_pitch, num_of_notes, top_pos, top_octave, bottom_pos, bottom_octave, cyc_count, top_dist, bottom_dist, current_pos;
+    original_full_pitch = pitch;
+    octave = Math.floor(pitch);
+    pitch = pitch - octave;
+    min = -1;
+    for (i = 0; i < scale.length; i = i + 1) {
+        if (min === -1) {
+            min = i;
+        } else {
+            dist = Math.abs(scale[i].fpt - pitch);
+            if (dist < Math.abs(scale[min].fpt - pitch)) {
+                min = i;
+            }
+        }
+    }
+    dist = Math.abs((scale[0].fpt + 1) - pitch);
+    if (dist < Math.abs(scale[min].fpt - pitch)) {
+        min = 0;
+    }
+    if (min === -1) {
+        umt_jsabort('Assert because min is -1');
+    }
+    if (list_of_notes_already_playing.length === 0) {
+        rv = {octave: octave, scalenote: min, num: scale[min].num, dnom: scale[min].dnom, fpt: scale[min].fpt };
+        return rv;
+    }
+    /* there are other notes playing: so we can't simply return the best scale match. so we have to find another note. */
+    /* the idea here is to "fan out" -- take the "min" note found above, start with the scale notes directly above and below, and test the closest one to see if it harmonizes with the existing notes. if it doesn't, push it up/down and go through the loop again. mathematically we should be guaranteed to find a match, even if it's a P1 with an existing note. */
+    num_of_notes = scale.length;
+    top_pos = min + 1;
+    top_octave = octave;
+    if (top_pos === num_of_notes) {
+        top_octave = top_octave + 1;
+        top_pos = 0;
+    }
+    bottom_pos = min - 1;
+    bottom_octave = octave;
+    if (bottom_pos < 0) {
+        bottom_octave = bottom_octave - 1;
+        bottom_pos = num_of_notes - 1;
+    }
+    cyc_count = 0;
+    while (true) {
+        cyc_count = cyc_count + 1;
+        if (cyc_count === 100) {
+            umt_jsabort('crash because stuck in endless loop');
+        }
+        top_dist = Math.abs((top_octave + scale[top_pos].fpt) - original_full_pitch);
+        bottom_dist = Math.abs((bottom_octave + scale[bottom_pos].fpt) - original_full_pitch);
+        if (top_dist < bottom_dist) {
+            current_pos = top_pos;
+            top_pos = top_pos + 1;
+            if (top_pos === num_of_notes) {
+                top_octave = top_octave + 1;
+                top_pos = 0;
+            }
+        } else {
+            current_pos = bottom_pos;
+            bottom_pos = bottom_pos - 1;
+            if (bottom_pos < 0) {
+                bottom_octave = bottom_octave - 1;
+                bottom_pos = num_of_notes - 1;
+            }
+        }
+        if (umt_determine_if_fits(scale[current_pos].num, scale[current_pos].dnom, list_of_notes_already_playing)) {
+            rv = {octave: octave, scalenote: current_pos, num: scale[current_pos].num, dnom: scale[current_pos].dnom, fpt: scale[current_pos].fpt };
+            return rv;
+        }
+    }
+}
+
+function umt_sanit_test_entire_score(lpnum, do_output) {
+    "use strict";
+    var parts, current_time, beyond_all, still_going, bust_out_count, playing_now, pncount, vcnum, notenum, partlen, i, x, y, result, xnum, ynum, xdnom, ydnom, xrest, yrest, descrip;
+    parts = g_umt.loop[lpnum].score.parts;
+    current_time = 0;
+    still_going = true;
+    bust_out_count = 0;
+    while (still_going) {
+        bust_out_count = bust_out_count + 1;
+        if (bust_out_count === 500) {
+            umt_jsabort('ugh, we are stuck in an endless loop.');
+        }
+        beyond_all = true;
+        playing_now = [];
+        pncount = 0;
+        for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
+            partlen = g_umt.loop[lpnum].score.voice[vcnum].cursor;
+            for (i = 0; i < partlen; i = i + 1) {
+                if (g_umt.loop[lpnum].score.voice[vcnum].notes[i].harm_dnom >= 0) {
+                    if (g_umt.loop[lpnum].score.voice[vcnum].notes[i].starttime <= current_time) {
+                        if (g_umt.loop[lpnum].score.voice[vcnum].notes[i].starttime + g_umt.loop[lpnum].score.voice[vcnum].notes[i].duration > current_time) {
+                            playing_now[pncount] = {voice: vcnum, note: i};
+                            pncount = pncount + 1;
+                            beyond_all = false;
+                        }
+                    }
+                }
+            }
+        }
+        if (do_output) {
+/*            if (pncount > 0) { */
+/*                playing_now[0].note = 1; /  * evil hack to force a dissonance for testing purposes */
+/*            } */
+            descrip = '';
+            for (i = 0; i < pncount; i = i + 1) {
+                vcnum = playing_now[i].voice;
+                notenum = playing_now[i].note;
+                xnum = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].harm_num;
+                xdnom = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].harm_dnom;
+                descrip = descrip + ' and ' + xnum + ' / ' + xdnom;
+            }
+        }
+        for (x = 0; x < pncount - 1; x = x + 1) {
+            for (y = x + 1; y < pncount; y = y + 1) {
+                vcnum = playing_now[x].voice;
+                notenum = playing_now[x].note;
+                xnum = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].harm_num;
+                xdnom = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].harm_dnom;
+                xrest = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].rest;
+                vcnum = playing_now[y].voice;
+                notenum = playing_now[y].note;
+                ynum = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].harm_num;
+                ydnom = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].harm_dnom;
+                yrest = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].rest;
+                if ((xrest === false) && (yrest === false)) {
+                    result = umt_is_cons_order_ind(xnum, xdnom, ynum, ydnom);
+                    if (result === false) {
+                        umt_jsabort('BANG!! we just ran into dissonance!');
+                    }
+                }
+            }
+        }
+        if (beyond_all) {
+            still_going = false;
+        } else {
+            current_time = current_time + 1;
+        }
+    }
+}
+
+function umt_get_scale_by_abbrv(scale_abbrv) {
+    "use strict";
+    switch (scale_abbrv) {
+    case 'chroma13':
+        return umt_get_scale13_chromatic();
+    case 'chroma11regreg':
+        return umt_get_scale11_chromatic_reg_reg();
+    case 'chroma11altreg':
+        return umt_get_scale11_chromatic_alt_reg();
+    case 'chroma11regalt':
+        return umt_get_scale11_chromatic_reg_alt();
+    case 'chroma11altalt':
+        return umt_get_scale11_chromatic_alt_alt();
+    case 'maj7reg':
+        return umt_get_scale7_major_reg();
+    case 'maj7alt':
+        return umt_get_scale7_major_alt();
+    case 'minnat7regreg':
+        return umt_get_scale7_minor_natural_reg_reg();
+    case 'minnat7altreg':
+        return umt_get_scale7_minor_natural_alt_reg();
+    case 'minnat7regalt':
+        return umt_get_scale7_minor_natural_reg_alt();
+    case 'minnat7altalt':
+        return umt_get_scale7_minor_natural_alt_alt();
+    case 'minharm7reg':
+        return umt_get_scale7_minor_harmonic_reg(); /* use this one */
+    case 'minharm7alt':
+        return umt_get_scale7_minor_harmonic_alt();
+    case 'minmelo7reg':
+        return umt_get_scale7_minor_melodic_reg();
+    case 'minmelo7alt':
+        return umt_get_scale7_minor_melodic_alt();
+    case 'arabicmaj7':
+        return umt_get_scale7_arabicish_major();
+    case 'arabicmin7':
+        return umt_get_scale7_arabicish_minor();
+    case 'pentatonic23reg':
+        return umt_get_scale5_pentatonic_2_3_reg();
+    case 'pentatonic23alt':
+        return umt_get_scale5_pentatonic_2_3_alt();
+    case 'pentatonic32reg':
+        return umt_get_scale5_pentatonic_3_2_reg();
+    case 'pentatonic32alt':
+        return umt_get_scale5_pentatonic_3_2_alt();
+    case 'quad':
+        return umt_get_scale4_quadtonic();
+    case 'tri':
+        return umt_get_scale3_tritonic();
+    default:
+        umt_jsabort("unrecognized scale code: " + scale_abbrv);
+        break;
+    }
+}
+
+function umt_harmonize_score(lpnum) {
+    "use strict";
+    var the_scale, parts, vcnum, notecount, i, current_time, current_position, time_remaining, off_end, still_going, max_found, cycle_count, still_unfound_maxes, cycle_unfound_count, max_idx, poz, list_of_notes_already_playing, harmonized_info, min_idx, dist, lonap_cursr;
+    the_scale = umt_add_floats_to_scale(umt_get_scale_by_abbrv(g_umt.loop[lpnum].score.scale));
+    /* clear old data */
+    parts = g_umt.loop[lpnum].score.parts;
+    for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
+        notecount = g_umt.loop[lpnum].score.voice[vcnum].cursor;
+        for (i = 0; i < notecount; i = i + 1) {
+            g_umt.loop[lpnum].score.voice[vcnum].notes[i].harm_octave = -1;
+            g_umt.loop[lpnum].score.voice[vcnum].notes[i].harm_num = -1;
+            g_umt.loop[lpnum].score.voice[vcnum].notes[i].harm_dnom = -1;
+        }
+    }
+    /* and off we go */
+    /* this is a tricky function that absolutely relies on the position in the notes array and the duration information being exactly right */
+    /* the way it works is by setting current position to 0, and then advancing the current position when time runs out, and setting the time remaining to the duration of that note. */
+    /* on each cycle, it subtracts the duraction of the shorted note from each of the 'time remaining' values for every note */
+    /* however, while it uses the shortest note (min_idx) for subtracting time (and thereby virtually 'plays' the piece), it uses the longest note (max_idx) for setting the harmony first */
+    /* max_idx is actually the longest "unharmonized" note -- not necessarily the longest note */
+    current_time = 0;
+    current_position = [];
+    for (i = 0; i < parts; i = i + 1) {
+        current_position[i] = 0;
+    }
+    time_remaining = [];
+    for (i = 0; i < parts; i = i + 1) {
+        time_remaining[i] = g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].duration;
+    }
+    off_end = [];
+    for (i = 0; i < parts; i = i + 1) {
+        if (current_position[i] === g_umt.loop[lpnum].score.voice[i].cursor) {
+            off_end[i] = true;
+        } else {
+            off_end[i] = false;
+        }
+    }
+    still_going = false;
+    for (i = 0; i < parts; i = i + 1) {
+        if (off_end[i] === false) {
+            still_going = true;
+        }
+    }
+    max_found = [];
+    cycle_count = 0;
+    while (still_going) {
+        cycle_count = cycle_count + 1;
+        if (cycle_count > 1000) {
+            umt_jsabort('caught in endless loop?  cycle count blew up.');
+            return;
+        }
+        for (i = 0; i < parts; i = i + 1) {
+            max_found[i] = false;
+        }
+        still_unfound_maxes = false;
+        for (i = 0; i < parts; i = i + 1) {
+            if (off_end[i] === false) {
+                if (max_found[i] === false) {
+                    still_unfound_maxes = true;
+                }
+            }
+        }
+        cycle_unfound_count = 0;
+        while (still_unfound_maxes) {
+            cycle_unfound_count = cycle_unfound_count + 1;
+            if (cycle_unfound_count > 100) {
+                umt_jsabort('kot in endless looooop?? cycle count unfound blew up.');
+                return;
+            }
+            /* find max */
+            max_idx = -1;
+            for (i = 0; i < parts; i = i + 1) {
+                if (off_end[i] === false) {
+                    if (max_found[i] === false) {
+                        if (max_idx === -1) {
+                            max_idx = i;
+                        } else {
+                            if (time_remaining[i] > time_remaining[max_idx]) {
+                                max_idx = i;
+                            }
+                        }
+                    }
+                }
+            }
+            if (max_idx === -1) {
+                umt_jsabort('max_idx is -1 -- should be impossible');
+                return;
+            }
+            max_found[max_idx] = true;
+            /* here is the actual "harmonization" code -- everything else is just looping */
+            if (g_umt.loop[lpnum].score.voice[max_idx].notes[current_position[max_idx]].harm_dnom === -1) {
+                poz = current_position[max_idx];
+                /* find all other notes that are turned on at the same time */
+                list_of_notes_already_playing = [];
+                lonap_cursr = 0;
+                for (i = 0; i < parts; i = i + 1) {
+                    if (current_position[i] < g_umt.loop[lpnum].score.voice[i].cursor) { /* check that we're not off the end */
+                        if (g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].harm_dnom !== -1) {
+                            /* sanity check 2 */
+                            if (current_time < g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].starttime) {
+                                umt_jsabort('START TIME IS AFTER CURRENT TIME! OH NO!');
+                            }
+                            if (current_time >= (g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].starttime + g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].duration)) {
+                                umt_jsabort('START TIME + DURATION IS BEFORE CURRENT TIME!! OH NO!!');
+                            }
+                            if (g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].rest === false) {
+                                list_of_notes_already_playing[lonap_cursr] = {octave: g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].harm_octave, num: g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].harm_num, dnom: g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].harm_dnom};
+                                lonap_cursr = lonap_cursr + 1;
+                            }
+                        }
+                    }
+                }
+                harmonized_info = umt_find_most_harmonic_note(g_umt.loop[lpnum].score.voice[max_idx].notes[poz].pitch, the_scale, list_of_notes_already_playing);
+                /* sanity check 1 */
+                if (current_time !== g_umt.loop[lpnum].score.voice[max_idx].notes[current_position[max_idx]].starttime) {
+                    umt_cx('START TIMES DO NOT MATCH! OH NO!');
+                    umt_cx('current_time is ' + current_time);
+                    umt_cx('g_umt.loop[lpnum].score.voice[max_idx].notes[current_position[max_idx]].starttime is ' + g_umt.loop[lpnum].score.voice[max_idx].notes[current_position[max_idx]].starttime);
+                    umt_cx('lpnum is ' + lpnum);
+                    umt_cx('max_idx is ' + max_idx);
+                    umt_cx('current_position[max_idx] is ' + current_position[max_idx]);
+                    console.log('g_umt', g_umt);
+                    umt_jsabort('START TIMES DO NOT MATCH! OH NO!');
+                }
+                g_umt.loop[lpnum].score.voice[max_idx].notes[current_position[max_idx]].harm_octave = harmonized_info.octave;
+                g_umt.loop[lpnum].score.voice[max_idx].notes[current_position[max_idx]].harm_num = harmonized_info.num;
+                g_umt.loop[lpnum].score.voice[max_idx].notes[current_position[max_idx]].harm_dnom = harmonized_info.dnom;
+                umt_sanit_test_entire_score(lpnum, false);
+            }
+            /* end of actual "harmonization" code" */
+            still_unfound_maxes = false; /* this loop could no doubt be optimized */
+            for (i = 0; i < parts; i = i + 1) {
+                if (off_end[i] === false) {
+                    if (max_found[i] === false) {
+                        still_unfound_maxes = true;
+                    }
+                }
+            }
+        }
+        /* find min */
+        min_idx = -1;
+        for (i = 0; i < parts; i = i + 1) {
+            if (off_end[i] === false) {
+                if (min_idx === -1) {
+                    min_idx = i;
+                } else {
+                    if (time_remaining[i] < time_remaining[min_idx]) {
+                        min_idx = i;
+                    }
+                }
+            }
+        }
+        /* subtract dist */
+        dist = time_remaining[min_idx];
+        current_time += dist;
+        for (i = 0; i < parts; i = i + 1) {
+            if (off_end[i] === false) {
+                time_remaining[i] -= dist;
+            }
+        }
+        /* advance positions */
+        for (i = 0; i < parts; i = i + 1) {
+            if (off_end[i] === false) {
+                if (time_remaining[i] === 0) {
+                    current_position[i] = current_position[i] + 1;
+                    if (current_position[i] === g_umt.loop[lpnum].score.voice[i].cursor) {
+                        off_end[i] = true;
+                    } else {
+                        time_remaining[i] = g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].duration;
+                    }
+                }
+            }
+        }
+        for (i = 0; i < parts; i = i + 1) {
+            if (current_position[i] === g_umt.loop[lpnum].score.voice[i].cursor) {
+                off_end[i] = true;
+            }
+        }
+        still_going = false;
+        for (i = 0; i < parts; i = i + 1) {
+            if (off_end[i] === false) {
+                still_going = true;
+            }
+        }
+    }
+    umt_sanit_test_entire_score(lpnum, true);
+    umt_cx('umt_harmonize_score(lpnum) done');
+}
+
+function umt_exec_harmonize_score() {
+    "use strict";
+    umt_harmonize_score(0);
+}
+
+function umt_play_harmonized(lpnum) {
+    "use strict";
+    var from_moment, center, tempo_scalar, num_voices, voicenum, notenum, duration, amplitude, frequency, start_time, inst_specific_params, harmonized_octave, harmonized_num, harmonized_dnom;
+    from_moment = g_umt.global_ctx.currentTime + 1;
+    center = g_umt.loop[lpnum].score.centernote_log;
+    tempo_scalar = 60 / g_umt.loop[lpnum].score.tempo;
+    num_voices = g_umt.loop[lpnum].score.parts;
+    for (voicenum = 0; voicenum < num_voices; voicenum = voicenum + 1) {
+        for (notenum = 0; notenum < g_umt.loop[lpnum].score.voice[voicenum].cursor; notenum = notenum + 1) {
+            if (g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].rest === false) {
+                harmonized_octave = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_octave;
+                harmonized_num = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_num;
+                harmonized_dnom = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_dnom;
+                duration = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].duration * tempo_scalar;
+                amplitude = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].amplitude;
+                amplitude = amplitude / num_voices;
+                inst_specific_params = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].inst_params;
+                frequency = Math.exp((harmonized_octave + center) * g_umt.LOG2);
+                frequency = frequency * (harmonized_num / harmonized_dnom);
+                start_time = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].starttime * tempo_scalar;
+                umt_que_up_a_note(from_moment, frequency, start_time, duration, amplitude, inst_specific_params);
+            }
+        }
+    }
+}
+
+function umt_dump_harmonized(lpnum) {
+    "use strict";
+    var num_voices, voicenum, notenum, duration, amplitude, start_time, harmonized_octave, harmonized_num, harmonized_dnom;
+    num_voices = g_umt.loop[lpnum].score.parts;
+    umt_cx('num_voices is ' + num_voices);
+    for (voicenum = 0; voicenum < num_voices; voicenum = voicenum + 1) {
+        umt_cx('  voicenum is ' + voicenum);
+        for (notenum = 0; notenum < g_umt.loop[lpnum].score.voice[voicenum].cursor; notenum = notenum + 1) {
+            harmonized_octave = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_octave;
+            harmonized_num = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_num;
+            harmonized_dnom = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_dnom;
+            duration = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].duration;
+            amplitude = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].amplitude;
+            amplitude = amplitude / num_voices;
+            start_time = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].starttime;
+            if (g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].rest) {
+                umt_cx('    note ' + notenum + ', start ' + start_time + ', duration ' + duration + ', rest');
+            } else {
+                umt_cx('    note ' + notenum + ', start ' + start_time + ', duration ' + duration + ', octave ' + harmonized_octave + ', num ' + harmonized_num + ', dnom ' + harmonized_dnom + ', amplitude ' + amplitude);
+            }
+        }
+    }
+}
+
+function umt_exec_play_harmonized() {
+    "use strict";
+    umt_play_harmonized(0);
+}
+
+function umt_exec_run_tests() {
+    "use strict";
+    umt_test_is_consonant();
+    window.alert('Tests passed.');
+}
+
+function umt_exec_disonance_test() {
+    "use strict";
+    var first_num, first_dnom, second_num, second_dnom, diff, result;
+    first_num = document.getElementById('first_num').value;
+    first_num = parseInt(first_num, 10);
+    umt_cx('first_num is ' + first_num);
+    first_dnom = document.getElementById('first_dnom').value;
+    first_dnom = parseInt(first_dnom, 10);
+    umt_cx('first_dnom is ' + first_dnom);
+    second_num = document.getElementById('second_num').value;
+    second_num = parseInt(second_num, 10);
+    umt_cx('second_num is ' + second_num);
+    second_dnom = document.getElementById('second_dnom').value;
+    second_dnom = parseInt(second_dnom, 10);
+    umt_cx('second_dnom is ' + second_dnom);
+    umt_cx('  so we got ' + first_num + ' / ' + first_dnom + ', ' + second_num + ' / ' + second_dnom);
+    diff = umt_fract_subtract(first_num, first_dnom, second_num, second_dnom);
+    umt_cx('diff is ' + diff.num + ' / ' + diff.dnom);
+    if (diff.num < 0) {
+        /* second is bigger */
+        umt_cx('second is bigger');
+        result = umt_is_consonant(first_num, first_dnom, second_num, second_dnom);
+    } else {
+        /* first is bigger */
+        umt_cx('first is bigger');
+        result = umt_is_consonant(second_num, second_dnom, first_num, first_dnom);
+    }
+    umt_cx('result is ' + result);
+    if (result) {
+        window.alert('consonant');
+    } else {
+        window.alert('DISSONANT');
+    }
+}
+
+function umt_gen_rhythm_subset(random_obj, min_size, chunk_size) {
+    "use strict";
+    var set_size, rv, current_time, position, amount_left, dur;
+    set_size = chunk_size / min_size;
+    rv = [];
+    current_time = 0;
+    position = 0;
+    while (current_time < set_size) {
+        amount_left = set_size - current_time;
+        if (amount_left === 1) {
+            dur = 1;
+        } else {
+            dur = Math.floor(random_obj.genrand_real2() * amount_left + 1);
+        }
+        rv[position] = dur * min_size;
+        position = position + 1;
+        current_time = current_time + dur;
+    }
+    return rv;
+}
+
+function umt_generate_rhythm(random_obj, min_size, chunk_size, total_length) {
+    "use strict";
+    var rv, current_start, chunk_data, end_pt, chunk_len, idx;
+    if (chunk_size === total_length) {
+        return umt_gen_rhythm_subset(random_obj, min_size, chunk_size);
+    }
+    rv = [];
+    for (current_start = 0; current_start < total_length; current_start = current_start + chunk_size) {
+        chunk_data = umt_gen_rhythm_subset(random_obj, min_size, chunk_size);
+        end_pt = rv.length;
+        chunk_len = chunk_data.length;
+        for (idx = 0; idx < chunk_len; idx = idx + 1) {
+            rv[end_pt + idx] = chunk_data[idx];
+        }
+    }
+    return rv;
+}
+
+function umt_add_sym_base_to_voice(lpnum, vcnum, min_size, chunk_size, total_length, center_octave, restyness) {
+    "use strict";
+    var rhythm, len_rhy, idx, duration, pitch;
+    rhythm = umt_generate_rhythm(g_umt.loop[lpnum].score.voice[vcnum].rand_rhythm, min_size, chunk_size, total_length);
+    len_rhy = rhythm.length;
+    for (idx = 0; idx < len_rhy; idx = idx + 1) {
+        duration = rhythm[idx];
+        if (Math.floor(g_umt.loop[lpnum].score.voice[vcnum].rand_rests.genrand_real2() * 100) < restyness) {
+            umt_add_note(lpnum, vcnum, true, center_octave, duration, 1, null);
+        } else {
+            pitch = (g_umt.loop[lpnum].score.voice[vcnum].rand_pitch.genrand_real2() / 2) - 0.25;
+            umt_add_note(lpnum, vcnum, false, center_octave + pitch, duration, 1, null);
+        }
+    }
+}
+
+function umt_schedule_play_of_segment() {
+    "use strict";
+    var lpnum, current_time, ctx_offset, window_start, window_stop, loop_unit_len, loop_len, from_moment, center, tempo_scalar, num_voices, voicenum, notenum, duration, amplitude, frequency, adjusted_start_time, start_time, inst_specific_params, harmonized_octave, harmonized_num, harmonized_dnom;
+    lpnum = g_umt.currently_playing_loop;
+    ctx_offset = 0; // g_umt.loop[lpnum].score.playback_time_offset;
+    current_time = g_umt.global_ctx.currentTime + ctx_offset;
+    window_start = current_time;
+    window_stop = current_time + (g_umt.composition_lag * 1.05) + 0.5;
+    if (window_start < g_umt.played_up_to) {
+        window_start = g_umt.played_up_to;
+    }
+    loop_unit_len = g_umt.loop[lpnum].score.voice[0].next_start;
+    tempo_scalar = 60 / g_umt.loop[lpnum].score.tempo;
+    loop_len = loop_unit_len * tempo_scalar;
+    from_moment = Math.floor(window_start / loop_len) * loop_len;
+    center = g_umt.loop[lpnum].score.centernote_log;
+    num_voices = g_umt.loop[lpnum].score.parts;
+    for (voicenum = 0; voicenum < num_voices; voicenum = voicenum + 1) {
+        for (notenum = 0; notenum < g_umt.loop[lpnum].score.voice[voicenum].cursor; notenum = notenum + 1) {
+            adjusted_start_time = (g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].starttime * tempo_scalar) + from_moment;
+            if (adjusted_start_time < window_start) {
+                adjusted_start_time = adjusted_start_time + loop_len;
+            }
+            if (adjusted_start_time < window_stop) {
+                if (g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].rest === false) {
+                    harmonized_octave = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_octave;
+                    harmonized_num = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_num;
+                    harmonized_dnom = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_dnom;
+                    duration = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].duration * tempo_scalar;
+                    amplitude = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].amplitude;
+                    amplitude = amplitude / num_voices;
+                    inst_specific_params = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].inst_params;
+                    frequency = Math.exp((harmonized_octave + center) * g_umt.LOG2);
+                    frequency = frequency * (harmonized_num / harmonized_dnom);
+                    start_time = adjusted_start_time - from_moment; /* g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].starttime * tempo_scalar; */
+                    umt_que_up_a_note(from_moment - ctx_offset, frequency, start_time, duration, amplitude, inst_specific_params);
+                }
+            }
+        }
+    }
+    g_umt.played_up_to = window_stop;
+    if (g_umt.timer_is_on) {
+        window.setTimeout(umt_schedule_play_of_segment, 500);
+    }
+}
+
+function umt_do_timer_pulse() {
+    "use strict";
+    umt_schedule_play_of_segment();
+}
+
+function umt_automatic_start(lpnum) {
+    "use strict";
+    g_umt.currently_playing_loop = lpnum;
+    window.setTimeout(umt_do_timer_pulse, 500);
+    g_umt.timer_is_on = true;
+}
+
+function umt_automatic_stop() {
+    "use strict";
+    g_umt.timer_is_on = false;
+}
+
+function umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose) {
+    "use strict";
+    var segment_start, ix, segment_end, ts_rh_cursor, ts_pi_cursor, min_pitch, max_pitch, this_pitch, midpoint_pitch, rhythm_cursor, pitch_cursor, termination_cursor, rest, duration, amplitude, inst_params, percent, bevel_amount, segment_len;
+    segment_start = -1;
+    ts_rh_cursor = -1;
+    ts_pi_cursor = -1;
+    for (ix = 0; ix < g_umt.loop[lpnum].score.voice[vcnum].cursor; ix = ix + 1) {
+        if (segment_start === -1) {
+            if (g_umt.loop[lpnum].score.voice[vcnum].notes[ix].starttime >= start_time) {
+                segment_start = ix;
+                max_pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch;
+                min_pitch = max_pitch;
+            }
+        }
+        if (g_umt.loop[lpnum].score.voice[vcnum].notes[ix].starttime < end_time) {
+            segment_end = ix;
+        }
+        if (ts_rh_cursor === -1) {
+            if (g_umt.loop[lpnum].score.voice[vcnum].notes[ix].starttime >= (start_time + time_rhythm_scroll)) {
+                ts_rh_cursor = ix;
+            }
+        }
+        if (ts_pi_cursor === -1) {
+            if (g_umt.loop[lpnum].score.voice[vcnum].notes[ix].starttime >= (start_time + time_pitch_scroll)) {
+                ts_pi_cursor = ix;
+            }
+        }
+        if ((g_umt.loop[lpnum].score.voice[vcnum].notes[ix].starttime >= start_time) && (g_umt.loop[lpnum].score.voice[vcnum].notes[ix].starttime < end_time)) {
+            /* if notes are "playing" get min and max */
+            /* we need min and max for scrolling effect */
+            this_pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch;
+            if (this_pitch > max_pitch) {
+                max_pitch = this_pitch;
+            }
+            if (this_pitch < min_pitch) {
+                min_pitch = this_pitch;
+            }
+        }
+    }
+    segment_len = segment_end - segment_start + 1;
+    midpoint_pitch = (min_pitch + max_pitch) / 2;
+    /* time scroll cursors handle "horizontal" scrolling (pitch and rhythm as separate channels) */
+    rhythm_cursor = ts_rh_cursor;
+    pitch_cursor = ts_pi_cursor;
+    if (rhythm_direction === -1) {
+        rhythm_cursor = segment_end - (ts_rh_cursor - segment_start);
+    }
+    if (pitches_direction === -1) {
+        pitch_cursor = segment_end - (ts_pi_cursor - segment_start);
+    }
+    termination_cursor = segment_start;
+    while (termination_cursor <= segment_end) {
+        rest = g_umt.loop[lpnum].score.voice[vcnum].notes[pitch_cursor].rest;
+        this_pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[pitch_cursor].pitch;
+        duration = g_umt.loop[lpnum].score.voice[vcnum].notes[rhythm_cursor].duration;
+        amplitude = g_umt.loop[lpnum].score.voice[vcnum].notes[rhythm_cursor].amplitude;
+        inst_params = g_umt.loop[lpnum].score.voice[vcnum].notes[rhythm_cursor].inst_params;
+        /* actual pitch scroll handles "vertical" scrolling */
+        if (actual_pitch_scroll !== 0) {
+            this_pitch = this_pitch    + actual_pitch_scroll;
+            if (this_pitch > max_pitch) {
+                this_pitch = this_pitch - (max_pitch - min_pitch);
+            } else {
+                if (this_pitch < min_pitch) {
+                    this_pitch = this_pitch + (max_pitch - min_pitch);
+                }
+            }
+        }
+        if (pitch_scale !== 1) {
+            this_pitch = ((this_pitch - midpoint_pitch) * pitch_scale) + midpoint_pitch;
+        }
+        /* "bevel" bevels only towards the end note, but bevel combined with transpose can bevel both ends; having an additional parameter to bevel the front end would be redundant because it would just be subtracted from transpose */
+        if (pitch_bevel !== 0) {
+            percent = (termination_cursor - segment_start) / segment_end;
+            bevel_amount = pitch_bevel * percent;
+            this_pitch = this_pitch + bevel_amount;
+        }
+        if (pitch_transpose !== 0) {
+            this_pitch = this_pitch + pitch_transpose;
+        }
+        umt_add_note(lpnum, vcnum, rest, this_pitch, duration, amplitude, inst_params);
+        rhythm_cursor = rhythm_cursor + rhythm_direction;
+        if (rhythm_cursor > segment_end) {
+            rhythm_cursor = rhythm_cursor - segment_len;
+        }
+        if (rhythm_cursor < segment_start) {
+            rhythm_cursor = pitch_cursor + segment_len;
+        }
+        pitch_cursor = pitch_cursor + pitches_direction;
+        if (pitch_cursor > segment_end) {
+            pitch_cursor = pitch_cursor - segment_len;
+        }
+        if (pitch_cursor < segment_start) {
+            pitch_cursor = pitch_cursor + segment_len;
+        }
+        termination_cursor = termination_cursor + 1;
+    }
+}
+
+function umt_exec_test_copy_trans(lpnum) {
+    "use strict";
+    var vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose, csr_pos, csr_start, duration;
+    for (vcnum = 0; vcnum < 6; vcnum = vcnum + 1) {
+        start_time = 0;
+        csr_pos = g_umt.loop[lpnum].score.voice[vcnum].cursor;
+        umt_cx("lpnum = " + umt_ctstr(lpnum));
+        umt_cx("vcnum = " + umt_ctstr(vcnum));
+        umt_cx("csr_pos = " + umt_ctstr(csr_pos));
+        console.log("g_umt", g_umt);
+        csr_start = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].starttime;
+        duration = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].duration;
+        end_time = csr_start + duration;
+        rhythm_direction = 1;
+        pitches_direction = 1;
+        time_rhythm_scroll = 0;
+        time_pitch_scroll = 0;
+        actual_pitch_scroll = 0;
+        pitch_scale = 1.0;
+        pitch_bevel = 0;
+        pitch_transpose = 0.5;
+        umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
+        csr_pos = g_umt.loop[lpnum].score.voice[vcnum].cursor;
+        csr_start = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].starttime;
+        duration = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].duration;
+        end_time = csr_start + duration;
+        pitch_transpose = 0.7;
+        umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
+        csr_pos = g_umt.loop[lpnum].score.voice[vcnum].cursor;
+        csr_start = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].starttime;
+        duration = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].duration;
+        end_time = csr_start + duration;
+        pitch_transpose = -1.33;
+        pitch_scale = 2.0;
+        rhythm_direction = 1;
+        pitches_direction = -1;
+        umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
+    }
+    umt_cx('umt_exec_test_copy_trans() done');
+}
+
+function umt_compose_sample_composition(lpnum) {
+    "use strict";
+    umt_clear_loop(lpnum, g_umt.ui_params.tempo, g_umt.ui_params.centernote, g_umt.ui_params.scale);
+    umt_add_voice(lpnum, 0);
+    umt_add_sym_base_to_voice(lpnum, 0, 1, 8, 32, 5, 0);
+    umt_add_voice(lpnum, 1);
+    umt_add_sym_base_to_voice(lpnum, 1, 4, 8, 32, 3, 10);
+    umt_add_voice(lpnum, 2);
+    umt_add_sym_base_to_voice(lpnum, 2, 16, 16, 32, 2, 20);
+    umt_add_voice(lpnum, 3);
+    umt_add_sym_base_to_voice(lpnum, 3, 1, 2, 32, 8, 30);
+    umt_add_voice(lpnum, 4);
+    umt_add_sym_base_to_voice(lpnum, 4, 1, 2, 32, 7, 40);
+    umt_add_voice(lpnum, 5);
+    umt_add_sym_base_to_voice(lpnum, 5, 1, 8, 32, 6, 50);
+    umt_exec_test_copy_trans(lpnum);
+    umt_harmonize_score(lpnum);
+}
+
+function umt_exec_timer_pulse() {
+    "use strict";
+    umt_do_timer_pulse();
+}
+
+function umt_exec_automatic_start() {
+    "use strict";
+    if (g_umt.test_idem_compose === false) {
+        umt_compose_sample_composition(1, 0);
+        g_umt.test_idem_compose = true;
+    }
+    umt_automatic_start(1);
+}
+
+function umt_exec_automatic_stop() {
+    "use strict";
+    umt_automatic_stop();
+}
+
+function umt_disable_ui() {
+    "use strict";
+    window.document.getElementById("start_automatic").disabled = true;
+    window.document.getElementById("stop_automatic").disabled = true;
+}
+
+function umt_enable_ui() {
+    "use strict";
+    window.document.getElementById("start_automatic").disabled = false;
+    window.document.getElementById("stop_automatic").disabled = false;
+}
+
+function umt_automatically_recompose_loop_from_ui_params() {
+    "use strict";
+    var old_loop, new_loop, old_tempo_scalar, new_tempo_scalar, old_offset, current_time, current_units, virtual_new_time, offset_difference, loop_unit_len, loop_len, start_time, stop_time, diff_time;
+    if (g_umt.timer_is_on) {
+        old_loop = g_umt.currently_playing_loop;
+        umt_cx("old_loop = " + umt_ctstr(old_loop));
+        new_loop = 1 - old_loop;
+        umt_cx("new_loop = " + umt_ctstr(new_loop));
+        old_tempo_scalar = 60 / g_umt.loop[old_loop].score.tempo;
+        umt_cx("old_tempo_scalar = " + umt_ctstr(old_tempo_scalar));
+        old_offset = g_umt.loop[old_loop].score.playback_time_offset;
+        umt_cx("old_offset = " + umt_ctstr(old_offset));
+    } else {
+        return;
+    }
+    start_time = g_umt.global_ctx.currentTime;
+    umt_disable_ui();
+    umt_compose_sample_composition(new_loop, 0);
+    umt_cx("old_loop = " + umt_ctstr(old_loop));
+    umt_cx("new_loop = " + umt_ctstr(new_loop));
+    umt_cx("old_tempo_scalar = " + umt_ctstr(old_tempo_scalar));
+    umt_cx("old_offset = " + umt_ctstr(old_offset));
+    new_tempo_scalar = 60 / g_umt.loop[new_loop].score.tempo;
+    umt_cx("new_tempo_scalar = " + umt_ctstr(new_tempo_scalar));
+    current_time = g_umt.global_ctx.currentTime + old_offset;
+    umt_cx("current_time = " + umt_ctstr(current_time));
+    current_units = current_time / old_tempo_scalar;
+    umt_cx("current_units = " + umt_ctstr(current_units));
+    virtual_new_time = current_units * new_tempo_scalar;
+    umt_cx("virtual_new_time = " + umt_ctstr(virtual_new_time));
+    offset_difference = current_time - virtual_new_time;
+    umt_cx("offset_difference = " + umt_ctstr(offset_difference));
+    loop_unit_len = g_umt.loop[new_loop].score.voice[0].next_start;
+    umt_cx("loop_unit_len = " + umt_ctstr(loop_unit_len));
+    loop_len = loop_unit_len * new_tempo_scalar;
+    umt_cx("loop_len = " + umt_ctstr(loop_len));
+    offset_difference = offset_difference - (Math.floor(offset_difference / loop_len) * loop_len);  // modulo
+    umt_cx("offset_difference (after modulo) = " + umt_ctstr(offset_difference));
+    g_umt.loop[new_loop].score.playback_time_offset = offset_difference;
+    // g_umt.loop[new_loop].score.playback_time_offset = 0;
+    umt_automatic_start(new_loop);
+    umt_enable_ui();
+    stop_time = g_umt.global_ctx.currentTime;
+    diff_time = stop_time - start_time;
+    umt_cx("diff_time " + umt_ctstr(diff_time));
+    g_umt.composition_lag = diff_time;
+}
+
+function umt_exec_scale_change() {
+    "use strict";
+    var listbox, scaleparam;
+    listbox = window.document.getElementById("lb_scale");
+    scaleparam = listbox.options[listbox.selectedIndex].value;
+    g_umt.ui_params.scale = scaleparam;
+    umt_automatically_recompose_loop_from_ui_params();
+}
+
+/* main */
+
+g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(440) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 2, test_idem_compose: false, ui_params: { tempo: 400, scale: 'maj7reg', centernote: 440 } };
+console.log('g_umt', g_umt);
+
+jQuery(function () {
+    "use strict";
+    jQuery("#slider_tempo").slider({min: 100, max: 1000, step: 100, value: 400, orientation: "horizontal", change: function (event, ui) {
+        var newvalue;
+        // umt_cx("event " + umt_ctstr(event));
+        // umt_cx("ui " + umt_ctstr(ui));
+        if (event.type === "slidechange") {
+            newvalue = ui.value;
+            window.document.getElementById("dbg_tempo_value").innerHTML = newvalue;
+            g_umt.ui_params.tempo = newvalue;
+            umt_automatically_recompose_loop_from_ui_params();
+        }
+    }
+         });
+    jQuery("#slider_centernote").slider({min: 1, max: 9, step: 1, value: 5, orientation: "horizontal", change: function (event, ui) {
+        var newvalue, centernote;
+        // umt_cx("event " + umt_ctstr(event));
+        // umt_cx("ui " + umt_ctstr(ui));
+        if (event.type === "slidechange") {
+            newvalue = ui.value;
+            centernote = Math.pow(2, (newvalue - 5) / 12) * 440;
+            window.document.getElementById("dbg_centernote_value").innerHTML = centernote;
+            g_umt.ui_params.centernote = centernote;
+            umt_automatically_recompose_loop_from_ui_params();
+        }
+    }
+         });
+});
+
+</script>
+
+</head>
+<body>
+  <section>
+    <h1>Welcome to UMT: The Ultimate Music Toy</h1>
+
+<hr />
+
+<p> Stuff that applies to whole score </p>
+
+<p>
+    <input type="button" id="start_automatic" value="Start Music" />
+    <input type="button" id="stop_automatic" value="Stop Music" />
+</p>
+
+<p> Scale:
+
+<select id="lb_scale">
+    <option value="chroma13">Chromatic 13</option>
+    <option value="chroma11regreg">Chromatic 11 reg reg</option>
+    <option value="chroma11altreg">Chromatic 11 alt reg</option>
+    <option value="chroma11regalt">Chromatic 11 reg alt</option>
+    <option value="chroma11altalt">Chromatic 11 alt alt</option>
+    <option value="maj7reg" selected="selected">Major 7 reg</option>
+    <option value="maj7alt">Major 7 alt</option>
+    <option value="minnat7regreg">Minor Natural 7 reg reg</option>
+    <option value="minnat7altreg">Minor Natural 7 alt reg</option>
+    <option value="minnat7regalt">Minor Natural 7 reg alt</option>
+    <option value="minnat7altalt">Minor Natural 7 alt alt</option>
+    <option value="minharm7reg">Minor Harmonic 7 reg</option>
+    <option value="minharm7alt">Minor Harmonic 7 alt</option>
+    <option value="minmelo7reg">Minor Melodic 7 reg</option>
+    <option value="minmelo7alt">Minor Melodic 7 alt</option>
+    <option value="arabicmaj7">Wayne's "Arabic"-ish Major 7</option>
+    <option value="arabicmin7">Wayne's "Arabic"-ish Minor 7</option>
+    <option value="pentatonic23reg">Pentatonic 2+3 reg</option>
+    <option value="pentatonic23alt">Pentatonic 2+3 alt</option>
+    <option value="pentatonic32reg">Pentatonic 3+2 reg</option>
+    <option value="pentatonic32alt">Pentatonic 3+2 alt</option>
+    <option value="quad">Quadtonic 4</option>
+    <option value="tri">Tritonic 3</option>
+</select>
+
+</p>
+
+<p> Tempo: 
+
+<div id="slider_tempo" class="ddrg" style="width:200px;"></div>
+
+<div id="dbg_tempo_value">400</div>
+
+</p>
+
+<p> Center note (tonic/key):
+
+<div id="slider_centernote" class="ddrg" style="width:200px;"></div>
+
+<div id="dbg_centernote_value">440</div>
+
+</p>
+
+<hr />
+
+
+  </section>
+<script>
+
+var umt_listen_element = document.getElementById("start_automatic");
+umt_listen_element.addEventListener("click", umt_exec_automatic_start, true);
+
+umt_listen_element = document.getElementById("stop_automatic");
+umt_listen_element.addEventListener("click", umt_exec_automatic_stop, true);
+
+umt_listen_element = document.getElementById("lb_scale");
+umt_listen_element.addEventListener("change", umt_exec_scale_change, true);
+
+
+
+</script>
+
+</body>
+</html>
