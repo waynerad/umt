@@ -162,11 +162,10 @@ function umt_clear_loop(lpnum, x_tempo, center_note, x_scale) {
     g_umt.loop[lpnum] = { score: {tempo: x_tempo, centernote_log: (Math.log(center_note) / g_umt.LOG2) - 5, scale: x_scale, playback_time_offset: 0, voice: [] } };
 }
 
-function umt_add_voice(lpnum, idx) {
+function umt_add_voice(lpnum, idx, song_number, range_min, range_max) {
     "use strict";
     g_umt.loop[lpnum].score.parts = idx + 1;
-    g_umt.loop[lpnum].score.voice[idx] = { instrument: 'tuningfork', selection: 0, cursor: 0, next_start: 0, range_top: 6.0, range_bottom: 4.0, notes: [], rand_rhythm: umt_get_rando(idx * 40), rand_pitch: umt_get_rando(idx * 40 + 1), rand_rests: umt_get_rando(idx * 40 + 2), rand_syms: umt_get_rando(idx * 40 + 3) };
-    /* BUGBUG: range_top and range_bottom are currently IGNORED */
+    g_umt.loop[lpnum].score.voice[idx] = { instrument: 'tuningfork', selection: 0, cursor: 0, next_start: 0, range_top: range_max, range_bottom: range_min, notes: [], rand_rhythm: umt_get_rando(song_number * 40), rand_pitch: umt_get_rando(song_number * 40 + 1), rand_rests: umt_get_rando(song_number * 40 + 2), rand_syms: umt_get_rando(song_number * 40 + 3) };
 }
 
 function umt_add_note(lpnum, voicenum, rest, pitch, duration, amplitude, inst_params) {
@@ -1158,7 +1157,8 @@ function umt_automatic_stop() {
 
 function umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose) {
     "use strict";
-    var segment_start, ix, segment_end, ts_rh_cursor, ts_pi_cursor, min_pitch, max_pitch, this_pitch, midpoint_pitch, rhythm_cursor, pitch_cursor, termination_cursor, rest, duration, amplitude, inst_params, percent, bevel_amount, segment_len;
+    var segment_start, ix, segment_end, ts_rh_cursor, ts_pi_cursor, min_pitch, max_pitch, this_pitch, midpoint_pitch, rhythm_cursor, pitch_cursor, termination_cursor, rest, duration, amplitude, inst_params, percent, bevel_amount, segment_len, range_test_start, range_test_end, range_test_cursor, range_pitch, range_min, range_max, range_scalar, range_transpose;
+    /* first find the start and end of the segment, and the starting point for the rhythm cursor (ts_rh_cursor) and pitch cursor (ts_pi_cursor) which can be different if there is rhythm or pitch scrolling */
     segment_start = -1;
     ts_rh_cursor = -1;
     ts_pi_cursor = -1;
@@ -1207,6 +1207,8 @@ function umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direc
         pitch_cursor = segment_end - (ts_pi_cursor - segment_start);
     }
     termination_cursor = segment_start;
+    range_test_start = g_umt.loop[lpnum].score.voice[vcnum].cursor;
+    /* execute the copy+transform */
     while (termination_cursor <= segment_end) {
         rest = g_umt.loop[lpnum].score.voice[vcnum].notes[pitch_cursor].rest;
         this_pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[pitch_cursor].pitch;
@@ -1253,18 +1255,53 @@ function umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direc
         }
         termination_cursor = termination_cursor + 1;
     }
+    /* see if we went out of range, and if so, transpose in direction of proper range (allowing for slight overshoot) */
+    range_test_end = g_umt.loop[lpnum].score.voice[vcnum].cursor;
+    min_pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[range_test_start].pitch;
+    max_pitch = min_pitch;
+    for (range_test_cursor = range_test_start; range_test_cursor < range_test_end; range_test_cursor = range_test_cursor + 1) {
+        range_pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[range_test_cursor].pitch;
+        if (range_pitch < min_pitch) {
+            min_pitch = range_pitch;
+        }
+        if (range_pitch > max_pitch) {
+            max_pitch = range_pitch;
+        }
+    }
+    range_min = g_umt.loop[lpnum].score.voice[vcnum].range_bottom;
+    range_max = g_umt.loop[lpnum].score.voice[vcnum].range_top;
+    if ((min_pitch < range_min) && (max_pitch > range_max)) {
+        umt_jsabort('exceeded both min and max for range');
+        /* exceeded both min and max -- need to scale and transpose */
+        range_scalar = (range_max - range_min) / (max_pitch - min_pitch);
+        range_transpose = ((max_pitch - min_pitch) / 2) - ((range_max - range_min) / 2);
+        for (ix = range_test_start; ix < range_test_end; ix = ix + 1) {
+            g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch = (g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch * range_scalar) - range_transpose;
+        }
+    } else {
+        if (min_pitch < range_min) {
+            range_transpose = (range_min - min_pitch) / 2;
+            for (ix = range_test_start; ix < range_test_end; ix = ix + 1) {
+                g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch + range_transpose;
+            }
+        } else {
+            if (max_pitch > range_max) {
+                range_transpose = (max_pitch - range_max) / 2;
+                for (ix = range_test_start; ix < range_test_end; ix = ix + 1) {
+                    g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch - range_transpose;
+                }
+            }
+        }
+    }
 }
 
 function umt_exec_test_copy_trans(lpnum) {
     "use strict";
-    var vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose, csr_pos, csr_start, duration;
-    for (vcnum = 0; vcnum < 6; vcnum = vcnum + 1) {
+    var parts, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose, csr_pos, csr_start, duration;
+    parts = g_umt.loop[lpnum].score.parts;
+    for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
         start_time = 0;
         csr_pos = g_umt.loop[lpnum].score.voice[vcnum].cursor;
-        umt_cx("lpnum = " + umt_ctstr(lpnum));
-        umt_cx("vcnum = " + umt_ctstr(vcnum));
-        umt_cx("csr_pos = " + umt_ctstr(csr_pos));
-        console.log("g_umt", g_umt);
         csr_start = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].starttime;
         duration = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].duration;
         end_time = csr_start + duration;
@@ -1299,17 +1336,17 @@ function umt_exec_test_copy_trans(lpnum) {
 function umt_compose_sample_composition(lpnum) {
     "use strict";
     umt_clear_loop(lpnum, g_umt.ui_params.tempo, g_umt.ui_params.centernote, g_umt.ui_params.scale);
-    umt_add_voice(lpnum, 0);
+    umt_add_voice(lpnum, 0, 0, 4, 6); /* 5 - 1, 5 + 1 */
     umt_add_sym_base_to_voice(lpnum, 0, 1, 8, 32, 5, 0);
-    umt_add_voice(lpnum, 1);
+    umt_add_voice(lpnum, 1, 1, 2, 4);
     umt_add_sym_base_to_voice(lpnum, 1, 4, 8, 32, 3, 10);
-    umt_add_voice(lpnum, 2);
+    umt_add_voice(lpnum, 2, 2, 1, 3);
     umt_add_sym_base_to_voice(lpnum, 2, 16, 16, 32, 2, 20);
-    umt_add_voice(lpnum, 3);
+    umt_add_voice(lpnum, 3, 3, 7, 9);
     umt_add_sym_base_to_voice(lpnum, 3, 1, 2, 32, 8, 30);
-    umt_add_voice(lpnum, 4);
+    umt_add_voice(lpnum, 4, 4, 6, 8);
     umt_add_sym_base_to_voice(lpnum, 4, 1, 2, 32, 7, 40);
-    umt_add_voice(lpnum, 5);
+    umt_add_voice(lpnum, 5, 5, 5, 7);
     umt_add_sym_base_to_voice(lpnum, 5, 1, 8, 32, 6, 50);
     umt_exec_test_copy_trans(lpnum);
     umt_harmonize_score(lpnum);
@@ -1351,46 +1388,29 @@ function umt_automatically_recompose_loop_from_ui_params() {
     var old_loop, new_loop, old_tempo_scalar, new_tempo_scalar, old_offset, current_time, current_units, virtual_new_time, offset_difference, loop_unit_len, loop_len, start_time, stop_time, diff_time;
     if (g_umt.timer_is_on) {
         old_loop = g_umt.currently_playing_loop;
-        umt_cx("old_loop = " + umt_ctstr(old_loop));
         new_loop = 1 - old_loop;
-        umt_cx("new_loop = " + umt_ctstr(new_loop));
         old_tempo_scalar = 60 / g_umt.loop[old_loop].score.tempo;
-        umt_cx("old_tempo_scalar = " + umt_ctstr(old_tempo_scalar));
         old_offset = g_umt.loop[old_loop].score.playback_time_offset;
-        umt_cx("old_offset = " + umt_ctstr(old_offset));
     } else {
         return;
     }
     start_time = g_umt.global_ctx.currentTime;
     umt_disable_ui();
     umt_compose_sample_composition(new_loop, 0);
-    umt_cx("old_loop = " + umt_ctstr(old_loop));
-    umt_cx("new_loop = " + umt_ctstr(new_loop));
-    umt_cx("old_tempo_scalar = " + umt_ctstr(old_tempo_scalar));
-    umt_cx("old_offset = " + umt_ctstr(old_offset));
     new_tempo_scalar = 60 / g_umt.loop[new_loop].score.tempo;
-    umt_cx("new_tempo_scalar = " + umt_ctstr(new_tempo_scalar));
     current_time = g_umt.global_ctx.currentTime + old_offset;
-    umt_cx("current_time = " + umt_ctstr(current_time));
     current_units = current_time / old_tempo_scalar;
-    umt_cx("current_units = " + umt_ctstr(current_units));
     virtual_new_time = current_units * new_tempo_scalar;
-    umt_cx("virtual_new_time = " + umt_ctstr(virtual_new_time));
     offset_difference = current_time - virtual_new_time;
-    umt_cx("offset_difference = " + umt_ctstr(offset_difference));
     loop_unit_len = g_umt.loop[new_loop].score.voice[0].next_start;
-    umt_cx("loop_unit_len = " + umt_ctstr(loop_unit_len));
     loop_len = loop_unit_len * new_tempo_scalar;
-    umt_cx("loop_len = " + umt_ctstr(loop_len));
     offset_difference = offset_difference - (Math.floor(offset_difference / loop_len) * loop_len);  // modulo
-    umt_cx("offset_difference (after modulo) = " + umt_ctstr(offset_difference));
     g_umt.loop[new_loop].score.playback_time_offset = offset_difference;
     // g_umt.loop[new_loop].score.playback_time_offset = 0;
     umt_automatic_start(new_loop);
     umt_enable_ui();
     stop_time = g_umt.global_ctx.currentTime;
     diff_time = stop_time - start_time;
-    umt_cx("diff_time " + umt_ctstr(diff_time));
     g_umt.composition_lag = diff_time;
 }
 
@@ -1403,9 +1423,14 @@ function umt_exec_scale_change() {
     umt_automatically_recompose_loop_from_ui_params();
 }
 
+function umt_exec_play_voice_change() {
+    window.alert("umt_exec_play_voice_change");
+    console.log(g_umt.ui_params);
+}
+
 /* main */
 
-g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(440) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 2, test_idem_compose: false, ui_params: { tempo: 400, scale: 'maj7reg', centernote: 440 } };
+g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 2, test_idem_compose: false, ui_params: { tempo: 400, scale: 'maj7reg', centernote: 432, voice: [{playing: false, minnote: 1}] } };
 console.log('g_umt', g_umt);
 
 jQuery(function () {
@@ -1428,7 +1453,7 @@ jQuery(function () {
         // umt_cx("ui " + umt_ctstr(ui));
         if (event.type === "slidechange") {
             newvalue = ui.value;
-            centernote = Math.pow(2, (newvalue - 5) / 12) * 440;
+            centernote = Math.pow(2, (newvalue - 5) / 12) * 432;
             window.document.getElementById("dbg_centernote_value").innerHTML = centernote;
             g_umt.ui_params.centernote = centernote;
             umt_automatically_recompose_loop_from_ui_params();
@@ -1456,27 +1481,15 @@ jQuery(function () {
 <p> Scale:
 
 <select id="lb_scale">
-    <option value="chroma13">Chromatic 13</option>
-    <option value="chroma11regreg">Chromatic 11 reg reg</option>
-    <option value="chroma11altreg">Chromatic 11 alt reg</option>
-    <option value="chroma11regalt">Chromatic 11 reg alt</option>
-    <option value="chroma11altalt">Chromatic 11 alt alt</option>
-    <option value="maj7reg" selected="selected">Major 7 reg</option>
-    <option value="maj7alt">Major 7 alt</option>
-    <option value="minnat7regreg">Minor Natural 7 reg reg</option>
-    <option value="minnat7altreg">Minor Natural 7 alt reg</option>
-    <option value="minnat7regalt">Minor Natural 7 reg alt</option>
-    <option value="minnat7altalt">Minor Natural 7 alt alt</option>
-    <option value="minharm7reg">Minor Harmonic 7 reg</option>
-    <option value="minharm7alt">Minor Harmonic 7 alt</option>
-    <option value="minmelo7reg">Minor Melodic 7 reg</option>
-    <option value="minmelo7alt">Minor Melodic 7 alt</option>
+    <option value="chroma13">Chromatic 13 (alt)</option>
+    <option value="chroma11regreg">Chromatic 11</option>
+    <option value="maj7reg" selected="selected">Major 7</option>
+    <option value="minnat7regreg">Minor Natural 7</option>
+    <option value="minharm7reg">Minor Harmonic 7</option>
     <option value="arabicmaj7">Wayne's "Arabic"-ish Major 7</option>
     <option value="arabicmin7">Wayne's "Arabic"-ish Minor 7</option>
-    <option value="pentatonic23reg">Pentatonic 2+3 reg</option>
-    <option value="pentatonic23alt">Pentatonic 2+3 alt</option>
-    <option value="pentatonic32reg">Pentatonic 3+2 reg</option>
-    <option value="pentatonic32alt">Pentatonic 3+2 alt</option>
+    <option value="pentatonic23reg">Pentatonic 5 (2+3)</option>
+    <option value="pentatonic32reg">Pentatonic 5 (3+2)</option>
     <option value="quad">Quadtonic 4</option>
     <option value="tri">Tritonic 3</option>
 </select>
@@ -1495,12 +1508,35 @@ jQuery(function () {
 
 <div id="slider_centernote" class="ddrg" style="width:200px;"></div>
 
-<div id="dbg_centernote_value">440</div>
+<div id="dbg_centernote_value">432</div>
 
 </p>
 
 <hr />
 
+<div id="voice_template">
+	<input type="checkbox" name="playvoice0" id="playvoice0">
+	Song Number:
+	<select name="songnumber0" id="songnumber0">
+		<option value="1">1</option>
+		<option value="2">2</option>
+		<option value="3">3</option>
+		<option value="4">4</option>
+		<option value="5">5</option>
+		<option value="6">6</option>
+		<option value="7">7</option>
+		<option value="8">8</option>
+		<option value="9">9</option>
+	</select>
+	Min Note:
+	<select name="minnote0" id="minnote0">
+		<option value="1">1</option>
+		<option value="2">2</option>
+		<option value="4">4</option>
+		<option value="8">8</option>
+		<option value="16">16</option>
+	</select>
+</div>
 
   </section>
 <script>
@@ -1514,7 +1550,8 @@ umt_listen_element.addEventListener("click", umt_exec_automatic_stop, true);
 umt_listen_element = document.getElementById("lb_scale");
 umt_listen_element.addEventListener("change", umt_exec_scale_change, true);
 
-
+umt_listen_element = document.getElementById("playvoice0");
+umt_listen_element.addEventListener("change", umt_exec_play_voice_change, true);
 
 </script>
 
