@@ -141,6 +141,7 @@ function umt_generate_a_note(frequency, duration, amplitude) {
 
 function umt_que_up_a_note(from_moment, frequency, start_time, duration, amplitude, inst_specific_params) {
     "use strict";
+    // umt_cx("play from " + umt_ctstr(from_moment) + ", frequency " + umt_ctstr(frequency) + ", start_time " + umt_ctstr(start_time) + ", duration " + umt_ctstr(duration) + ", amplitude " + umt_ctstr(amplitude));
     var idxname, the_buffer, node, our_start, start_mmt;
     idxname = inst_specific_params; /* delete_me */
     idxname = frequency + "x" + duration + "x" + amplitude;
@@ -1130,10 +1131,13 @@ function umt_schedule_play_of_segment() {
     "use strict";
     var lpnum, current_time, ctx_offset, window_start, window_stop, loop_unit_len, loop_len, from_moment, center, tempo_scalar, num_voices, voicenum, notenum, duration, amplitude, frequency, adjusted_start_time, start_time, inst_specific_params, harmonized_octave, harmonized_num, harmonized_dnom;
     lpnum = g_umt.currently_playing_loop;
+    if (g_umt.loop[lpnum].score.parts === 0) {
+        return;
+    }
     ctx_offset = 0; // g_umt.loop[lpnum].score.playback_time_offset;
     current_time = g_umt.global_ctx.currentTime + ctx_offset;
     window_start = current_time;
-    window_stop = current_time + (g_umt.composition_lag * 1.05) + 0.5;
+    window_stop = current_time + g_umt.composition_lag;
     if (window_start < g_umt.played_up_to) {
         window_start = g_umt.played_up_to;
     }
@@ -1180,7 +1184,9 @@ function umt_do_timer_pulse() {
 function umt_automatic_start(lpnum) {
     "use strict";
     g_umt.currently_playing_loop = lpnum;
-    window.setTimeout(umt_do_timer_pulse, 500);
+    if (!g_umt.timer_is_on) {
+        window.setTimeout(umt_do_timer_pulse, 500);
+    }
     g_umt.timer_is_on = true;
 }
 
@@ -1376,19 +1382,20 @@ function umt_exec_test_copy_trans(lpnum) {
 
 function umt_compose_sample_composition(lpnum) {
     "use strict";
+    /* ponky */
     umt_clear_loop(lpnum, g_umt.ui_params.tempo, g_umt.ui_params.centernote, g_umt.ui_params.scale);
     umt_add_voice(lpnum, 0, 0, 4, 6); /* 5 - 1, 5 + 1 */
     umt_add_sym_base_to_voice(lpnum, 0, 1, 8, 32, 5, 0);
-    umt_add_voice(lpnum, 1, 1, 2, 4);
-    umt_add_sym_base_to_voice(lpnum, 1, 4, 8, 32, 3, 10);
-    umt_add_voice(lpnum, 2, 2, 1, 3);
-    umt_add_sym_base_to_voice(lpnum, 2, 16, 16, 32, 2, 20);
-    umt_add_voice(lpnum, 3, 3, 7, 9);
-    umt_add_sym_base_to_voice(lpnum, 3, 1, 2, 32, 8, 30);
-    umt_add_voice(lpnum, 4, 4, 6, 8);
-    umt_add_sym_base_to_voice(lpnum, 4, 1, 2, 32, 7, 40);
-    umt_add_voice(lpnum, 5, 5, 5, 7);
-    umt_add_sym_base_to_voice(lpnum, 5, 1, 8, 32, 6, 50);
+    // umt_add_voice(lpnum, 1, 1, 2, 4);
+    // umt_add_sym_base_to_voice(lpnum, 1, 4, 8, 32, 3, 10);
+    // umt_add_voice(lpnum, 2, 2, 1, 3);
+    // umt_add_sym_base_to_voice(lpnum, 2, 16, 16, 32, 2, 20);
+    // umt_add_voice(lpnum, 3, 3, 7, 9);
+    // umt_add_sym_base_to_voice(lpnum, 3, 1, 2, 32, 8, 30);
+    // umt_add_voice(lpnum, 4, 4, 6, 8);
+    // umt_add_sym_base_to_voice(lpnum, 4, 1, 2, 32, 7, 40);
+    // umt_add_voice(lpnum, 5, 5, 5, 7);
+    // umt_add_sym_base_to_voice(lpnum, 5, 1, 8, 32, 6, 50);
     umt_exec_test_copy_trans(lpnum);
     umt_harmonize_score(lpnum);
 }
@@ -1400,6 +1407,7 @@ function umt_exec_timer_pulse() {
 
 function umt_exec_automatic_start() {
     "use strict";
+    // qz umt_copy_ui_to_ui_params()
     if (g_umt.test_idem_compose === false) {
         umt_compose_sample_composition(1, 0);
         g_umt.test_idem_compose = true;
@@ -1409,6 +1417,7 @@ function umt_exec_automatic_start() {
 
 function umt_exec_automatic_stop() {
     "use strict";
+    console.log(g_umt);
     umt_automatic_stop();
 }
 
@@ -1453,6 +1462,11 @@ function umt_automatically_recompose_loop_from_ui_params() {
     stop_time = g_umt.global_ctx.currentTime;
     diff_time = stop_time - start_time;
     g_umt.composition_lag = diff_time;
+    g_umt.composition_lag = g_umt.composition_lag * 1.1; /* pad */
+    if (g_umt.composition_lag < 2.0) {
+        g_umt.composition_lag = 2.0;
+    }
+    // umt_cx("g_umt.composition_lag = " + umt_ctstr(g_umt.composition_lag));
 }
 
 function umt_exec_scale_change() {
@@ -1464,15 +1478,19 @@ function umt_exec_scale_change() {
     umt_automatically_recompose_loop_from_ui_params();
 }
 
-function umt_exec_play_voice_change() {
+function umt_exec_play_voice_change(event) {
     "use strict";
-    window.alert("umt_exec_play_voice_change");
-    console.log(g_umt.ui_params);
+    var elemid, ui_voice_num, checkd;
+    elemid = event.target.id;
+    ui_voice_num = Number(elemid.substring(9));
+    checkd = document.getElementById(elemid).value.checked;
+    umt_cx("checkd = " + umt_ctstr(checkd));
+    g_umt.ui_params.voice[ui_voice_num].playing = checkd;
 }
 
 /* main */
 
-g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 2, test_idem_compose: false, ui_params: { tempo: 400, scale: 'maj7reg', centernote: 432, voice: [{playing: false, minnote: 1}] } };
+g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 2, test_idem_compose: false, ui_params: { tempo: 400, scale: 'maj7reg', centernote: 432, parts: 1, voice: [{playing: false, minnote: 1}] } };
 console.log('g_umt', g_umt);
 
 jQuery(function () {
@@ -1557,7 +1575,7 @@ jQuery(function () {
 <hr />
 
 <div id="voice_template">
-	<input type="checkbox" name="playvoice0" id="playvoice0">
+	Play <input type="checkbox" name="playvoice0" id="playvoice0">
 	Song Number:
 	<select name="songnumber0" id="songnumber0">
 		<option value="1">1</option>
@@ -1569,6 +1587,32 @@ jQuery(function () {
 		<option value="7">7</option>
 		<option value="8">8</option>
 		<option value="9">9</option>
+	</select>
+	Octave:
+	<select name="octave0" id="octave0">
+		<option value="1">1</option>
+		<option value="2">2</option>
+		<option value="3">3</option>
+		<option value="4">4</option>
+		<option value="5">5</option>
+		<option value="6">6</option>
+		<option value="7">7</option>
+		<option value="8">8</option>
+		<option value="9">9</option>
+	</select>
+	Note Distance:
+	<select name="notedistance0" id="notedistance0">
+		<option value="0">0</option>
+		<option value="1">.1</option>
+		<option value="2">.2</option>
+		<option value="3">.3</option>
+		<option value="4">.4</option>
+		<option value="5">.5</option>
+		<option value="6">.6</option>
+		<option value="7">.7</option>
+		<option value="8">.8</option>
+		<option value="9">.9</option>
+		<option value="9">1.0</option>
 	</select>
 	Min Note:
 	<select name="minnote0" id="minnote0">
