@@ -1483,14 +1483,61 @@ function umt_exec_play_voice_change(event) {
     var elemid, ui_voice_num, checkd;
     elemid = event.target.id;
     ui_voice_num = Number(elemid.substring(9));
-    checkd = document.getElementById(elemid).value.checked;
+    checkd = document.getElementById(elemid).checked;
     umt_cx("checkd = " + umt_ctstr(checkd));
     g_umt.ui_params.voice[ui_voice_num].playing = checkd;
 }
 
+function umt_ui_add_row(voice_number) {
+    "use strict";
+    var text, i;
+    jQuery('#voices_table > tbody:last').append('<tr id="voice_row_' + voice_number + '"><td id="voicedescriptcell' + voice_number + '" valign="top"> Voice Description Cell ' + voice_number + '</td></tr>');
+    text = document.getElementById("voicedescriptcellxx").innerHTML;
+    i = text.indexOf("XX");
+    text = text.substring(0, i) + voice_number + text.substring(i + 2);
+    document.getElementById("voicedescriptcell" + voice_number).innerHTML = text;
+}
+
+function umt_ui_test_for_part_in_ui(partnum) {
+    "use strict";
+    if (partnum < 5) {
+        return true;
+    }
+}
+
+function umt_ui_copy_ui_params_to_actual_ui() {
+    "use strict";
+    var parts, i;
+    parts = g_umt.ui_params.parts;
+    for (i = 0; i < parts; i = i + 1) {
+        if (umt_ui_test_for_part_in_ui(i)) {
+            jQuery("#the_part").remove();
+        }
+        if (i > g_umt.ui_params.max_parts_ever) {
+            g_umt.ui_params.max_parts_ever = i;
+        }
+    }
+    for (i = parts; i < g_umt.ui_params.max_parts_ever; i = i + 1) {
+        /* do nothing for now */
+        umt_ui_test_for_part_in_ui(i);
+    }
+}
+
+function umt_exec_add_voice() {
+    "use strict";
+    var voice_num;
+    voice_num = g_umt.ui_params.parts + 1;
+    g_umt.ui_params.parts = voice_num;
+    g_umt.ui_params.voice[voice_num] = {playing: false, minnote: 16};
+    umt_ui_add_row(voice_num); /* BUGBUG use AUTOMATIC to add this */
+    if (voice_num > g_umt.ui_params.max_parts_ever) {
+        g_umt.ui_params.max_parts_ever = voice_num;
+    }
+}
+
 /* main */
 
-g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 2, test_idem_compose: false, ui_params: { tempo: 400, scale: 'maj7reg', centernote: 432, parts: 1, voice: [{playing: false, minnote: 1}] } };
+g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 2, test_idem_compose: false, ui_params: { tempo: 400, scale: 'maj7reg', centernote: 432, parts: 4, voice: [{playing: false, minnote: 1}, {playing: false, minnote: 2}, {playing: false, minnote: 4}, {playing: false, minnote: 8}] }, max_parts_ever: 99999 };
 console.log('g_umt', g_umt);
 
 jQuery(function () {
@@ -1501,26 +1548,68 @@ jQuery(function () {
         // umt_cx("ui " + umt_ctstr(ui));
         if (event.type === "slidechange") {
             newvalue = ui.value;
-            window.document.getElementById("dbg_tempo_value").innerHTML = newvalue;
+            window.document.getElementById("display_tempo_value").innerHTML = newvalue;
             g_umt.ui_params.tempo = newvalue;
             umt_automatically_recompose_loop_from_ui_params();
         }
     }
          });
     jQuery("#slider_centernote").slider({min: 1, max: 9, step: 1, value: 5, orientation: "horizontal", change: function (event, ui) {
-        var newvalue, centernote;
+        var newvalue;
         // umt_cx("event " + umt_ctstr(event));
         // umt_cx("ui " + umt_ctstr(ui));
         if (event.type === "slidechange") {
             newvalue = ui.value;
-            centernote = Math.pow(2, (newvalue - 5) / 12) * 432;
-            window.document.getElementById("dbg_centernote_value").innerHTML = centernote;
-            g_umt.ui_params.centernote = centernote;
+            newvalue = Math.pow(2, (newvalue - 5) / 12) * 432;
+            window.document.getElementById("display_centernote_value").innerHTML = newvalue;
+            g_umt.ui_params.centernote = newvalue;
             umt_automatically_recompose_loop_from_ui_params();
         }
     }
          });
+    jQuery("#slider_octave0").slider({min: 1, max: 9, step: 1, value: 5, orientation: "vertical", change: function (event, ui) {
+        var newvalue;
+        if (event.type === "slidechange") {
+            newvalue = ui.value;
+            window.document.getElementById("display_octave0").innerHTML = newvalue;
+        }
+    }
+         });
+    jQuery("#slider_notedistance0").slider({min: 1, max: 11, step: 1, value: 5, orientation: "vertical", change: function (event, ui) {
+        var newvalue, aspercentage;
+        if (event.type === "slidechange") {
+            newvalue = ui.value;
+            newvalue = newvalue - 1;
+            aspercentage = newvalue * 10;
+            window.document.getElementById("display_notedistance0").innerHTML = aspercentage + "%";
+        }
+    }
+         });
+    jQuery("#slider_minnote0").slider({min: 1, max: 5, step: 1, value: 3, orientation: "vertical", change: function (event, ui) {
+        var newvalue;
+        if (event.type === "slidechange") {
+            newvalue = ui.value;
+            newvalue = Math.pow(2, (newvalue - 1));
+            window.document.getElementById("display_minnote0").innerHTML = newvalue;
+        }
+    }
+         });
+    jQuery("#slider_chunksize0").slider({min: 1, max: 10, step: 1, value: 3, orientation: "vertical", change: function (event, ui) {
+        var newvalue;
+        if (event.type === "slidechange") {
+            newvalue = ui.value;
+            newvalue = Math.pow(2, (newvalue - 1));
+            window.document.getElementById("display_chunksize0").innerHTML = newvalue;
+        }
+    }
+         });
 });
+
+function umt_exec_test_add_row() {
+    "use strict";
+    jQuery('#voices_table > tbody:last').append('<tr><td> Hello cell 1</td><td> Hello cell 2</td></tr>');
+    umt_ui_add_row(5);
+}
 
 </script>
 
@@ -1560,7 +1649,7 @@ jQuery(function () {
 
 <div id="slider_tempo" class="ddrg" style="width:200px;"></div>
 
-<div id="dbg_tempo_value">400</div>
+<div id="display_tempo_value">400</div>
 
 </p>
 
@@ -1568,61 +1657,65 @@ jQuery(function () {
 
 <div id="slider_centernote" class="ddrg" style="width:200px;"></div>
 
-<div id="dbg_centernote_value">432</div>
+<div id="display_centernote_value">432</div>
 
 </p>
 
 <hr />
 
-<div id="voice_template">
-	Play <input type="checkbox" name="playvoice0" id="playvoice0">
-	Song Number:
-	<select name="songnumber0" id="songnumber0">
-		<option value="1">1</option>
-		<option value="2">2</option>
-		<option value="3">3</option>
-		<option value="4">4</option>
-		<option value="5">5</option>
-		<option value="6">6</option>
-		<option value="7">7</option>
-		<option value="8">8</option>
-		<option value="9">9</option>
-	</select>
-	Octave:
-	<select name="octave0" id="octave0">
-		<option value="1">1</option>
-		<option value="2">2</option>
-		<option value="3">3</option>
-		<option value="4">4</option>
-		<option value="5">5</option>
-		<option value="6">6</option>
-		<option value="7">7</option>
-		<option value="8">8</option>
-		<option value="9">9</option>
-	</select>
-	Note Distance:
-	<select name="notedistance0" id="notedistance0">
-		<option value="0">0</option>
-		<option value="1">.1</option>
-		<option value="2">.2</option>
-		<option value="3">.3</option>
-		<option value="4">.4</option>
-		<option value="5">.5</option>
-		<option value="6">.6</option>
-		<option value="7">.7</option>
-		<option value="8">.8</option>
-		<option value="9">.9</option>
-		<option value="9">1.0</option>
-	</select>
-	Min Note:
-	<select name="minnote0" id="minnote0">
-		<option value="1">1</option>
-		<option value="2">2</option>
-		<option value="4">4</option>
-		<option value="8">8</option>
-		<option value="16">16</option>
-	</select>
+<div id="voice_template" style="display:none;" >
+	<p><b>This is the template row</b></p>
+	<table border="0">
+		<tr>
+			<td id="voicedescriptcellxx" valign="top">
+				Voice #XX
+			</td><td id="voiceplaycellxx" valign="top">
+				Play
+				<br />
+				<input type="checkbox" name="playvoicexx" id="playvoicexx">
+			</td><td valign="top" align="center">
+				Song Number: <br />
+				<select name="songnumberxx" id="songnumberxx">
+					<option value="1">1</option>
+					<option value="2">2</option>
+					<option value="3">3</option>
+					<option value="4">4</option>
+					<option value="5">5</option>
+					<option value="6">6</option>
+					<option value="7">7</option>
+					<option value="8">8</option>
+					<option value="9">9</option>
+				</select>
+			</td><td valign="top" align="center">
+				Octave: <br />
+				<div id="slider_octavexx" class="ddrg" style="height:100px;"></div> <br />
+				<div id="display_octavexx">5</div>
+			</td><td valign="top" align="center">
+				Note Distance:<br />
+				<div id="slider_notedistancexx" class="ddrg" style="height:100px;"></div> <br />
+				<div id="display_notedistancexx">40%</div>
+			</td><td valign="top" align="center">
+				Min Note:<br />
+				<div id="slider_minnotexx" class="ddrg" style="height:100px;"></div> <br />
+				<div id="display_minnotexx"></div>
+			</td><td valign="top" align="center">
+				Chunk Size:<br />
+				<div id="slider_chunksizexx" class="ddrg" style="height:100px;"></div> <br />
+				<div id="display_chunksizexx"></div>
+			</td>
+		</tr>
+	</table>
 </div>
+
+<div id="voices_section">
+	<table id="voices_table" border="0">
+		<tbody>
+		</tbody>
+	</table>
+</div>
+
+<input id="test_add_row" type="button" value="Test adding a row" />
+<input id="add_voice" type="button" value="Add a voice for real" />
 
   </section>
 <script>
@@ -1636,8 +1729,14 @@ umt_listen_element.addEventListener("click", umt_exec_automatic_stop, true);
 umt_listen_element = document.getElementById("lb_scale");
 umt_listen_element.addEventListener("change", umt_exec_scale_change, true);
 
-umt_listen_element = document.getElementById("playvoice0");
-umt_listen_element.addEventListener("change", umt_exec_play_voice_change, true);
+// umt_listen_element = document.getElementById("playvoice0");
+// umt_listen_element.addEventListener("change", umt_exec_play_voice_change, true);
+
+umt_listen_element = document.getElementById("test_add_row");
+umt_listen_element.addEventListener("click", umt_exec_test_add_row, true);
+
+umt_listen_element = document.getElementById("add_voice");
+umt_listen_element.addEventListener("click", umt_exec_add_voice, true);
 
 </script>
 
