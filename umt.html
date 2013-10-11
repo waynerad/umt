@@ -1518,6 +1518,41 @@ function umt_ui_add_row(voice_number) {
             document.getElementById(cellidname + voice_number).innerHTML = text;
         }
     }
+    jQuery("#slider_octave" + voice_number).slider({min: 0, max: 9, step: 1, value: 5, orientation: "vertical", change: function (event, ui) {
+        var newvalue;
+        if (event.type === "slidechange") {
+            newvalue = ui.value;
+            window.document.getElementById("display_octave" + voice_number).innerHTML = newvalue;
+        }
+    }
+         });
+    jQuery("#slider_notedistance" + voice_number).slider({min: 0, max: 10, step: 1, value: 5, orientation: "vertical", change: function (event, ui) {
+        var newvalue, aspercentage;
+        if (event.type === "slidechange") {
+            newvalue = ui.value;
+            aspercentage = newvalue * 10;
+            window.document.getElementById("display_notedistance" + voice_number).innerHTML = aspercentage + "%";
+        }
+    }
+         });
+    jQuery("#slider_minnote" + voice_number).slider({min: 0, max: 4, step: 1, value: 3, orientation: "vertical", change: function (event, ui) {
+        var newvalue;
+        if (event.type === "slidechange") {
+            newvalue = ui.value;
+            newvalue = Math.pow(2, newvalue);
+            window.document.getElementById("display_minnote" + voice_number).innerHTML = newvalue;
+        }
+    }
+         });
+    jQuery("#slider_chunksize" + voice_number).slider({min: 0, max: 9, step: 1, value: 3, orientation: "vertical", change: function (event, ui) {
+        var newvalue;
+        if (event.type === "slidechange") {
+            newvalue = ui.value;
+            newvalue = Math.pow(2, newvalue);
+            window.document.getElementById("display_chunksize" + voice_number).innerHTML = newvalue;
+        }
+    }
+         });
 }
 
 function umt_ui_test_for_part_in_ui(ptnum) {
@@ -1535,11 +1570,9 @@ function umt_copy_part_from_params_to_ui(ptnum) {
 
 function umt_ui_copy_ui_params_to_actual_ui() {
     "use strict";
-    var parts, i;
+    var parts, i, absvalue, slidervalue;
     parts = g_umt.ui_params.parts;
-    umt_cx("parts " + umt_ctstr(parts));
     for (i = 0; i < parts; i = i + 1) {
-        umt_cx("i " + umt_ctstr(i));
         if (!umt_ui_test_for_part_in_ui(i)) {
             umt_ui_add_row(i);
         }
@@ -1550,30 +1583,61 @@ function umt_ui_copy_ui_params_to_actual_ui() {
     }
     for (i = parts; i <= g_umt.ui_params.max_parts_ever; i = i + 1) {
         if (umt_ui_test_for_part_in_ui(i)) {
-            umt_cx("remove");
             jQuery("#the_part").remove();
         }
-        /* do nothing for now */
-        /* umt_ui_test_for_part_in_ui(i); */
+    }
+    for (i = 0; i < parts; i = i + 1) {
+        umt_cx("i = " + umt_ctstr(i));
+        /* checkbox */
+        if (g_umt.ui_params.voice[i].playing) {
+            document.getElementById("playvoice" + i).checked = true;
+        } else {
+            document.getElementById("playvoice" + i).checked = false;
+        }
+        /* octave */
+        absvalue = g_umt.ui_params.voice[i].octave;
+        umt_cx("absvalue = " + umt_ctstr(absvalue));
+        window.document.getElementById("display_octave" + i).innerHTML = absvalue;
+        slidervalue = absvalue - 1;
+        umt_cx("slidervalue = " + umt_ctstr(slidervalue));
+        jQuery("#slider_octave" + i).slider({ value: slidervalue });
+        /* note distance */
+        absvalue = g_umt.ui_params.voice[i].note_distance;
+        umt_cx("absvalue = " + umt_ctstr(absvalue));
+        window.document.getElementById("display_notedistance" + i).innerHTML = (absvalue * 100) + "%";
+        slidervalue = absvalue * 10;
+        umt_cx("slidervalue = " + umt_ctstr(slidervalue));
+        jQuery("#slider_notedistance" + i).slider({ value: slidervalue });
+        /* min note */
+        absvalue = g_umt.ui_params.voice[i].min_note;
+        umt_cx("absvalue = " + umt_ctstr(absvalue));
+        window.document.getElementById("display_minnote" + i).innerHTML = absvalue;
+        slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
+        umt_cx("slidervalue = " + umt_ctstr(slidervalue));
+        jQuery("#slider_minnote" + i).slider({ value: slidervalue });
+        /* chunk size */
+        absvalue = g_umt.ui_params.voice[i].chunk_size;
+        umt_cx("absvalue = " + umt_ctstr(absvalue));
+        window.document.getElementById("display_chunksize" + i).innerHTML = absvalue;
+        slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
+        umt_cx("slidervalue = " + umt_ctstr(slidervalue));
+        jQuery("#slider_chunksize" + i).slider({ value: slidervalue });
     }
 }
 
 function umt_exec_add_voice() {
     "use strict";
     var voice_num;
-    voice_num = g_umt.ui_params.parts + 1;
-    g_umt.ui_params.parts = voice_num;
-    g_umt.ui_params.voice[voice_num] = {playing: false, minnote: 16};
-    /* umt_ui_add_row(voice_num); / * BUGBUG use AUTOMATIC to add this */
-    if (voice_num > g_umt.ui_params.max_parts_ever) {
-        g_umt.ui_params.max_parts_ever = voice_num;
+    voice_num = g_umt.ui_params.parts;
+    g_umt.ui_params.voice[voice_num] = {playing: false, variation: 1, octave: 5, note_distance: 0.3, min_note: 8, chunk_size: 8 }
+    g_umt.ui_params.parts = g_umt.ui_params.parts + 1;
+    if (g_umt.ui_params.parts > g_umt.ui_params.max_parts_ever) {
+        g_umt.ui_params.max_parts_ever = g_umt.ui_params.parts;
     }
     umt_ui_copy_ui_params_to_actual_ui();
 }
 
 /* main */
-
-// g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 2, test_idem_compose: false, ui_params: { tempo: 400, scale: 'maj7reg', centernote: 432, parts: 4, voice: [{playing: false, minnote: 1}, {playing: false, minnote: 2}, {playing: false, minnote: 4}, {playing: false, minnote: 8}] }, max_parts_ever: 99999 };
 
 g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 2, test_idem_compose: false, ui_params: { tempo: 400, scale: 'maj7reg', centernote: 432, parts: 0, voice: [] }, max_parts_ever: 4 };
 console.log('g_umt', g_umt);
@@ -1602,42 +1666,6 @@ jQuery(function () {
             window.document.getElementById("display_centernote_value").innerHTML = newvalue;
             g_umt.ui_params.centernote = newvalue;
             umt_automatically_recompose_loop_from_ui_params();
-        }
-    }
-         });
-    jQuery("#slider_octave0").slider({min: 1, max: 9, step: 1, value: 5, orientation: "vertical", change: function (event, ui) {
-        var newvalue;
-        if (event.type === "slidechange") {
-            newvalue = ui.value;
-            window.document.getElementById("display_octave0").innerHTML = newvalue;
-        }
-    }
-         });
-    jQuery("#slider_notedistance0").slider({min: 1, max: 11, step: 1, value: 5, orientation: "vertical", change: function (event, ui) {
-        var newvalue, aspercentage;
-        if (event.type === "slidechange") {
-            newvalue = ui.value;
-            newvalue = newvalue - 1;
-            aspercentage = newvalue * 10;
-            window.document.getElementById("display_notedistance0").innerHTML = aspercentage + "%";
-        }
-    }
-         });
-    jQuery("#slider_minnote0").slider({min: 1, max: 5, step: 1, value: 3, orientation: "vertical", change: function (event, ui) {
-        var newvalue;
-        if (event.type === "slidechange") {
-            newvalue = ui.value;
-            newvalue = Math.pow(2, (newvalue - 1));
-            window.document.getElementById("display_minnote0").innerHTML = newvalue;
-        }
-    }
-         });
-    jQuery("#slider_chunksize0").slider({min: 1, max: 10, step: 1, value: 3, orientation: "vertical", change: function (event, ui) {
-        var newvalue;
-        if (event.type === "slidechange") {
-            newvalue = ui.value;
-            newvalue = Math.pow(2, (newvalue - 1));
-            window.document.getElementById("display_chunksize0").innerHTML = newvalue;
         }
     }
          });
