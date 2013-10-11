@@ -1,3 +1,7 @@
-The Ultimate Music Toy (UMT) is a Javascript program that runs in your web browser (using the HTML5 WebAudio API) that lets you play with music: it is a music composition system that lets you interactively change the composition parameters and hear what happens.
+The Ultimate Music Toy (UMT) is a music composition system that lets you interactively change the composition while it's playing, and immediately hear the results!
+
+It runs in the web browser and is written entirely in Javascript and uses the WebAudio API in HTML5 to actually play the music.
+
+Tested to work on Chrome but should work on any HTML5-compliant browser.
 
 by Wayne Radinsky
