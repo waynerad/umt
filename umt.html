@@ -38,6 +38,8 @@ fpt -- "floating-point" -- floating point value of pitches for scale notes
 /* umt_jsabort, umt_cx, and umt_ctstr are debugging functions that will be
    REMOVED from the final product (assuming there is ever any such thing as a
    final product :P )
+
+   Actual music code starts with the function umt_get_audio_context
 */
 
 function umt_jsabort(msg) {
@@ -193,7 +195,7 @@ function umt_add_note(lpnum, voicenum, rest, pitch, duration, amplitude, inst_pa
     g_umt.loop[lpnum].score.voice[idx].next_start += duration;
 }
 
-function umt_play_raw_score(lpnum) {
+function umt_test_play_raw_score(lpnum) {
     "use strict";
     var from_moment, center, tempo_scalar, num_voices, voicenum, notenum, pitch, duration, amplitude, frequency, start_time, inst_specific_params;
     from_moment = g_umt.global_ctx.currentTime + 1;
@@ -218,7 +220,7 @@ function umt_play_raw_score(lpnum) {
 
 function umt_exec_play_raw_score() {
     "use strict";
-    umt_play_raw_score(0);
+    umt_test_play_raw_score(0);
 }
 
 /* cheat sheet for scales
@@ -1382,7 +1384,6 @@ function umt_exec_test_copy_trans(lpnum) {
 
 function umt_compose_sample_composition(lpnum) {
     "use strict";
-    /* ponky */
     umt_clear_loop(lpnum, g_umt.ui_params.tempo, g_umt.ui_params.centernote, g_umt.ui_params.scale);
     umt_add_voice(lpnum, 0, 0, 4, 6); /* 5 - 1, 5 + 1 */
     umt_add_sym_base_to_voice(lpnum, 0, 1, 8, 32, 5, 0);
@@ -1488,33 +1489,53 @@ function umt_exec_play_voice_change(event) {
     g_umt.ui_params.voice[ui_voice_num].playing = checkd;
 }
 
+function umt_ui_create_closure_function_for_symmetry_slider_outside_a_loop(voice_number, slider_number) {
+    "use strict";
+    jQuery("#slider_symmetryparam" + voice_number + "_" + slider_number).slider({min: 0, max: 20, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
+        var newvalue;
+        if (event.type === "slidechange") {
+            newvalue = ui.value;
+            window.document.getElementById("display_symmetryparam" + voice_number + "_" + slider_number).innerHTML = newvalue;
+        }
+    }
+         });
+}
+
 function umt_ui_add_row(voice_number) {
     "use strict";
-    var text, i, display_number, columnidlist, idx, cellidname;
-    jQuery('#voices_table > tbody:last').append('<tr id="voice_row_' + voice_number + '"><td id="voicedescriptcell' + voice_number + '" valign="top"> Voice Description Cell ' + voice_number + '</td></td><td id="voiceplaycell' + voice_number + '" valign="top"></td><td id="voicevariationnumcell' + voice_number + '" valign="top" align="center"></td><td id="voiceoctavecell' + voice_number + '" valign="top" align="center"></td><td id="voicenotedistcell' + voice_number + '" valign="top" align="center"></td><td id="voiceminnotecell' + voice_number + '" valign="top" align="center"></td><td id="voicechunksizecell' + voice_number + '" valign="top" align="center"></tr>');
+    var text, i, display_number, columnidlist, idx, cellidname, j, rowcontent, y, currentrowhtml;
+    jQuery('#voices_table > tbody:last').append('<tr id="voice_row_' + voice_number + '"><td id="voicedescriptcell' + voice_number + '" valign="top"> Voice Description Cell ' + voice_number + '</td></td><td id="voiceplaycell' + voice_number + '" valign="top"></td><td id="voicevariationnumcell' + voice_number + '" valign="top" align="center"></td><td id="voiceoctavecell' + voice_number + '" valign="top" align="center"></td><td id="voicenotedistcell' + voice_number + '" valign="top" align="center"></td><td id="voiceminnotecell' + voice_number + '" valign="top" align="center"></td><td id="voicechunksizecell' + voice_number + '" valign="top" align="center"></td><td id="voicemeasuresizecell' + voice_number + '" valign="top" align="center"></td><td id="voicesymmetriescell' + voice_number + '" valign="top" align="center"></td></tr>');
     text = document.getElementById("voicedescriptcellxx").innerHTML;
     display_number = voice_number + 1;
     i = text.indexOf("XX");
     text = text.substring(0, i) + display_number + text.substring(i + 2);
     document.getElementById("voicedescriptcell" + voice_number).innerHTML = text;
-    columnidlist = ["voiceplaycell", "voicevariationnumcell", "voiceoctavecell", "voicenotedistcell", "voiceminnotecell", "voicechunksizecell"];
-    umt_cx("columnidlist = " + umt_ctstr(columnidlist));
+    columnidlist = ["voiceplaycell", "voicevariationnumcell", "voiceoctavecell", "voicenotedistcell", "voiceminnotecell", "voicechunksizecell", "voicemeasuresizecell", "voicesymmetriescell"];
     for (idx in columnidlist) {
         if (columnidlist.hasOwnProperty(idx)) {
-            umt_cx("idx = " + umt_ctstr(idx));
             cellidname = columnidlist[idx];
-            umt_cx("cellidname = " + umt_ctstr(cellidname));
             text = document.getElementById(cellidname + "xx").innerHTML;
-            umt_cx("text = " + umt_ctstr(text));
             i = text.indexOf("xx");
-            umt_cx("i = " + umt_ctstr(i));
             while (i >= 0) {
                 text = text.substring(0, i) + voice_number + text.substring(i + 2);
-                umt_cx("text = " + umt_ctstr(text));
                 i = text.indexOf("xx");
-                umt_cx("i = " + umt_ctstr(i));
             }
-            umt_cx("text (final!) = " + umt_ctstr(text));
+            if (cellidname === "voicesymmetriescell") {
+                i = text.indexOf("<tr>");
+                j = text.indexOf("</tr>");
+                rowcontent = text.substring(i, j + 6);
+                text = text.substring(0, i) + text.substring(j + 5); /* cut */
+                for (y = 0; y < 10; y = y + 1) {
+                    currentrowhtml = rowcontent;
+                    i = currentrowhtml.indexOf("yyy");
+                    while (i >= 0) {
+                        currentrowhtml = currentrowhtml.substring(0, i) + y + currentrowhtml.substring(i + 3);
+                        i = currentrowhtml.indexOf("yyy");
+                    }
+                    i = text.indexOf("<!-- insertion_point -->");
+                    text = text.substring(0, i) + currentrowhtml + text.substring(i); /* paste */
+                }
+            }
             document.getElementById(cellidname + voice_number).innerHTML = text;
         }
     }
@@ -1553,9 +1574,21 @@ function umt_ui_add_row(voice_number) {
         }
     }
          });
+    jQuery("#slider_measuresize" + voice_number).slider({min: 0, max: 9, step: 1, value: 3, orientation: "vertical", change: function (event, ui) {
+        var newvalue;
+        if (event.type === "slidechange") {
+            newvalue = ui.value;
+            newvalue = Math.pow(2, newvalue);
+            window.document.getElementById("display_measuresize" + voice_number).innerHTML = newvalue;
+        }
+    }
+         });
+    for (y = 0; y < 10; y = y + 1) {
+        umt_ui_create_closure_function_for_symmetry_slider_outside_a_loop(voice_number, y);
+    }
 }
 
-function umt_ui_test_for_part_in_ui(ptnum) {
+function umt_ui_is_part_in_ui(ptnum) {
     "use strict";
     if (document.getElementById("voice_row_" + ptnum)) {
         return true;
@@ -1568,12 +1601,28 @@ function umt_copy_part_from_params_to_ui(ptnum) {
     return ptnum + 1;
 }
 
+function umt_ui_turn_on_symmetry_patterns(row, pattern_num, pattern_label, is_on) {
+    "use strict";
+    var suffix, display;
+    suffix = row + "_" + pattern_num;
+    if (is_on) {
+        display = "block";
+    } else {
+        display = "none";
+    }
+    document.getElementById("display_symmetrylevel" + suffix).style.display = display;
+    document.getElementById("display_symmetrylevel" + suffix).innerHTML = pattern_label;
+    document.getElementById("sel_symmetry" + suffix).style.display = display;
+    document.getElementById("slider_symmetryparam" + suffix).style.display = display;
+    document.getElementById("display_symmetryparam" + suffix).style.display = display;
+}
+
 function umt_ui_copy_ui_params_to_actual_ui() {
     "use strict";
-    var parts, i, absvalue, slidervalue;
+    var parts, i, absvalue, slidervalue, loop_duration, j, however_many, sym_size, sym_num;
     parts = g_umt.ui_params.parts;
     for (i = 0; i < parts; i = i + 1) {
-        if (!umt_ui_test_for_part_in_ui(i)) {
+        if (!umt_ui_is_part_in_ui(i)) {
             umt_ui_add_row(i);
         }
         if (i > g_umt.ui_params.max_parts_ever) {
@@ -1582,12 +1631,12 @@ function umt_ui_copy_ui_params_to_actual_ui() {
         umt_copy_part_from_params_to_ui(i);
     }
     for (i = parts; i <= g_umt.ui_params.max_parts_ever; i = i + 1) {
-        if (umt_ui_test_for_part_in_ui(i)) {
+        if (umt_ui_is_part_in_ui(i)) {
             jQuery("#the_part").remove();
         }
     }
+    loop_duration = g_umt.ui_params.loop_duration;
     for (i = 0; i < parts; i = i + 1) {
-        umt_cx("i = " + umt_ctstr(i));
         /* checkbox */
         if (g_umt.ui_params.voice[i].playing) {
             document.getElementById("playvoice" + i).checked = true;
@@ -1596,32 +1645,40 @@ function umt_ui_copy_ui_params_to_actual_ui() {
         }
         /* octave */
         absvalue = g_umt.ui_params.voice[i].octave;
-        umt_cx("absvalue = " + umt_ctstr(absvalue));
         window.document.getElementById("display_octave" + i).innerHTML = absvalue;
         slidervalue = absvalue - 1;
-        umt_cx("slidervalue = " + umt_ctstr(slidervalue));
         jQuery("#slider_octave" + i).slider({ value: slidervalue });
         /* note distance */
         absvalue = g_umt.ui_params.voice[i].note_distance;
-        umt_cx("absvalue = " + umt_ctstr(absvalue));
         window.document.getElementById("display_notedistance" + i).innerHTML = (absvalue * 100) + "%";
         slidervalue = absvalue * 10;
-        umt_cx("slidervalue = " + umt_ctstr(slidervalue));
         jQuery("#slider_notedistance" + i).slider({ value: slidervalue });
         /* min note */
         absvalue = g_umt.ui_params.voice[i].min_note;
-        umt_cx("absvalue = " + umt_ctstr(absvalue));
         window.document.getElementById("display_minnote" + i).innerHTML = absvalue;
         slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
-        umt_cx("slidervalue = " + umt_ctstr(slidervalue));
         jQuery("#slider_minnote" + i).slider({ value: slidervalue });
         /* chunk size */
         absvalue = g_umt.ui_params.voice[i].chunk_size;
-        umt_cx("absvalue = " + umt_ctstr(absvalue));
         window.document.getElementById("display_chunksize" + i).innerHTML = absvalue;
         slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
-        umt_cx("slidervalue = " + umt_ctstr(slidervalue));
         jQuery("#slider_chunksize" + i).slider({ value: slidervalue });
+        /* measure size */
+        absvalue = g_umt.ui_params.voice[i].measure_size;
+        window.document.getElementById("display_measuresize" + i).innerHTML = absvalue;
+        slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
+        jQuery("#slider_measuresize" + i).slider({ value: slidervalue });
+        /* symmetry patterns and parameters */
+        however_many = Math.floor((Math.log(loop_duration) / Math.log(2)) + 0.01);
+        for (j = 0; j < however_many; j = j + 1) {
+            umt_ui_turn_on_symmetry_patterns(i, j, j, false);
+        }
+        sym_size = g_umt.ui_params.voice[i].measure_size;
+        while (sym_size < loop_duration) {
+            sym_num = Math.floor((Math.log(sym_size) / Math.log(2)) + 0.01);
+            umt_ui_turn_on_symmetry_patterns(i, sym_num, sym_size, true);
+            sym_size = sym_size * 2;
+        }
     }
 }
 
@@ -1629,7 +1686,7 @@ function umt_exec_add_voice() {
     "use strict";
     var voice_num;
     voice_num = g_umt.ui_params.parts;
-    g_umt.ui_params.voice[voice_num] = {playing: false, variation: 1, octave: 5, note_distance: 0.3, min_note: 8, chunk_size: 8 }
+    g_umt.ui_params.voice[voice_num] = {playing: false, variation: 1, octave: 5, note_distance: 0.3, min_note: 8, chunk_size: 8, measure_size: 32 };
     g_umt.ui_params.parts = g_umt.ui_params.parts + 1;
     if (g_umt.ui_params.parts > g_umt.ui_params.max_parts_ever) {
         g_umt.ui_params.max_parts_ever = g_umt.ui_params.parts;
@@ -1639,15 +1696,13 @@ function umt_exec_add_voice() {
 
 /* main */
 
-g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 2, test_idem_compose: false, ui_params: { tempo: 400, scale: 'maj7reg', centernote: 432, parts: 0, voice: [] }, max_parts_ever: 4 };
+g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 2, test_idem_compose: false, ui_params: { tempo: 400, scale: 'maj7reg', centernote: 432, parts: 0, voice: [], loop_duration: 512 }, max_parts_ever: 4 };
 console.log('g_umt', g_umt);
 
 jQuery(function () {
     "use strict";
     jQuery("#slider_tempo").slider({min: 100, max: 1000, step: 100, value: 400, orientation: "horizontal", change: function (event, ui) {
         var newvalue;
-        // umt_cx("event " + umt_ctstr(event));
-        // umt_cx("ui " + umt_ctstr(ui));
         if (event.type === "slidechange") {
             newvalue = ui.value;
             window.document.getElementById("display_tempo_value").innerHTML = newvalue;
@@ -1658,8 +1713,6 @@ jQuery(function () {
          });
     jQuery("#slider_centernote").slider({min: 1, max: 9, step: 1, value: 5, orientation: "horizontal", change: function (event, ui) {
         var newvalue;
-        // umt_cx("event " + umt_ctstr(event));
-        // umt_cx("ui " + umt_ctstr(ui));
         if (event.type === "slidechange") {
             newvalue = ui.value;
             newvalue = Math.pow(2, (newvalue - 5) / 12) * 432;
@@ -1749,19 +1802,41 @@ jQuery(function () {
 			</td><td id="voiceoctavecellxx" valign="top" align="center">
 				Octave: <br />
 				<div id="slider_octavexx" class="ddrg" style="height:100px;"></div> <br />
-				<div id="display_octavexx">5</div>
+				<div id="display_octavexx"></div>
 			</td><td id="voicenotedistcellxx" valign="top" align="center">
 				Note Distance:<br />
 				<div id="slider_notedistancexx" class="ddrg" style="height:100px;"></div> <br />
-				<div id="display_notedistancexx">40%</div>
+				<div id="display_notedistancexx"></div>
 			</td><td id="voiceminnotecellxx" valign="top" align="center">
 				Min Note:<br />
 				<div id="slider_minnotexx" class="ddrg" style="height:100px;"></div> <br />
 				<div id="display_minnotexx"></div>
 			</td><td id="voicechunksizecellxx" valign="top" align="center">
-				Chunk Size:<br />
+				Max Note:<br />
 				<div id="slider_chunksizexx" class="ddrg" style="height:100px;"></div> <br />
 				<div id="display_chunksizexx"></div>
+			</td><td id="voicemeasuresizecellxx" valign="top" align="center">
+				Measure Size:<br />
+				<div id="slider_measuresizexx" class="ddrg" style="height:100px;"></div> <br />
+				<div id="display_measuresizexx"></div>
+			</td><td id="voicesymmetriescellxx" valign="top" align="center">
+				Symmetry Patterns:<br />
+				<table border="0">
+					<tr>
+						<td valign="top">
+							<span id="display_symmetrylevelxx_yyy" style="display:none;">1</span>
+							<select name="sel_symmetryxx_yyy" id="sel_symmetryxx_yyy" style="display:none;">
+								<option value="trans">Transpose</option>
+								<option value="scale">Scale</option>
+								<option value="rev">Reverse</option>
+							</select>
+						</td><td valign="top" align="center">
+							<div id="slider_symmetryparamxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
+							<span id="display_symmetryparamxx_yyy" style="display:none;">readout</div>
+						</td>
+					</tr>
+					<!-- insertion_point -->
+				</table>
 			</td>
 		</tr>
 	</table>
