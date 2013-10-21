@@ -1603,18 +1603,32 @@ function umt_copy_part_from_params_to_ui(ptnum) {
 
 function umt_ui_turn_on_symmetry_patterns(row, pattern_num, pattern_label, is_on) {
     "use strict";
-    var suffix, display;
+    var suffix, block, inline;
     suffix = row + "_" + pattern_num;
     if (is_on) {
-        display = "block";
+        block = "block";
+        inline = "inline";
     } else {
-        display = "none";
+        block = "none";
+        inline = "none";
     }
-    document.getElementById("display_symmetrylevel" + suffix).style.display = display;
-    document.getElementById("display_symmetrylevel" + suffix).innerHTML = pattern_label;
-    document.getElementById("sel_symmetry" + suffix).style.display = display;
-    document.getElementById("slider_symmetryparam" + suffix).style.display = display;
-    document.getElementById("display_symmetryparam" + suffix).style.display = display;
+    window.document.getElementById("display_symmetrylevel" + suffix).style.display = inline;
+    window.document.getElementById("display_symmetrylevel" + suffix).innerHTML = pattern_label;
+    window.document.getElementById("sel_symmetry" + suffix).style.display = inline;
+    window.document.getElementById("slider_symmetryparam" + suffix).style.display = block;
+    window.document.getElementById("display_symmetryparam" + suffix).style.display = block;
+}
+
+function umt_ui_set_symmetry_listbox_and_slider(row, pattern_num) {
+    "use strict";
+    var suffix, pattern_duration, absvalue, slidervalue;
+    suffix = row + "_" + pattern_num;
+    pattern_duration = Math.pow(2, pattern_num);
+    window.document.getElementById("sel_symmetry" + suffix).value = g_umt.ui_params.voice[row].symmetry[pattern_duration].pattern;
+    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].param;
+    slidervalue = absvalue;
+    window.document.getElementById("display_symmetryparam" + suffix).innerHTML = absvalue;
+    jQuery("#slider_symmetryparam" + suffix).slider({ value: slidervalue });
 }
 
 function umt_ui_copy_ui_params_to_actual_ui() {
@@ -1677,6 +1691,7 @@ function umt_ui_copy_ui_params_to_actual_ui() {
         while (sym_size < loop_duration) {
             sym_num = Math.floor((Math.log(sym_size) / Math.log(2)) + 0.01);
             umt_ui_turn_on_symmetry_patterns(i, sym_num, sym_size, true);
+            umt_ui_set_symmetry_listbox_and_slider(i, sym_num);
             sym_size = sym_size * 2;
         }
     }
@@ -1686,7 +1701,7 @@ function umt_exec_add_voice() {
     "use strict";
     var voice_num;
     voice_num = g_umt.ui_params.parts;
-    g_umt.ui_params.voice[voice_num] = {playing: false, variation: 1, octave: 5, note_distance: 0.3, min_note: 8, chunk_size: 8, measure_size: 32 };
+    g_umt.ui_params.voice[voice_num] = {playing: false, variation: 1, octave: 5, note_distance: 0.3, min_note: 8, chunk_size: 8, measure_size: 32, symmetry: { 1: {pattern: "trans", param: 0}, 2: {pattern: "trans", param: 0}, 4: {pattern: "trans", param: 0}, 8: {pattern: "trans", param: 0}, 16: {pattern: "trans", param: 0}, 32: {pattern: "trans", param: 0}, 64: {pattern: "trans", param: 0}, 128: {pattern: "trans", param: 0}, 256: {pattern: "trans", param: 0}, 512: {pattern: "trans", param: 0}, 1024: {pattern: "trans", param: 0} } };
     g_umt.ui_params.parts = g_umt.ui_params.parts + 1;
     if (g_umt.ui_params.parts > g_umt.ui_params.max_parts_ever) {
         g_umt.ui_params.max_parts_ever = g_umt.ui_params.parts;
@@ -1729,7 +1744,7 @@ jQuery(function () {
 </head>
 <body>
   <section>
-    <h1>Welcome to UMT: The Ultimate Music Toy</h1>
+    <h1>UMT: The Ultimate Music Toy</h1>
 
 <hr />
 
@@ -1820,16 +1835,18 @@ jQuery(function () {
 				<div id="slider_measuresizexx" class="ddrg" style="height:100px;"></div> <br />
 				<div id="display_measuresizexx"></div>
 			</td><td id="voicesymmetriescellxx" valign="top" align="center">
-				Symmetry Patterns:<br />
+				Symmetry Patterns: <br />
 				<table border="0">
 					<tr>
 						<td valign="top">
-							<span id="display_symmetrylevelxx_yyy" style="display:none;">1</span>
-							<select name="sel_symmetryxx_yyy" id="sel_symmetryxx_yyy" style="display:none;">
-								<option value="trans">Transpose</option>
-								<option value="scale">Scale</option>
-								<option value="rev">Reverse</option>
-							</select>
+							<span style="white-space: nowrap;">
+								<span id="display_symmetrylevelxx_yyy" style="display:none;">1</span>
+								<select name="sel_symmetryxx_yyy" id="sel_symmetryxx_yyy" style="display:none;">
+									<option value="trans">Transpose</option>
+									<option value="scale">Scale</option>
+									<option value="rev">Reverse</option>
+								</select>
+							</span>
 						</td><td valign="top" align="center">
 							<div id="slider_symmetryparamxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
 							<span id="display_symmetryparamxx_yyy" style="display:none;">readout</div>
