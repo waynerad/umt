@@ -1491,10 +1491,10 @@ function umt_exec_play_voice_change(event) {
 
 function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voice_number, slider_number) {
     "use strict";
-    jQuery("#slider_symmetry_trans_param" + voice_number + "_" + slider_number).slider({min: 0, max: 20, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
+    jQuery("#slider_symmetry_trans_param" + voice_number + "_" + slider_number).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
         var newvalue, pattern_duration;
         if (event.type === "slidechange") {
-            newvalue = (ui.value - 10) / 10;
+            newvalue = ui.value / 10;
             window.document.getElementById("display_symmetry_trans_param" + voice_number + "_" + slider_number).innerHTML = (newvalue * 100) + "%";
             pattern_duration = Math.pow(2, slider_number);
             g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].trans_param = newvalue;
@@ -1511,10 +1511,10 @@ function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voi
         }
     }
          });
-    jQuery("#slider_symmetry_tilt_param" + voice_number + "_" + slider_number).slider({min: 0, max: 20, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
+    jQuery("#slider_symmetry_tilt_param" + voice_number + "_" + slider_number).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
         var newvalue, pattern_duration;
         if (event.type === "slidechange") {
-            newvalue = (ui.value - 10) / 10;
+            newvalue = ui.value / 10;
             window.document.getElementById("display_symmetry_tilt_param" + voice_number + "_" + slider_number).innerHTML = (newvalue * 100) + "%";
             pattern_duration = Math.pow(2, slider_number);
             g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].tilt_param = newvalue;
@@ -1573,6 +1573,118 @@ function umt_exec_pervoice_symmetry_change(event) {
     elemid = elemid.substring(12);
     umt_ui_show_or_hide_appropriate_symmetry_sliders(selectedvalue, elemid);
 }
+
+function umt_ui_turn_on_symmetry_patterns(row, pattern_num, pattern_label, is_on) {
+    "use strict";
+    var suffix, block, inline;
+    suffix = row + "_" + pattern_num;
+    if (is_on) {
+        block = "block";
+        inline = "inline";
+    } else {
+        block = "none";
+        inline = "none";
+    }
+    window.document.getElementById("display_symmetrylevel" + suffix).style.display = inline;
+    window.document.getElementById("display_symmetrylevel" + suffix).innerHTML = pattern_label;
+    window.document.getElementById("sel_symmetry" + suffix).style.display = inline;
+    window.document.getElementById("slider_symmetry_trans_param" + suffix).style.display = block;
+    window.document.getElementById("display_symmetry_trans_param" + suffix).style.display = block;
+    window.document.getElementById("slider_symmetry_scale_param" + suffix).style.display = block;
+    window.document.getElementById("display_symmetry_scale_param" + suffix).style.display = block;
+    window.document.getElementById("slider_symmetry_tilt_param" + suffix).style.display = block;
+    window.document.getElementById("display_symmetry_tilt_param" + suffix).style.display = block;
+}
+
+function umt_ui_set_symmetry_listbox_and_slider(row, pattern_num, pattern_duration) {
+    "use strict";
+    var suffix, absvalue, slidervalue;
+    suffix = row + "_" + pattern_num;
+    window.document.getElementById("sel_symmetry" + suffix).value = g_umt.ui_params.voice[row].symmetry[pattern_duration].pattern;
+    /* trans param */
+    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].trans_param;
+    slidervalue = absvalue * 10;
+    window.document.getElementById("display_symmetry_trans_param" + suffix).innerHTML = (absvalue * 100) + "%";
+    jQuery("#slider_symmetry_trans_param" + suffix).slider({ value: slidervalue });
+    /* scale param */
+    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].scale_param;
+    slidervalue = (absvalue * 10) + 12;
+    window.document.getElementById("display_symmetry_scale_param" + suffix).innerHTML = (absvalue * 100) + "%";
+    jQuery("#slider_symmetry_scale_param" + suffix).slider({ value: slidervalue });
+    /* tilt param */
+    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].tilt_param;
+    slidervalue = absvalue * 10;
+    window.document.getElementById("display_symmetry_tilt_param" + suffix).innerHTML = (absvalue * 100) + "%";
+    jQuery("#slider_symmetry_tilt_param" + suffix).slider({ value: slidervalue });
+}
+
+var umt_ui_cascade_measure_size_changes, umt_ui_cascade_chunk_size_changes, umt_ui_cascade_min_note_changes;
+
+umt_ui_cascade_measure_size_changes = function (voice_number, newvalue) {
+    "use strict";
+    var chunk_size, loop_duration, sym_num, sym_size, slidervalue, symmetry_pattern;
+    chunk_size = g_umt.ui_params.voice[voice_number].chunk_size;
+    if (newvalue < chunk_size) {
+        chunk_size = newvalue;
+        slidervalue = Math.floor((Math.log(chunk_size) / Math.log(2)) + 0.01);
+        jQuery("#slider_chunksize" + voice_number).slider({ value: slidervalue });
+        window.document.getElementById("display_chunksize" + voice_number).innerHTML = newvalue;
+        g_umt.ui_params.voice[voice_number].chunk_size = chunk_size;
+        umt_ui_cascade_chunk_size_changes(voice_number, chunk_size);
+    }
+    loop_duration = g_umt.ui_params.loop_duration;
+    sym_num = 0;
+    sym_size = 1;
+    while (sym_size < loop_duration) {
+        if (sym_size < newvalue) {
+            umt_ui_turn_on_symmetry_patterns(voice_number, sym_num, sym_size, false);
+        } else {
+            umt_ui_set_symmetry_listbox_and_slider(voice_number, sym_num, sym_size);
+            umt_ui_turn_on_symmetry_patterns(voice_number, sym_num, sym_size, true);
+            symmetry_pattern = g_umt.ui_params.voice[voice_number].symmetry[sym_size].pattern;
+            umt_ui_show_or_hide_appropriate_symmetry_sliders(symmetry_pattern, voice_number + "_" + sym_num);
+        }
+        sym_num = sym_num + 1;
+        sym_size = sym_size * 2;
+    }
+};
+
+umt_ui_cascade_chunk_size_changes = function (voice_number, newvalue) {
+    "use strict";
+    var min_note, measure_size, slidervalue;
+    min_note = g_umt.ui_params.voice[voice_number].min_note;
+    if (newvalue < min_note) {
+        min_note = newvalue;
+        slidervalue = Math.floor((Math.log(min_note) / Math.log(2)) + 0.01);
+        jQuery("#slider_minnote" + voice_number).slider({ value: slidervalue });
+        window.document.getElementById("display_minnote" + voice_number).innerHTML = newvalue;
+        g_umt.ui_params.voice[voice_number].min_note = min_note;
+        umt_ui_cascade_min_note_changes(voice_number, min_note);
+    }
+    measure_size = g_umt.ui_params.voice[voice_number].measure_size;
+    if (newvalue > measure_size) {
+        measure_size = newvalue;
+        slidervalue = Math.floor((Math.log(measure_size) / Math.log(2)) + 0.01);
+        jQuery("#slider_measuresize" + voice_number).slider({ value: slidervalue });
+        window.document.getElementById("display_measuresize" + voice_number).innerHTML = newvalue;
+        g_umt.ui_params.voice[voice_number].measure_size = measure_size;
+        umt_ui_cascade_measure_size_changes(voice_number, measure_size);
+    }
+};
+
+umt_ui_cascade_min_note_changes = function (voice_number, newvalue) {
+    "use strict";
+    var chunk_size, slidervalue;
+    chunk_size = g_umt.ui_params.voice[voice_number].chunk_size;
+    if (newvalue > chunk_size) {
+        chunk_size = newvalue;
+        slidervalue = Math.floor((Math.log(chunk_size) / Math.log(2)) + 0.01);
+        jQuery("#slider_chunksize" + voice_number).slider({ value: slidervalue });
+        window.document.getElementById("display_chunksize" + voice_number).innerHTML = newvalue;
+        g_umt.ui_params.voice[voice_number].chunk_size = chunk_size;
+        umt_ui_cascade_chunk_size_changes(voice_number, chunk_size);
+    }
+};
 
 function umt_ui_add_row(voice_number) {
     "use strict";
@@ -1635,6 +1747,8 @@ function umt_ui_add_row(voice_number) {
             newvalue = ui.value;
             newvalue = Math.pow(2, newvalue);
             window.document.getElementById("display_minnote" + voice_number).innerHTML = newvalue;
+            g_umt.ui_params.voice[voice_number].min_note = newvalue;
+            umt_ui_cascade_min_note_changes(voice_number, newvalue);
         }
     }
          });
@@ -1644,6 +1758,7 @@ function umt_ui_add_row(voice_number) {
             newvalue = ui.value;
             newvalue = Math.pow(2, newvalue);
             window.document.getElementById("display_chunksize" + voice_number).innerHTML = newvalue;
+            umt_ui_cascade_chunk_size_changes(voice_number, newvalue);
         }
     }
          });
@@ -1653,6 +1768,8 @@ function umt_ui_add_row(voice_number) {
             newvalue = ui.value;
             newvalue = Math.pow(2, newvalue);
             window.document.getElementById("display_measuresize" + voice_number).innerHTML = newvalue;
+            g_umt.ui_params.voice[voice_number].measure_size = newvalue;
+            umt_ui_cascade_measure_size_changes(voice_number, newvalue);
         }
     }
          });
@@ -1674,51 +1791,6 @@ function umt_ui_is_part_in_ui(ptnum) {
 function umt_copy_part_from_params_to_ui(ptnum) {
     "use strict";
     return ptnum + 1;
-}
-
-function umt_ui_turn_on_symmetry_patterns(row, pattern_num, pattern_label, is_on) {
-    "use strict";
-    var suffix, block, inline;
-    suffix = row + "_" + pattern_num;
-    if (is_on) {
-        block = "block";
-        inline = "inline";
-    } else {
-        block = "none";
-        inline = "none";
-    }
-    window.document.getElementById("display_symmetrylevel" + suffix).style.display = inline;
-    window.document.getElementById("display_symmetrylevel" + suffix).innerHTML = pattern_label;
-    window.document.getElementById("sel_symmetry" + suffix).style.display = inline;
-    window.document.getElementById("slider_symmetry_trans_param" + suffix).style.display = block;
-    window.document.getElementById("display_symmetry_trans_param" + suffix).style.display = block;
-    window.document.getElementById("slider_symmetry_scale_param" + suffix).style.display = block;
-    window.document.getElementById("display_symmetry_scale_param" + suffix).style.display = block;
-    window.document.getElementById("slider_symmetry_tilt_param" + suffix).style.display = block;
-    window.document.getElementById("display_symmetry_tilt_param" + suffix).style.display = block;
-}
-
-function umt_ui_set_symmetry_listbox_and_slider(row, pattern_num) {
-    "use strict";
-    var suffix, pattern_duration, absvalue, slidervalue;
-    suffix = row + "_" + pattern_num;
-    pattern_duration = Math.pow(2, pattern_num);
-    window.document.getElementById("sel_symmetry" + suffix).value = g_umt.ui_params.voice[row].symmetry[pattern_duration].pattern;
-    /* trans param */
-    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].trans_param;
-    slidervalue = (absvalue * 10) + 10;
-    window.document.getElementById("display_symmetry_trans_param" + suffix).innerHTML = (absvalue * 100) + "%";
-    jQuery("#slider_symmetry_trans_param" + suffix).slider({ value: slidervalue });
-    /* scale param */
-    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].scale_param;
-    slidervalue = (absvalue * 10) + 12;
-    window.document.getElementById("display_symmetry_scale_param" + suffix).innerHTML = (absvalue * 100) + "%";
-    jQuery("#slider_symmetry_scale_param" + suffix).slider({ value: slidervalue });
-    /* tilt param */
-    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].tilt_param;
-    slidervalue = (absvalue * 10) + 10;
-    window.document.getElementById("display_symmetry_tilt_param" + suffix).innerHTML = (absvalue * 100) + "%";
-    jQuery("#slider_symmetry_tilt_param" + suffix).slider({ value: slidervalue });
 }
 
 function umt_ui_copy_ui_params_to_actual_ui() {
@@ -1781,7 +1853,7 @@ function umt_ui_copy_ui_params_to_actual_ui() {
         sym_num = Math.floor((Math.log(sym_size) / Math.log(2)) + 0.01);
         while (sym_size < loop_duration) {
             umt_ui_turn_on_symmetry_patterns(i, sym_num, sym_size, true);
-            umt_ui_set_symmetry_listbox_and_slider(i, sym_num);
+            umt_ui_set_symmetry_listbox_and_slider(i, sym_num, sym_size);
             symmetry_pattern = g_umt.ui_params.voice[i].symmetry[sym_size].pattern;
             umt_ui_show_or_hide_appropriate_symmetry_sliders(symmetry_pattern, i + "_" + sym_num);
             sym_size = sym_size * 2;
@@ -1858,7 +1930,7 @@ jQuery(function () {
     <option value="minharm7reg">Minor Harmonic 7</option>
     <option value="arabicmaj7">Wayne's "Arabic"-ish Major 7</option>
     <option value="arabicmin7">Wayne's "Arabic"-ish Minor 7</option>
-    <option value="pentatonic23reg">Pentatonic 5 (2+3)</option>
+    <option value="pentatonic23reg">Pentatonic 5 (2+3 standard)</option>
     <option value="pentatonic32reg">Pentatonic 5 (3+2)</option>
     <option value="quad">Quadtonic 4</option>
     <option value="tri">Tritonic 3</option>
@@ -1931,9 +2003,10 @@ jQuery(function () {
 				Symmetry Patterns: <br />
 				<table border="0">
 					<tr>
-						<td valign="top">
+						<td valign="center">
 							<span style="white-space: nowrap;">
 								<span id="display_symmetrylevelxx_yyy" style="display:none;">1</span>
+						</td><td valign="top">
 								<select name="sel_symmetryxx_yyy" id="sel_symmetryxx_yyy" style="display:none;">
 									<option value="trans">Transpose</option>
 									<option value="scale">Scale</option>
@@ -1943,13 +2016,11 @@ jQuery(function () {
 							</span>
 						</td><td valign="top" align="center">
 							<div id="slider_symmetry_trans_paramxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
-							<span id="display_symmetry_trans_paramxx_yyy" style="display:none;">readout</div>
-						</td><td valign="top" align="center">
+							<span id="display_symmetry_trans_paramxx_yyy" style="display:none;">readout</span>
 							<div id="slider_symmetry_scale_paramxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
-							<span id="display_symmetry_scale_paramxx_yyy" style="display:none;">readout</div>
-						</td><td valign="top" align="center">
+							<span id="display_symmetry_scale_paramxx_yyy" style="display:none;">readout</span>
 							<div id="slider_symmetry_tilt_paramxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
-							<span id="display_symmetry_tilt_paramxx_yyy" style="display:none;">readout</div>
+							<span id="display_symmetry_tilt_paramxx_yyy" style="display:none;">readout</span>
 						</td>
 					</tr>
 					<!-- insertion_point -->
