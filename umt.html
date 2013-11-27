@@ -158,7 +158,8 @@ function umt_que_up_a_note(from_moment, frequency, start_time, duration, amplitu
     node.connect(g_umt.global_ctx.destination);
     our_start = Number(start_time);
     start_mmt = from_moment + our_start;
-    node.noteOn(start_mmt);
+    // node.noteOn(start_mmt);
+    node.start(start_mmt);
 }
 
 function umt_get_rando(seed_num) {
@@ -220,7 +221,7 @@ function umt_test_play_raw_score(lpnum) {
 
 function umt_exec_play_raw_score() {
     "use strict";
-    umt_test_play_raw_score(0);
+    umt_test_play_raw_score(g_umt.currently_playing_loop);
 }
 
 /* cheat sheet for scales
@@ -544,6 +545,7 @@ function umt_is_cons_order_ind(xnum, xdnom, ynum, ydnom) {
     return umt_is_consonant(ynum, ydnom, xnum, xdnom);
 }
 
+/* need caching for this function -- recalculating dissonance every time is computationally expensive */
 function umt_determine_if_fits(num, dnom, list_of_notes_already_playing) {
     "use strict";
     var lx, i, diff;
@@ -567,30 +569,27 @@ function umt_determine_if_fits(num, dnom, list_of_notes_already_playing) {
 
 function umt_find_most_harmonic_note(pitch, scale, list_of_notes_already_playing) {
     "use strict";
-    var octave, min, i, dist, rv, original_full_pitch, num_of_notes, top_pos, top_octave, bottom_pos, bottom_octave, cyc_count, top_dist, bottom_dist, current_pos;
+    var octave, min_idx, min_dist, i, dist, rv, original_full_pitch, num_of_notes, top_pos, top_octave, bottom_pos, bottom_octave, cyc_count, top_dist, bottom_dist, current_pos, current_octave;
     original_full_pitch = pitch;
     octave = Math.floor(pitch);
     pitch = pitch - octave;
-    min = -1;
-    for (i = 0; i < scale.length; i = i + 1) {
-        if (min === -1) {
-            min = i;
-        } else {
-            dist = Math.abs(scale[i].fpt - pitch);
-            if (dist < Math.abs(scale[min].fpt - pitch)) {
-                min = i;
-            }
+    min_idx = -1;
+    min_dist = 1.0 - pitch;
+    num_of_notes = scale.length;
+    for (i = 0; i < num_of_notes; i = i + 1) {
+        dist = Math.abs(scale[i].fpt - pitch);
+        if (dist < min_dist) {
+            min_idx = i;
+            min_dist = dist;
         }
     }
-    dist = Math.abs((scale[0].fpt + 1) - pitch);
-    if (dist < Math.abs(scale[min].fpt - pitch)) {
-        min = 0;
-    }
-    if (min === -1) {
-        umt_jsabort('Assert because min is -1');
-    }
     if (list_of_notes_already_playing.length === 0) {
-        rv = {octave: octave, scalenote: min, num: scale[min].num, dnom: scale[min].dnom, fpt: scale[min].fpt };
+        if (min_idx === -1) {
+            octave = octave + 1;
+            rv = {octave: octave, scalenote: 0, num: scale[0].num, dnom: scale[0].dnom, fpt: scale[0].fpt };
+        } else {
+            rv = {octave: octave, scalenote: min_idx, num: scale[min_idx].num, dnom: scale[min_idx].dnom, fpt: scale[min_idx].fpt };
+        }
         return rv;
     }
     /* there are other notes playing: so we can't simply return the best scale
@@ -602,19 +601,14 @@ function umt_find_most_harmonic_note(pitch, scale, list_of_notes_already_playing
        up/down and go through the loop again. mathematically we should be
        guaranteed to find a match, even if it's a P1 with an existing note.
     */
-    num_of_notes = scale.length;
-    top_pos = min + 1;
+    if (min_idx === -1) {
+        min_idx = 0;
+        octave = octave + 1;
+    }
+    top_pos = min_idx;
     top_octave = octave;
-    if (top_pos === num_of_notes) {
-        top_octave = top_octave + 1;
-        top_pos = 0;
-    }
-    bottom_pos = min - 1;
+    bottom_pos = min_idx;
     bottom_octave = octave;
-    if (bottom_pos < 0) {
-        bottom_octave = bottom_octave - 1;
-        bottom_pos = num_of_notes - 1;
-    }
     cyc_count = 0;
     while (true) {
         cyc_count = cyc_count + 1;
@@ -625,6 +619,7 @@ function umt_find_most_harmonic_note(pitch, scale, list_of_notes_already_playing
         bottom_dist = Math.abs((bottom_octave + scale[bottom_pos].fpt) - original_full_pitch);
         if (top_dist < bottom_dist) {
             current_pos = top_pos;
+            current_octave = top_octave;
             top_pos = top_pos + 1;
             if (top_pos === num_of_notes) {
                 top_octave = top_octave + 1;
@@ -632,6 +627,7 @@ function umt_find_most_harmonic_note(pitch, scale, list_of_notes_already_playing
             }
         } else {
             current_pos = bottom_pos;
+            current_octave = bottom_octave;
             bottom_pos = bottom_pos - 1;
             if (bottom_pos < 0) {
                 bottom_octave = bottom_octave - 1;
@@ -639,7 +635,7 @@ function umt_find_most_harmonic_note(pitch, scale, list_of_notes_already_playing
             }
         }
         if (umt_determine_if_fits(scale[current_pos].num, scale[current_pos].dnom, list_of_notes_already_playing)) {
-            rv = {octave: octave, scalenote: current_pos, num: scale[current_pos].num, dnom: scale[current_pos].dnom, fpt: scale[current_pos].fpt };
+            rv = {octave: current_octave, scalenote: current_pos, num: scale[current_pos].num, dnom: scale[current_pos].dnom, fpt: scale[current_pos].fpt };
             return rv;
         }
     }
@@ -1120,7 +1116,7 @@ function umt_add_sym_base_to_voice(lpnum, vcnum, min_size, chunk_size, total_len
     len_rhy = rhythm.length;
     for (idx = 0; idx < len_rhy; idx = idx + 1) {
         duration = rhythm[idx];
-        if (Math.floor(g_umt.loop[lpnum].score.voice[vcnum].rand_rests.genrand_real2() * 100) < restyness) {
+        if (g_umt.loop[lpnum].score.voice[vcnum].rand_rests.genrand_real2() < restyness) {
             umt_add_note(lpnum, vcnum, true, center_octave, duration, 1, null);
         } else {
             pitch = (g_umt.loop[lpnum].score.voice[vcnum].rand_pitch.genrand_real2() * (2 * note_distance)) - note_distance;
@@ -1143,31 +1139,33 @@ function umt_schedule_play_of_segment() {
     if (window_start < g_umt.played_up_to) {
         window_start = g_umt.played_up_to;
     }
-    loop_unit_len = g_umt.loop[lpnum].score.voice[0].next_start;
-    tempo_scalar = 60 / g_umt.loop[lpnum].score.tempo;
-    loop_len = loop_unit_len * tempo_scalar;
-    from_moment = Math.floor(window_start / loop_len) * loop_len;
-    center = g_umt.loop[lpnum].score.centernote_log;
-    num_voices = g_umt.loop[lpnum].score.parts;
-    for (voicenum = 0; voicenum < num_voices; voicenum = voicenum + 1) {
-        for (notenum = 0; notenum < g_umt.loop[lpnum].score.voice[voicenum].cursor; notenum = notenum + 1) {
-            adjusted_start_time = (g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].starttime * tempo_scalar) + from_moment;
-            if (adjusted_start_time < window_start) {
-                adjusted_start_time = adjusted_start_time + loop_len;
-            }
-            if (adjusted_start_time < window_stop) {
-                if (g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].rest === false) {
-                    harmonized_octave = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_octave;
-                    harmonized_num = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_num;
-                    harmonized_dnom = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_dnom;
-                    duration = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].duration * tempo_scalar;
-                    amplitude = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].amplitude;
-                    amplitude = amplitude / num_voices;
-                    inst_specific_params = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].inst_params;
-                    frequency = Math.exp((harmonized_octave + center) * g_umt.LOG2);
-                    frequency = frequency * (harmonized_num / harmonized_dnom);
-                    start_time = adjusted_start_time - from_moment; /* g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].starttime * tempo_scalar; */
-                    umt_que_up_a_note(from_moment - ctx_offset, frequency, start_time, duration, amplitude, inst_specific_params);
+    if (g_umt.loop[g_umt.currently_playing_loop].score.parts > 0) {
+        loop_unit_len = g_umt.loop[lpnum].score.voice[0].next_start;
+        tempo_scalar = 60 / g_umt.loop[lpnum].score.tempo;
+        loop_len = loop_unit_len * tempo_scalar;
+        from_moment = Math.floor(window_start / loop_len) * loop_len;
+        center = g_umt.loop[lpnum].score.centernote_log;
+        num_voices = g_umt.loop[lpnum].score.parts;
+        for (voicenum = 0; voicenum < num_voices; voicenum = voicenum + 1) {
+            for (notenum = 0; notenum < g_umt.loop[lpnum].score.voice[voicenum].cursor; notenum = notenum + 1) {
+                adjusted_start_time = (g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].starttime * tempo_scalar) + from_moment;
+                if (adjusted_start_time < window_start) {
+                    adjusted_start_time = adjusted_start_time + loop_len;
+                }
+                if (adjusted_start_time < window_stop) {
+                    if (g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].rest === false) {
+                        harmonized_octave = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_octave;
+                        harmonized_num = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_num;
+                        harmonized_dnom = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_dnom;
+                        duration = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].duration * tempo_scalar;
+                        amplitude = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].amplitude;
+                        amplitude = amplitude / num_voices;
+                        inst_specific_params = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].inst_params;
+                        frequency = Math.exp((harmonized_octave + center) * g_umt.LOG2);
+                        frequency = frequency * (harmonized_num / harmonized_dnom);
+                        start_time = adjusted_start_time - from_moment; /* g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].starttime * tempo_scalar; */
+                        umt_que_up_a_note(from_moment - ctx_offset, frequency, start_time, duration, amplitude, inst_specific_params);
+                    }
                 }
             }
         }
@@ -1413,6 +1411,9 @@ function umt_ui_is_part_in_ui(ptnum) {
 function umt_compose_real_composition(lpnum) {
     "use strict";
     var composition_voice, ui_voice, song_number, octave, range_min, range_max, min_size, chunk_size, total_length, center_octave, restyness, note_distance, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose, symmetry_pattern, csr_pos, csr_start, duration, loop_duration, vcnum, transposer_value;
+    if (g_umt.idem_adding_voice) {
+        umt_jsabort("umt_compose_real_composition called during add voice");
+    }
     umt_clear_loop(lpnum, g_umt.ui_params.tempo, g_umt.ui_params.centernote, g_umt.ui_params.scale);
     composition_voice = 0;
     ui_voice = 0;
@@ -1475,7 +1476,7 @@ function umt_exec_timer_pulse() {
 function umt_exec_automatic_start() {
     "use strict";
     if (g_umt.idem_compose === false) {
-        umt_compose_real_composition(1, 0);
+        umt_compose_real_composition(1);
         g_umt.idem_compose = true;
     }
     umt_automatic_start(1);
@@ -1501,32 +1502,33 @@ function umt_enable_ui() {
 
 function umt_automatically_recompose_loop_from_ui_params() {
     "use strict";
-    var old_loop, new_loop, old_tempo_scalar, new_tempo_scalar, old_offset, current_time, current_units, virtual_new_time, offset_difference, loop_unit_len, loop_len, start_time, stop_time, diff_time;
+    var old_loop, new_loop, start_time, stop_time, diff_time;
     if (g_umt.timer_is_on) {
         old_loop = g_umt.currently_playing_loop;
         new_loop = 1 - old_loop;
-        old_tempo_scalar = 60 / g_umt.loop[old_loop].score.tempo;
-        old_offset = g_umt.loop[old_loop].score.playback_time_offset;
+        // old_tempo_scalar = 60 / g_umt.loop[old_loop].score.tempo;
+        // old_offset = g_umt.loop[old_loop].score.playback_time_offset;
     } else {
         return;
     }
     start_time = g_umt.global_ctx.currentTime;
     umt_disable_ui();
-    umt_compose_real_composition(new_loop, 0);
-    new_tempo_scalar = 60 / g_umt.loop[new_loop].score.tempo;
-    current_time = g_umt.global_ctx.currentTime + old_offset;
-    current_units = current_time / old_tempo_scalar;
-    virtual_new_time = current_units * new_tempo_scalar;
-    offset_difference = current_time - virtual_new_time;
-    loop_unit_len = g_umt.loop[new_loop].score.voice[0].next_start;
-    loop_len = loop_unit_len * new_tempo_scalar;
-    offset_difference = offset_difference - (Math.floor(offset_difference / loop_len) * loop_len);  // modulo
-    g_umt.loop[new_loop].score.playback_time_offset = offset_difference;
+    umt_compose_real_composition(new_loop);
+    // new_tempo_scalar = 60 / g_umt.loop[new_loop].score.tempo;
+    // current_time = g_umt.global_ctx.currentTime + old_offset;
+    // current_units = current_time / old_tempo_scalar;
+    // virtual_new_time = current_units * new_tempo_scalar;
+    // offset_difference = current_time - virtual_new_time;
+    // loop_unit_len = g_umt.loop[new_loop].score.voice[0].next_start;
+    // loop_len = loop_unit_len * new_tempo_scalar;
+    // offset_difference = offset_difference - (Math.floor(offset_difference / loop_len) * loop_len);  // modulo
+    // g_umt.loop[new_loop].score.playback_time_offset = offset_difference;
     // g_umt.loop[new_loop].score.playback_time_offset = 0;
     umt_automatic_start(new_loop);
     umt_enable_ui();
     stop_time = g_umt.global_ctx.currentTime;
     diff_time = stop_time - start_time;
+    umt_cx("g_umt.composition_lag = " + umt_ctstr(g_umt.composition_lag));
     g_umt.composition_lag = diff_time;
     g_umt.composition_lag = g_umt.composition_lag * 1.1; /* pad */
     if (g_umt.composition_lag < 2.0) {
@@ -1551,46 +1553,57 @@ function umt_exec_play_voice_change(event) {
     ui_voice_num = Number(elemid.substring(9));
     checkd = document.getElementById(elemid).checked;
     g_umt.ui_params.voice[ui_voice_num].playing = checkd;
+    umt_automatically_recompose_loop_from_ui_params();
 }
 
 function umt_exec_song_number_change(event) {
     "use strict";
     var elemid, ui_voice_num, listbox;
     elemid = event.target.id;
-    ui_voice_num = Number(elemid.substring(15));
+    ui_voice_num = Number(elemid.substring(10));
     listbox = window.document.getElementById("songnumber" + ui_voice_num);
     g_umt.ui_params.voice[ui_voice_num].song_number = Number(listbox.options[listbox.selectedIndex].value);
+    umt_automatically_recompose_loop_from_ui_params();
 }
 
 function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voice_number, slider_number) {
     "use strict";
     jQuery("#slider_symmetry_trans_param" + voice_number + "_" + slider_number).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
         var newvalue, pattern_duration;
-        if (event.type === "slidechange") {
-            newvalue = ui.value / 10;
-            window.document.getElementById("display_symmetry_trans_param" + voice_number + "_" + slider_number).innerHTML = (newvalue * 100) + "%";
-            pattern_duration = Math.pow(2, slider_number);
-            g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].trans_param = newvalue;
+        if (g_umt.idem_adding_voice === false) {
+            if (event.type === "slidechange") {
+                newvalue = ui.value / 10;
+                window.document.getElementById("display_symmetry_trans_param" + voice_number + "_" + slider_number).innerHTML = (newvalue * 100) + "%";
+                pattern_duration = Math.pow(2, slider_number);
+                g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].trans_param = newvalue;
+                umt_automatically_recompose_loop_from_ui_params();
+            }
         }
     }
          });
     jQuery("#slider_symmetry_scale_param" + voice_number + "_" + slider_number).slider({min: 0, max: 24, step: 1, value: 12, orientation: "horizontal", change: function (event, ui) {
         var newvalue, pattern_duration;
-        if (event.type === "slidechange") {
-            newvalue = (ui.value - 12) / 10;
-            window.document.getElementById("display_symmetry_scale_param" + voice_number + "_" + slider_number).innerHTML = (newvalue * 100) + "%";
-            pattern_duration = Math.pow(2, slider_number);
-            g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].scale_param = newvalue;
+        if (g_umt.idem_adding_voice === false) {
+            if (event.type === "slidechange") {
+                newvalue = (ui.value - 12) / 10;
+                window.document.getElementById("display_symmetry_scale_param" + voice_number + "_" + slider_number).innerHTML = (newvalue * 100) + "%";
+                pattern_duration = Math.pow(2, slider_number);
+                g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].scale_param = newvalue;
+                umt_automatically_recompose_loop_from_ui_params();
+            }
         }
     }
          });
     jQuery("#slider_symmetry_tilt_param" + voice_number + "_" + slider_number).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
         var newvalue, pattern_duration;
-        if (event.type === "slidechange") {
-            newvalue = ui.value / 10;
-            window.document.getElementById("display_symmetry_tilt_param" + voice_number + "_" + slider_number).innerHTML = (newvalue * 100) + "%";
-            pattern_duration = Math.pow(2, slider_number);
-            g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].tilt_param = newvalue;
+        if (g_umt.idem_adding_voice === false) {
+            if (event.type === "slidechange") {
+                newvalue = ui.value / 10;
+                window.document.getElementById("display_symmetry_tilt_param" + voice_number + "_" + slider_number).innerHTML = (newvalue * 100) + "%";
+                pattern_duration = Math.pow(2, slider_number);
+                g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].tilt_param = newvalue;
+                umt_automatically_recompose_loop_from_ui_params();
+            }
         }
     }
          });
@@ -1806,67 +1819,89 @@ function umt_ui_add_row(voice_number) {
             document.getElementById(cellidname + voice_number).innerHTML = text;
         }
     }
+    listen_element = document.getElementById("playvoice" + voice_number);
+    listen_element.addEventListener("change", umt_exec_play_voice_change, true);
+    listen_element = document.getElementById("songnumber" + voice_number);
+    listen_element.addEventListener("change", umt_exec_song_number_change, true);
     jQuery("#slider_octave" + voice_number).slider({min: 0, max: 9, step: 1, value: 5, orientation: "vertical", change: function (event, ui) {
         var newvalue;
-        if (event.type === "slidechange") {
-            newvalue = ui.value;
-            window.document.getElementById("display_octave" + voice_number).innerHTML = newvalue;
-            g_umt.ui_params.voice[voice_number].octave = newvalue;
+        if (g_umt.idem_adding_voice === false) {
+            if (event.type === "slidechange") {
+                newvalue = ui.value;
+                window.document.getElementById("display_octave" + voice_number).innerHTML = newvalue;
+                g_umt.ui_params.voice[voice_number].octave = newvalue;
+                umt_automatically_recompose_loop_from_ui_params();
+            }
         }
     }
          });
     jQuery("#slider_notedistance" + voice_number).slider({min: 0, max: 10, step: 1, value: 5, orientation: "vertical", change: function (event, ui) {
         var newvalue, absvalue, aspercentage;
-        if (event.type === "slidechange") {
-            newvalue = ui.value;
-            absvalue = newvalue / 10;
-            aspercentage = newvalue * 10;
-            window.document.getElementById("display_notedistance" + voice_number).innerHTML = aspercentage + "%";
-            g_umt.ui_params.voice[voice_number].note_distance = absvalue;
+        if (g_umt.idem_adding_voice === false) {
+            if (event.type === "slidechange") {
+                newvalue = ui.value;
+                absvalue = newvalue / 10;
+                aspercentage = newvalue * 10;
+                window.document.getElementById("display_notedistance" + voice_number).innerHTML = aspercentage + "%";
+                g_umt.ui_params.voice[voice_number].note_distance = absvalue;
+                umt_automatically_recompose_loop_from_ui_params();
+            }
         }
     }
          });
     jQuery("#slider_restyness" + voice_number).slider({min: 0, max: 10, step: 1, value: 0, orientation: "vertical", change: function (event, ui) {
         var newvalue, absvalue, aspercentage;
-        if (event.type === "slidechange") {
-            newvalue = ui.value;
-            absvalue = newvalue / 10;
-            aspercentage = newvalue * 10;
-            window.document.getElementById("display_restyness" + voice_number).innerHTML = aspercentage + "%";
-            g_umt.ui_params.voice[voice_number].restyness = absvalue;
+        if (g_umt.idem_adding_voice === false) {
+            if (event.type === "slidechange") {
+                newvalue = ui.value;
+                absvalue = newvalue / 10;
+                aspercentage = newvalue * 10;
+                window.document.getElementById("display_restyness" + voice_number).innerHTML = aspercentage + "%";
+                g_umt.ui_params.voice[voice_number].restyness = absvalue;
+                umt_automatically_recompose_loop_from_ui_params();
+            }
         }
     }
          });
     jQuery("#slider_minnote" + voice_number).slider({min: 0, max: 4, step: 1, value: 3, orientation: "vertical", change: function (event, ui) {
         var newvalue;
-        if (event.type === "slidechange") {
-            newvalue = ui.value;
-            newvalue = Math.pow(2, newvalue);
-            window.document.getElementById("display_minnote" + voice_number).innerHTML = newvalue;
-            g_umt.ui_params.voice[voice_number].min_note = newvalue;
-            umt_ui_cascade_min_note_changes(voice_number, newvalue);
+        if (g_umt.idem_adding_voice === false) {
+            if (event.type === "slidechange") {
+                newvalue = ui.value;
+                newvalue = Math.pow(2, newvalue);
+                window.document.getElementById("display_minnote" + voice_number).innerHTML = newvalue;
+                g_umt.ui_params.voice[voice_number].min_note = newvalue;
+                umt_ui_cascade_min_note_changes(voice_number, newvalue);
+                umt_automatically_recompose_loop_from_ui_params();
+            }
         }
     }
          });
     jQuery("#slider_chunksize" + voice_number).slider({min: 0, max: 9, step: 1, value: 3, orientation: "vertical", change: function (event, ui) {
         var newvalue;
-        if (event.type === "slidechange") {
-            newvalue = ui.value;
-            newvalue = Math.pow(2, newvalue);
-            window.document.getElementById("display_chunksize" + voice_number).innerHTML = newvalue;
-            g_umt.ui_params.voice[voice_number].chunk_size = newvalue;
-            umt_ui_cascade_chunk_size_changes(voice_number, newvalue);
+        if (g_umt.idem_adding_voice === false) {
+            if (event.type === "slidechange") {
+                newvalue = ui.value;
+                newvalue = Math.pow(2, newvalue);
+                window.document.getElementById("display_chunksize" + voice_number).innerHTML = newvalue;
+                g_umt.ui_params.voice[voice_number].chunk_size = newvalue;
+                umt_ui_cascade_chunk_size_changes(voice_number, newvalue);
+                umt_automatically_recompose_loop_from_ui_params();
+            }
         }
     }
          });
     jQuery("#slider_measuresize" + voice_number).slider({min: 0, max: 9, step: 1, value: 3, orientation: "vertical", change: function (event, ui) {
         var newvalue;
-        if (event.type === "slidechange") {
-            newvalue = ui.value;
-            newvalue = Math.pow(2, newvalue);
-            window.document.getElementById("display_measuresize" + voice_number).innerHTML = newvalue;
-            g_umt.ui_params.voice[voice_number].measure_size = newvalue;
-            umt_ui_cascade_measure_size_changes(voice_number, newvalue);
+        if (g_umt.idem_adding_voice === false) {
+            if (event.type === "slidechange") {
+                newvalue = ui.value;
+                newvalue = Math.pow(2, newvalue);
+                window.document.getElementById("display_measuresize" + voice_number).innerHTML = newvalue;
+                g_umt.ui_params.voice[voice_number].measure_size = newvalue;
+                umt_ui_cascade_measure_size_changes(voice_number, newvalue);
+                umt_automatically_recompose_loop_from_ui_params();
+            }
         }
     }
          });
@@ -1875,10 +1910,6 @@ function umt_ui_add_row(voice_number) {
         listen_element.addEventListener("change", umt_exec_pervoice_symmetry_change, true);
         umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voice_number, y);
     }
-    listen_element = document.getElementById("playvoice" + voice_number);
-    listen_element.addEventListener("change", umt_exec_play_voice_change, true);
-    listen_element = document.getElementById("songnumber" + voice_number);
-    listen_element.addEventListener("change", umt_exec_song_number_change, true);
 }
 
 function umt_ui_set_listbox_by_value(listbox, value) {
@@ -1895,6 +1926,7 @@ function umt_ui_set_listbox_by_value(listbox, value) {
 function umt_ui_copy_ui_params_to_actual_ui() {
     "use strict";
     var parts, i, absvalue, slidervalue, loop_duration, j, however_many, sym_size, sym_num, symmetry_pattern;
+    g_umt.idem_adding_voice = true;
     parts = g_umt.ui_params.parts;
     for (i = 0; i < parts; i = i + 1) {
         if (!umt_ui_is_part_in_ui(i)) {
@@ -1967,13 +1999,14 @@ function umt_ui_copy_ui_params_to_actual_ui() {
             sym_num = sym_num + 1;
         }
     }
+    g_umt.idem_adding_voice = false;
 }
 
 function umt_exec_add_voice() {
     "use strict";
     var voice_num;
     voice_num = g_umt.ui_params.parts;
-    g_umt.ui_params.voice[voice_num] = {playing: false, song_number: 1, octave: 5, note_distance: 0.3, restyness: 0.0, min_note: 8, chunk_size: 8, measure_size: 32, symmetry: { 1: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 2: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 4: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 8: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 16: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 32: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 64: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 128: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 256: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 512: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 1024: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0} } };
+    g_umt.ui_params.voice[voice_num] = {playing: false, song_number: 1, octave: 5, note_distance: 0.0, restyness: 0.0, min_note: 4, chunk_size: 4, measure_size: 16, symmetry: { 1: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 2: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 4: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 8: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 16: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 32: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 64: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 128: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 256: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 512: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 1024: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0} } };
     g_umt.ui_params.parts = g_umt.ui_params.parts + 1;
     if (g_umt.ui_params.parts > g_umt.ui_params.max_parts_ever) {
         g_umt.ui_params.max_parts_ever = g_umt.ui_params.parts;
@@ -1981,14 +2014,20 @@ function umt_exec_add_voice() {
     umt_ui_copy_ui_params_to_actual_ui();
 }
 
+function umt_exec_test_dumt_gmt() {
+    "use strict";
+    // umt_cx("g_umt = " + ctstr(g_umt));
+    console.log(g_umt);
+}
+
 /* main */
 
-g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 2, idem_compose: false, ui_params: { tempo: 400, scale: 'maj7reg', centernote: 432, parts: 0, voice: [], loop_duration: 512 }, max_parts_ever: 4 };
+g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 2, idem_compose: false, idem_adding_voice: false, ui_params: { tempo: 360, scale: 'maj7reg', centernote: 432, parts: 0, voice: [], loop_duration: 128 }, max_parts_ever: 4 };
 console.log('g_umt', g_umt);
 
 jQuery(function () {
     "use strict";
-    jQuery("#slider_tempo").slider({min: 100, max: 1000, step: 100, value: 400, orientation: "horizontal", change: function (event, ui) {
+    jQuery("#slider_tempo").slider({min: 60, max: 960, step: 30, value: 360, orientation: "horizontal", change: function (event, ui) {
         var newvalue;
         if (event.type === "slidechange") {
             newvalue = ui.value;
@@ -2025,6 +2064,8 @@ jQuery(function () {
 <p>
     <input type="button" id="start_automatic" value="Start Music" />
     <input type="button" id="stop_automatic" value="Stop Music" />
+    <input type="button" id="test_play_raw" value="Test Play Raw" />
+    <input type="button" id="test_dump_gumt" value="Test Dump g_umt" />
 </p>
 
 <p> Scale:
@@ -2049,7 +2090,7 @@ jQuery(function () {
 
 <div id="slider_tempo" class="ddrg" style="width:200px;"></div>
 
-<div id="display_tempo_value">400</div>
+<div id="display_tempo_value">360</div>
 
 </p>
 
@@ -2148,6 +2189,8 @@ jQuery(function () {
 
 <input id="add_voice" type="button" value="Add a voice" />
 
+<div id="darkLayer" class="darkClass" style="display:none"></div>
+
   </section>
 <script>
 
@@ -2162,6 +2205,13 @@ umt_listen_element.addEventListener("change", umt_exec_scale_change, true);
 
 umt_listen_element = document.getElementById("add_voice");
 umt_listen_element.addEventListener("click", umt_exec_add_voice, true);
+
+umt_listen_element = document.getElementById("test_play_raw");
+umt_listen_element.addEventListener("click", umt_exec_play_raw_score, true);
+
+umt_listen_element = document.getElementById("test_dump_gumt");
+umt_listen_element.addEventListener("click", umt_exec_test_dumt_gmt, true);
+
 
 </script>
 
