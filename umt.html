@@ -182,7 +182,7 @@ function umt_clear_loop(lpnum, x_tempo, center_note, x_scale) {
 function umt_add_voice(lpnum, idx, song_number, range_min, range_max) {
     "use strict";
     g_umt.loop[lpnum].score.parts = idx + 1;
-    g_umt.loop[lpnum].score.voice[idx] = { instrument: 'tuningfork', selection: 0, cursor: 0, next_start: 0, range_top: range_max, range_bottom: range_min, notes: [], rand_rhythm: umt_get_rando(song_number * 40), rand_pitch: umt_get_rando(song_number * 40 + 1), rand_amp: umt_get_rando(song_number * 40 + 5), rand_rests: umt_get_rando(song_number * 40 + 2), rand_syms: umt_get_rando(song_number * 40 + 3), rand_trans: umt_get_rando(song_number * 40 + 4) };
+    g_umt.loop[lpnum].score.voice[idx] = { instrument: 'tuningfork', selection: 0, cursor: 0, next_start: 0, range_top: range_max, range_bottom: range_min, notes: [], rand_rhythm: umt_get_rando(song_number * 40), rand_pitch: umt_get_rando(song_number * 40 + 1), rand_amp: umt_get_rando(song_number * 40 + 5), rand_rests: umt_get_rando(song_number * 40 + 2), rand_syms: umt_get_rando(song_number * 40 + 3), rand_trans: umt_get_rando(song_number * 40 + 4), rand_scale: umt_get_rando(song_number * 40 + 5), rand_tilt: umt_get_rando(song_number * 40 + 6), rand_scrollrhythm: umt_get_rando(song_number * 40 + 7), rand_scrollpitch: umt_get_rando(song_number * 40 + 8), rand_scrollboth: umt_get_rando(song_number * 40 + 9) };
 }
 
 function umt_add_note(lpnum, voicenum, rest, pitch, duration, amplitude, inst_params) {
@@ -1133,7 +1133,7 @@ function umt_add_sym_base_to_voice(lpnum, vcnum, min_size, chunk_size, total_len
 
 function umt_schedule_play_of_segment() {
     "use strict";
-    var lpnum, current_time, ctx_offset, window_start, window_stop, loop_unit_len, loop_len, from_moment, center, tempo_scalar, num_voices, voicenum, notenum, duration, amplitude, frequency, adjusted_start_time, start_time, inst_specific_params, harmonized_octave, harmonized_num, harmonized_dnom;
+    var lpnum, current_time, ctx_offset, compositonlag, window_start, window_stop, loop_unit_len, loop_len, from_moment, center, tempo_scalar, num_voices, voicenum, notenum, duration, amplitude, frequency, adjusted_start_time, start_time, inst_specific_params, harmonized_octave, harmonized_num, harmonized_dnom;
     lpnum = g_umt.currently_playing_loop;
     if (g_umt.loop[lpnum].score.parts === 0) {
         return;
@@ -1141,7 +1141,11 @@ function umt_schedule_play_of_segment() {
     ctx_offset = 0; // g_umt.loop[lpnum].score.playback_time_offset;
     current_time = g_umt.global_ctx.currentTime + ctx_offset;
     window_start = current_time;
-    window_stop = current_time + g_umt.composition_lag;
+    compositonlag = g_umt.composition_lag;
+    if (compositonlag < 0.1) {
+        compositonlag = 0.1;
+    }
+    window_stop = current_time + (compositonlag * 3);
     if (window_start < g_umt.played_up_to) {
         window_start = g_umt.played_up_to;
     }
@@ -1182,7 +1186,7 @@ function umt_schedule_play_of_segment() {
     }
     g_umt.played_up_to = window_stop;
     if (g_umt.timer_is_on) {
-        window.setTimeout(umt_schedule_play_of_segment, 500);
+        window.setTimeout(umt_schedule_play_of_segment, compositonlag * 1000);
     }
 }
 
@@ -1210,9 +1214,13 @@ function umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direc
     var segment_start, ix, segment_end, ts_rh_cursor, ts_pi_cursor, min_pitch, max_pitch, this_pitch, midpoint_pitch, rhythm_cursor, pitch_cursor, termination_cursor, rest, duration, amplitude, inst_params, percent, bevel_amount, segment_len, range_test_start, range_test_end, range_test_cursor, range_pitch, range_min, range_max, range_scalar, range_transpose;
     /* first find the start and end of the segment, and the starting point for the rhythm cursor (ts_rh_cursor) and pitch cursor (ts_pi_cursor) which can be different if there is rhythm or pitch scrolling */
     segment_start = -1;
-    ts_rh_cursor = -1;
+    ts_rh_cursor = -1; /* ts == "time scroll"; rh == "rhythm", pi == "pitch" */
     ts_pi_cursor = -1;
     for (ix = 0; ix < g_umt.loop[lpnum].score.voice[vcnum].cursor; ix = ix + 1) {
+        /* yes, we search the whole voice -- this is ok because loops are short.
+           If the sytem is ever used for long compositions, this will need to
+           be replaced with interval halving
+        */
         if (segment_start === -1) {
             if (g_umt.loop[lpnum].score.voice[vcnum].notes[ix].starttime >= start_time) {
                 segment_start = ix;
@@ -1286,7 +1294,7 @@ function umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direc
            subtracted from transpose
         */
         if (pitch_bevel !== 0) {
-            percent = (termination_cursor - segment_start) / segment_end;
+            percent = (g_umt.loop[lpnum].score.voice[vcnum].notes[termination_cursor].starttime - start_time) / (end_time - start_time);
             bevel_amount = pitch_bevel * percent;
             this_pitch = this_pitch + bevel_amount;
         }
@@ -1543,9 +1551,148 @@ function umt_test_setup_copy_trans_test_section() {
     umt_test_check_copytrans_durations([1, 1, 2, 4, 8, 16], 6, "scale-negative");
 
     /* tilt-ascending */
+    umt_test_reset_copytrans_test_sequence();
+    lpnum = 0;
+    vcnum = 0;
+    start_time = 0;
+    end_time = 32;
+    rhythm_direction = 1;
+    pitches_direction = 1;
+    time_rhythm_scroll = 0;
+    time_pitch_scroll = 0;
+    actual_pitch_scroll = 0;
+    pitch_scale = 1.0;
+    pitch_bevel = 1.0;
+    pitch_transpose = -0.5;
+    umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
+    umt_test_check_copytrans_pitches([4.5, 4.63125, 4.7625, 4.925, 5.15, 5.5], 6, "tilt-ascending");
+    umt_test_check_copytrans_durations([1, 1, 2, 4, 8, 16], 6, "tilt-ascending");
+
     /* tilt-descending */
+    umt_test_reset_copytrans_test_sequence();
+    lpnum = 0;
+    vcnum = 0;
+    start_time = 0;
+    end_time = 32;
+    rhythm_direction = 1;
+    pitches_direction = 1;
+    time_rhythm_scroll = 0;
+    time_pitch_scroll = 0;
+    actual_pitch_scroll = 0;
+    pitch_scale = 1.0;
+    pitch_bevel = -1.0;
+    pitch_transpose = 0.5;
+    umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
+    umt_test_check_copytrans_pitches([5.5, 5.56875, 5.6375, 5.675, 5.65, 5.5], 6, "tilt-descending");
+    umt_test_check_copytrans_durations([1, 1, 2, 4, 8, 16], 6, "tilt-descending");
+
     /* scroll-rhythm */
+    umt_test_reset_copytrans_test_sequence();
+    lpnum = 0;
+    vcnum = 0;
+    start_time = 0;
+    end_time = 32;
+    rhythm_direction = 1;
+    pitches_direction = 1;
+    time_rhythm_scroll = 8;
+    time_pitch_scroll = 0;
+    actual_pitch_scroll = 0;
+    pitch_scale = 1.0;
+    pitch_bevel = 0;
+    pitch_transpose = 0;
+    umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
+    umt_test_check_copytrans_pitches([5.0, 5.1, 5.2, 5.3, 5.4, 5.5], 6, "scroll-rhythm");
+    umt_test_check_copytrans_durations([8, 16, 1, 1, 2, 4], 6, "scroll-rhythm");
+
     /* scroll-pitch */
+    umt_test_reset_copytrans_test_sequence();
+    lpnum = 0;
+    vcnum = 0;
+    start_time = 0;
+    end_time = 32;
+    rhythm_direction = 1;
+    pitches_direction = 1;
+    time_rhythm_scroll = 0;
+    time_pitch_scroll = 8;
+    actual_pitch_scroll = 0;
+    pitch_scale = 1.0;
+    pitch_bevel = 0;
+    pitch_transpose = 0;
+    umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
+    umt_test_check_copytrans_pitches([5.4, 5.5, 5.0, 5.1, 5.2, 5.3], 6, "scroll-pitch");
+    umt_test_check_copytrans_durations([1, 1, 2, 4, 8, 16], 6, "scroll-pitch");
+
+    /* scroll-both */
+    umt_test_reset_copytrans_test_sequence();
+    lpnum = 0;
+    vcnum = 0;
+    start_time = 0;
+    end_time = 32;
+    rhythm_direction = 1;
+    pitches_direction = 1;
+    time_rhythm_scroll = 8;
+    time_pitch_scroll = 8;
+    actual_pitch_scroll = 0;
+    pitch_scale = 1.0;
+    pitch_bevel = 0;
+    pitch_transpose = 0;
+    umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
+    umt_test_check_copytrans_pitches([5.4, 5.5, 5.0, 5.1, 5.2, 5.3], 6, "scroll-both");
+    umt_test_check_copytrans_durations([8, 16, 1, 1, 2, 4], 6, "scroll-both");
+
+    /* reverse-rhythm */
+    umt_test_reset_copytrans_test_sequence();
+    lpnum = 0;
+    vcnum = 0;
+    start_time = 0;
+    end_time = 32;
+    rhythm_direction = -1;
+    pitches_direction = 1;
+    time_rhythm_scroll = 0;
+    time_pitch_scroll = 0;
+    actual_pitch_scroll = 0;
+    pitch_scale = 1.0;
+    pitch_bevel = 0;
+    pitch_transpose = 0;
+    umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
+    umt_test_check_copytrans_pitches([5.0, 5.1, 5.2, 5.3, 5.4, 5.5], 6, "reverse-rhythm");
+    umt_test_check_copytrans_durations([16, 8, 4, 2, 1, 1], 6, "reverse-rhythm");
+
+    /* reverse-pitch */
+    umt_test_reset_copytrans_test_sequence();
+    lpnum = 0;
+    vcnum = 0;
+    start_time = 0;
+    end_time = 32;
+    rhythm_direction = 1;
+    pitches_direction = -1;
+    time_rhythm_scroll = 0;
+    time_pitch_scroll = 0;
+    actual_pitch_scroll = 0;
+    pitch_scale = 1.0;
+    pitch_bevel = 0;
+    pitch_transpose = 0;
+    umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
+    umt_test_check_copytrans_pitches([5.5, 5.4, 5.3, 5.2, 5.1, 5.0], 6, "reverse-pitch");
+    umt_test_check_copytrans_durations([1, 1, 2, 4, 8, 16], 6, "reverse-pitch");
+
+    /* reverse-both */
+    umt_test_reset_copytrans_test_sequence();
+    lpnum = 0;
+    vcnum = 0;
+    start_time = 0;
+    end_time = 32;
+    rhythm_direction = -1;
+    pitches_direction = -1;
+    time_rhythm_scroll = 0;
+    time_pitch_scroll = 0;
+    actual_pitch_scroll = 0;
+    pitch_scale = 1.0;
+    pitch_bevel = 0;
+    pitch_transpose = 0;
+    umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
+    umt_test_check_copytrans_pitches([5.5, 5.4, 5.3, 5.2, 5.1, 5.0], 6, "reverse-both");
+    umt_test_check_copytrans_durations([16, 8, 4, 2, 1, 1], 6, "reverse-both");
 
     window.alert("Tests passed");
 }
@@ -1618,7 +1765,7 @@ function umt_ui_is_part_in_ui(ptnum) {
 
 function umt_compose_real_composition(lpnum) {
     "use strict";
-    var composition_voice, ui_voice, song_number, octave, range_min, range_max, min_size, chunk_size, total_length, center_octave, restyness, amp_variation, volume, note_distance, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose, symmetry_pattern, csr_pos, csr_start, duration, loop_duration, vcnum, transposer_value;
+    var composition_voice, ui_voice, song_number, octave, range_min, range_max, min_size, chunk_size, total_length, center_octave, restyness, amp_variation, volume, note_distance, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose, symmetry_pattern, csr_pos, csr_start, duration, loop_duration, vcnum;
     if (g_umt.idem_adding_voice) {
         umt_jsabort("umt_compose_real_composition called during add voice");
     }
@@ -1659,9 +1806,43 @@ function umt_compose_real_composition(lpnum) {
                 pitch_bevel = 0;
                 pitch_transpose = 0;
                 symmetry_pattern = g_umt.ui_params.voice[ui_voice].symmetry[end_time].pattern;
-                if (symmetry_pattern === 'trans') {
-                    transposer_value = g_umt.ui_params.voice[ui_voice].symmetry[end_time].trans_param; /* eliminate var after testing */
-                    pitch_transpose = (2 * transposer_value) * (g_umt.loop[lpnum].score.voice[composition_voice].rand_trans.genrand_real1() - 0.5);
+                switch (symmetry_pattern) {
+                case 'trans':
+                    pitch_transpose = (2 * g_umt.ui_params.voice[ui_voice].symmetry[end_time].trans_param) * (g_umt.loop[lpnum].score.voice[composition_voice].rand_trans.genrand_real1() - 0.5);
+                    break;
+                case 'invert':
+                    pitch_scale = -1.0;
+                    break;
+                case 'scale':
+                    pitch_scale = g_umt.ui_params.voice[ui_voice].symmetry[end_time].scale_param * g_umt.loop[lpnum].score.voice[composition_voice].rand_scale.genrand_real1();
+                    break;
+                case 'tilt':
+                    pitch_bevel = g_umt.ui_params.voice[ui_voice].symmetry[end_time].tilt_param * g_umt.loop[lpnum].score.voice[composition_voice].rand_tilt.genrand_real1();
+                    pitch_transpose = -(pitch_bevel / 2);
+                    break;
+                case 'reverserhythm':
+                    rhythm_direction = -1;
+                    break;
+                case 'reversepitch':
+                    pitches_direction = -1;
+                    break;
+                case 'reverseboth':
+                    rhythm_direction = -1;
+                    pitches_direction = -1;
+                    break;
+                case 'scrollrhythm':
+                    time_rhythm_scroll = (g_umt.ui_params.voice[ui_voice].symmetry[end_time].scrollboth_param * g_umt.loop[lpnum].score.voice[composition_voice].rand_tilt.genrand_real1()) * (end_time - start_time);
+                    break;
+                case 'scrollpitch':
+                    time_pitch_scroll = (g_umt.ui_params.voice[ui_voice].symmetry[end_time].scrollboth_param * g_umt.loop[lpnum].score.voice[composition_voice].rand_tilt.genrand_real1()) * (end_time - start_time);
+                    break;
+                case 'scrollboth':
+                    time_rhythm_scroll = (g_umt.ui_params.voice[ui_voice].symmetry[end_time].scrollboth_param * g_umt.loop[lpnum].score.voice[composition_voice].rand_tilt.genrand_real1()) * (end_time - start_time);
+                    time_pitch_scroll = time_rhythm_scroll;
+                    break;
+                default:
+                    umt_jsabort("unrecognized symmetry pattern in composition: " + symmetry_pattern);
+                    break;
                 }
                 vcnum = composition_voice;
                 umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
@@ -1738,12 +1919,9 @@ function umt_automatically_recompose_loop_from_ui_params() {
     umt_enable_ui();
     stop_time = g_umt.global_ctx.currentTime;
     diff_time = stop_time - start_time;
+    g_umt.composition_lag = (g_umt.composition_lag + diff_time) / 2;
+    window.document.getElementById("test_composition_time").value = diff_time;
     // umt_cx("g_umt.composition_lag = " + umt_ctstr(g_umt.composition_lag));
-    g_umt.composition_lag = diff_time;
-    g_umt.composition_lag = g_umt.composition_lag * 1.1; /* pad */
-    if (g_umt.composition_lag < 2.0) {
-        g_umt.composition_lag = 2.0;
-    }
     // umt_cx("g_umt.composition_lag = " + umt_ctstr(g_umt.composition_lag));
 }
 
@@ -1782,42 +1960,85 @@ function umt_exec_song_number_change(event) {
     }
 }
 
-function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voice_number, slider_number) {
+function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voice_number, pattern_size) {
     "use strict";
-    jQuery("#slider_symmetry_trans_param" + voice_number + "_" + slider_number).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
+    jQuery("#slider_symmetry_trans_param" + voice_number + "_" + pattern_size).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
         var newvalue, pattern_duration;
+        /* pattern_duration and pattern_size are two names for the same thing
+           but we have to use two different names so they will refer to
+           different variables and the closure will work
+        */
+        pattern_duration = pattern_size;
         if (g_umt.idem_adding_voice === false) {
             if (event.type === "slidechange") {
                 newvalue = ui.value / 10;
-                window.document.getElementById("display_symmetry_trans_param" + voice_number + "_" + slider_number).innerHTML = (newvalue * 100) + "%";
-                pattern_duration = Math.pow(2, slider_number);
+                window.document.getElementById("display_symmetry_trans_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
                 g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].trans_param = newvalue;
                 umt_automatically_recompose_loop_from_ui_params();
             }
         }
     }
          });
-    jQuery("#slider_symmetry_scale_param" + voice_number + "_" + slider_number).slider({min: 0, max: 24, step: 1, value: 12, orientation: "horizontal", change: function (event, ui) {
+    jQuery("#slider_symmetry_scale_param" + voice_number + "_" + pattern_size).slider({min: 0, max: 24, step: 1, value: 12, orientation: "horizontal", change: function (event, ui) {
         var newvalue, pattern_duration;
+        pattern_duration = pattern_size;
         if (g_umt.idem_adding_voice === false) {
             if (event.type === "slidechange") {
                 newvalue = (ui.value - 12) / 10;
-                window.document.getElementById("display_symmetry_scale_param" + voice_number + "_" + slider_number).innerHTML = (newvalue * 100) + "%";
-                pattern_duration = Math.pow(2, slider_number);
+                window.document.getElementById("display_symmetry_scale_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
                 g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].scale_param = newvalue;
                 umt_automatically_recompose_loop_from_ui_params();
             }
         }
     }
          });
-    jQuery("#slider_symmetry_tilt_param" + voice_number + "_" + slider_number).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
+    jQuery("#slider_symmetry_tilt_param" + voice_number + "_" + pattern_size).slider({min: 0, max: 24, step: 1, value: 12, orientation: "horizontal", change: function (event, ui) {
         var newvalue, pattern_duration;
+        pattern_duration = pattern_size;
+        if (g_umt.idem_adding_voice === false) {
+            if (event.type === "slidechange") {
+                newvalue = (ui.value - 12) / 10;
+                window.document.getElementById("display_symmetry_tilt_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
+                g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].tilt_param = newvalue;
+                umt_automatically_recompose_loop_from_ui_params();
+            }
+        }
+    }
+         });
+    jQuery("#slider_symmetry_scrollrhythm_param" + voice_number + "_" + pattern_size).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
+        var newvalue, pattern_duration;
+        pattern_duration = pattern_size;
         if (g_umt.idem_adding_voice === false) {
             if (event.type === "slidechange") {
                 newvalue = ui.value / 10;
-                window.document.getElementById("display_symmetry_tilt_param" + voice_number + "_" + slider_number).innerHTML = (newvalue * 100) + "%";
-                pattern_duration = Math.pow(2, slider_number);
-                g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].tilt_param = newvalue;
+                window.document.getElementById("display_symmetry_scrollrhythm_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
+                g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].scrollrhythm_param = newvalue;
+                umt_automatically_recompose_loop_from_ui_params();
+            }
+        }
+    }
+         });
+    jQuery("#slider_symmetry_scrollpitch_param" + voice_number + "_" + pattern_size).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
+        var newvalue, pattern_duration;
+        pattern_duration = pattern_size;
+        if (g_umt.idem_adding_voice === false) {
+            if (event.type === "slidechange") {
+                newvalue = ui.value / 10;
+                window.document.getElementById("display_symmetry_scrollpitch_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
+                g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].scrollpitch_param = newvalue;
+                umt_automatically_recompose_loop_from_ui_params();
+            }
+        }
+    }
+         });
+    jQuery("#slider_symmetry_scrollboth_param" + voice_number + "_" + pattern_size).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
+        var newvalue, pattern_duration;
+        pattern_duration = pattern_size;
+        if (g_umt.idem_adding_voice === false) {
+            if (event.type === "slidechange") {
+                newvalue = ui.value / 10;
+                window.document.getElementById("display_symmetry_scrollboth_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
+                g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].scrollboth_param = newvalue;
                 umt_automatically_recompose_loop_from_ui_params();
             }
         }
@@ -1827,67 +2048,78 @@ function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voi
 
 function umt_ui_show_or_hide_appropriate_symmetry_sliders(symmetry_selected, suffix) {
     "use strict";
+    var display_trans, display_scale, display_tilt, display_scrollrhythm, display_scrollpitch, display_scrollboth;
+    display_trans = "none";
+    display_scale = "none";
+    display_tilt = "none";
+    display_scrollrhythm = "none";
+    display_scrollpitch = "none";
+    display_scrollboth = "none";
     switch (symmetry_selected) {
     case 'trans':
-        window.document.getElementById("slider_symmetry_trans_param" + suffix).style.display = "block";
-        window.document.getElementById("display_symmetry_trans_param" + suffix).style.display = "block";
-        window.document.getElementById("slider_symmetry_scale_param" + suffix).style.display = "none";
-        window.document.getElementById("display_symmetry_scale_param" + suffix).style.display = "none";
-        window.document.getElementById("slider_symmetry_tilt_param" + suffix).style.display = "none";
-        window.document.getElementById("display_symmetry_tilt_param" + suffix).style.display = "none";
+        display_trans = "block";
+        break;
+    case 'invert':
         break;
     case 'scale':
-        window.document.getElementById("slider_symmetry_trans_param" + suffix).style.display = "none";
-        window.document.getElementById("display_symmetry_trans_param" + suffix).style.display = "none";
-        window.document.getElementById("slider_symmetry_scale_param" + suffix).style.display = "block";
-        window.document.getElementById("display_symmetry_scale_param" + suffix).style.display = "block";
-        window.document.getElementById("slider_symmetry_tilt_param" + suffix).style.display = "none";
-        window.document.getElementById("display_symmetry_tilt_param" + suffix).style.display = "none";
-        break;
-    case 'reverse':
-        window.document.getElementById("slider_symmetry_trans_param" + suffix).style.display = "none";
-        window.document.getElementById("display_symmetry_trans_param" + suffix).style.display = "none";
-        window.document.getElementById("slider_symmetry_scale_param" + suffix).style.display = "none";
-        window.document.getElementById("display_symmetry_scale_param" + suffix).style.display = "none";
-        window.document.getElementById("slider_symmetry_tilt_param" + suffix).style.display = "none";
-        window.document.getElementById("display_symmetry_tilt_param" + suffix).style.display = "none";
+        display_scale = "block";
         break;
     case 'tilt':
-        window.document.getElementById("slider_symmetry_trans_param" + suffix).style.display = "none";
-        window.document.getElementById("display_symmetry_trans_param" + suffix).style.display = "none";
-        window.document.getElementById("slider_symmetry_scale_param" + suffix).style.display = "none";
-        window.document.getElementById("display_symmetry_scale_param" + suffix).style.display = "none";
-        window.document.getElementById("slider_symmetry_tilt_param" + suffix).style.display = "block";
-        window.document.getElementById("display_symmetry_tilt_param" + suffix).style.display = "block";
+        display_tilt = "block";
+        break;
+    case 'reverserhythm':
+        break;
+    case 'reversepitch':
+        break;
+    case 'reverseboth':
+        break;
+    case 'scrollrhythm':
+        display_scrollrhythm = "block";
+        break;
+    case 'scrollpitch':
+        display_scrollpitch = "block";
+        break;
+    case 'scrollboth':
+        display_scrollboth = "block";
         break;
     default:
         umt_jsabort("unrecognized symmetry selected: " + symmetry_selected);
         break;
     }
+    window.document.getElementById("slider_symmetry_trans_param" + suffix).style.display = display_trans;
+    window.document.getElementById("display_symmetry_trans_param" + suffix).style.display = display_trans;
+    window.document.getElementById("slider_symmetry_scale_param" + suffix).style.display = display_scale;
+    window.document.getElementById("display_symmetry_scale_param" + suffix).style.display = display_scale;
+    window.document.getElementById("slider_symmetry_tilt_param" + suffix).style.display = display_tilt;
+    window.document.getElementById("display_symmetry_tilt_param" + suffix).style.display = display_tilt;
+    window.document.getElementById("slider_symmetry_scrollrhythm_param" + suffix).style.display = display_scrollrhythm;
+    window.document.getElementById("display_symmetry_scrollrhythm_param" + suffix).style.display = display_scrollrhythm;
+    window.document.getElementById("slider_symmetry_scrollpitch_param" + suffix).style.display = display_scrollpitch;
+    window.document.getElementById("display_symmetry_scrollpitch_param" + suffix).style.display = display_scrollpitch;
+    window.document.getElementById("slider_symmetry_scrollboth_param" + suffix).style.display = display_scrollboth;
+    window.document.getElementById("display_symmetry_scrollboth_param" + suffix).style.display = display_scrollboth;
 }
 
 function umt_exec_pervoice_symmetry_change(event) {
     "use strict";
     var elemid, listbox, selectedvalue, i, voice_number, sym_size, symmetry_pattern;
     elemid = event.target.id;
-    window.alert(elemid);
     listbox = event.target;
     selectedvalue = listbox.options[listbox.selectedIndex].value;
     elemid = elemid.substring(12);
-    window.alert(elemid);
     umt_ui_show_or_hide_appropriate_symmetry_sliders(selectedvalue, elemid);
     i = elemid.indexOf("_");
-    window.alert(i);
     voice_number = elemid.substring(0, i);
-    sym_size = elemid.substring(i);
+    sym_size = elemid.substring(i + 1);
     symmetry_pattern = selectedvalue;
     g_umt.ui_params.voice[voice_number].symmetry[sym_size].pattern = symmetry_pattern;
+    umt_automatically_recompose_loop_from_ui_params();
 }
 
-function umt_ui_turn_on_symmetry_patterns(row, pattern_num, pattern_label, is_on) {
+function umt_ui_turn_on_symmetry_patterns(row, pattern_label, is_on) {
     "use strict";
     var suffix, block, inline;
-    suffix = row + "_" + pattern_num;
+    suffix = row + "_" + pattern_label;
     if (is_on) {
         block = "block";
         inline = "inline";
@@ -1904,12 +2136,18 @@ function umt_ui_turn_on_symmetry_patterns(row, pattern_num, pattern_label, is_on
     window.document.getElementById("display_symmetry_scale_param" + suffix).style.display = block;
     window.document.getElementById("slider_symmetry_tilt_param" + suffix).style.display = block;
     window.document.getElementById("display_symmetry_tilt_param" + suffix).style.display = block;
+    window.document.getElementById("slider_symmetry_scrollrhythm_param" + suffix).style.display = block;
+    window.document.getElementById("display_symmetry_scrollrhythm_param" + suffix).style.display = block;
+    window.document.getElementById("slider_symmetry_scrollpitch_param" + suffix).style.display = block;
+    window.document.getElementById("display_symmetry_scrollpitch_param" + suffix).style.display = block;
+    window.document.getElementById("slider_symmetry_scrollboth_param" + suffix).style.display = block;
+    window.document.getElementById("display_symmetry_scrollboth_param" + suffix).style.display = block;
 }
 
-function umt_ui_set_symmetry_listbox_and_slider(row, pattern_num, pattern_duration) {
+function umt_ui_set_symmetry_listbox_and_slider(row, pattern_duration) {
     "use strict";
     var suffix, absvalue, slidervalue;
-    suffix = row + "_" + pattern_num;
+    suffix = row + "_" + pattern_duration;
     window.document.getElementById("sel_symmetry" + suffix).value = g_umt.ui_params.voice[row].symmetry[pattern_duration].pattern;
     /* trans param */
     absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].trans_param;
@@ -1923,16 +2161,31 @@ function umt_ui_set_symmetry_listbox_and_slider(row, pattern_num, pattern_durati
     jQuery("#slider_symmetry_scale_param" + suffix).slider({ value: slidervalue });
     /* tilt param */
     absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].tilt_param;
-    slidervalue = absvalue * 10;
+    slidervalue = (absvalue * 10) + 12;
     window.document.getElementById("display_symmetry_tilt_param" + suffix).innerHTML = (absvalue * 100) + "%";
     jQuery("#slider_symmetry_tilt_param" + suffix).slider({ value: slidervalue });
+    /* scrollrhythm param */
+    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].scrollrhythm_param;
+    slidervalue = absvalue * 10;
+    window.document.getElementById("display_symmetry_scrollrhythm_param" + suffix).innerHTML = (absvalue * 100) + "%";
+    jQuery("#slider_symmetry_scrollrhythm_param" + suffix).slider({ value: slidervalue });
+    /* scrollpitch param */
+    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].scrollpitch_param;
+    slidervalue = absvalue * 10;
+    window.document.getElementById("display_symmetry_scrollpitch_param" + suffix).innerHTML = (absvalue * 100) + "%";
+    jQuery("#slider_symmetry_scrollpitch_param" + suffix).slider({ value: slidervalue });
+    /* scrollboth param */
+    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].scrollboth_param;
+    slidervalue = absvalue * 10;
+    window.document.getElementById("display_symmetry_scrollboth_param" + suffix).innerHTML = (absvalue * 100) + "%";
+    jQuery("#slider_symmetry_scrollboth_param" + suffix).slider({ value: slidervalue });
 }
 
 var umt_ui_cascade_frame_size_changes, umt_ui_cascade_chunk_size_changes, umt_ui_cascade_min_note_changes;
 
 umt_ui_cascade_frame_size_changes = function (voice_number, newvalue) {
     "use strict";
-    var chunk_size, loop_duration, sym_num, sym_size, slidervalue, symmetry_pattern;
+    var chunk_size, loop_duration, sym_size, slidervalue, symmetry_pattern;
     chunk_size = g_umt.ui_params.voice[voice_number].chunk_size;
     if (newvalue < chunk_size) {
         chunk_size = newvalue;
@@ -1944,18 +2197,16 @@ umt_ui_cascade_frame_size_changes = function (voice_number, newvalue) {
         umt_ui_cascade_chunk_size_changes(voice_number, chunk_size);
     }
     loop_duration = g_umt.ui_params.loop_duration;
-    sym_num = 0;
     sym_size = 1;
     while (sym_size < loop_duration) {
         if (sym_size < newvalue) {
-            umt_ui_turn_on_symmetry_patterns(voice_number, sym_num, sym_size, false);
+            umt_ui_turn_on_symmetry_patterns(voice_number, sym_size, false);
         } else {
-            umt_ui_set_symmetry_listbox_and_slider(voice_number, sym_num, sym_size);
-            umt_ui_turn_on_symmetry_patterns(voice_number, sym_num, sym_size, true);
+            umt_ui_set_symmetry_listbox_and_slider(voice_number, sym_size);
+            umt_ui_turn_on_symmetry_patterns(voice_number, sym_size, true);
             symmetry_pattern = g_umt.ui_params.voice[voice_number].symmetry[sym_size].pattern;
-            umt_ui_show_or_hide_appropriate_symmetry_sliders(symmetry_pattern, voice_number + "_" + sym_num);
+            umt_ui_show_or_hide_appropriate_symmetry_sliders(symmetry_pattern, voice_number + "_" + sym_size);
         }
-        sym_num = sym_num + 1;
         sym_size = sym_size * 2;
     }
 };
@@ -1999,7 +2250,7 @@ umt_ui_cascade_min_note_changes = function (voice_number, newvalue) {
 
 function umt_ui_add_row(voice_number) {
     "use strict";
-    var text, i, display_number, columnidlist, idx, cellidname, j, rowcontent, y, currentrowhtml, listen_element;
+    var text, i, display_number, columnidlist, idx, cellidname, j, rowcontent, y, yyy, currentrowhtml, listen_element;
     jQuery('#voices_table > tbody:last').append('<tr id="voice_row_' + voice_number + '"><td id="voicedescriptcell' + voice_number + '" valign="top"> Voice Description Cell ' + voice_number + '</td></td><td id="voiceplaycell' + voice_number + '" valign="top"></td></td><td id="voicevolumecell' + voice_number + '" valign="top"></td><td id="voicesongnumcell' + voice_number + '" valign="top" align="center"></td><td id="voiceoctavecell' + voice_number + '" valign="top" align="center"></td><td id="voicenotedistcell' + voice_number + '" valign="top" align="center"></td><td id="voicerestynesscell' + voice_number + '" valign="top" align="center"></td><td id="voiceampvariationcell' + voice_number + '" valign="top" align="center"></td><td id="voiceminnotecell' + voice_number + '" valign="top" align="center"></td><td id="voicechunksizecell' + voice_number + '" valign="top" align="center"></td><td id="voiceframesizecell' + voice_number + '" valign="top" align="center"></td><td id="voicesymmetriescell' + voice_number + '" valign="top" align="center"></td></tr>');
     text = document.getElementById("voicedescriptcellxx").innerHTML;
     display_number = voice_number + 1;
@@ -2025,7 +2276,8 @@ function umt_ui_add_row(voice_number) {
                     currentrowhtml = rowcontent;
                     i = currentrowhtml.indexOf("yyy");
                     while (i >= 0) {
-                        currentrowhtml = currentrowhtml.substring(0, i) + y + currentrowhtml.substring(i + 3);
+                        yyy = Math.pow(2, y);
+                        currentrowhtml = currentrowhtml.substring(0, i) + yyy + currentrowhtml.substring(i + 3);
                         i = currentrowhtml.indexOf("yyy");
                     }
                     i = text.indexOf("<!-- insertion_point -->");
@@ -2157,9 +2409,10 @@ function umt_ui_add_row(voice_number) {
     }
          });
     for (y = 0; y < 10; y = y + 1) {
-        listen_element = document.getElementById("sel_symmetry" + voice_number + "_" + y);
+        yyy = Math.pow(2, y);
+        listen_element = document.getElementById("sel_symmetry" + voice_number + "_" + yyy);
         listen_element.addEventListener("change", umt_exec_pervoice_symmetry_change, true);
-        umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voice_number, y);
+        umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voice_number, yyy);
     }
 }
 
@@ -2177,7 +2430,7 @@ function umt_ui_set_listbox_by_value(listbox, value) {
 
 function umt_ui_copy_ui_params_to_actual_ui() {
     "use strict";
-    var parts, i, absvalue, slidervalue, loop_duration, j, however_many, sym_size, sym_num, symmetry_pattern;
+    var parts, i, absvalue, slidervalue, loop_duration, j, k, however_many, sym_size, sym_num, symmetry_pattern;
     g_umt.idem_adding_voice = true;
     parts = g_umt.ui_params.parts;
     for (i = 0; i < parts; i = i + 1) {
@@ -2245,18 +2498,20 @@ function umt_ui_copy_ui_params_to_actual_ui() {
         jQuery("#slider_framesize" + i).slider({ value: slidervalue });
         /* symmetry patterns and parameters */
         however_many = Math.floor((Math.log(loop_duration) / Math.log(2)) + 0.01);
+        k = 1;
         for (j = 0; j < however_many; j = j + 1) {
-            umt_ui_turn_on_symmetry_patterns(i, j, j, false);
+            umt_ui_turn_on_symmetry_patterns(i, k, false);
+            k = k * 2;
         }
         sym_size = g_umt.ui_params.voice[i].frame_size;
         sym_num = Math.floor((Math.log(sym_size) / Math.log(2)) + 0.01);
         while (sym_size < loop_duration) {
-            umt_ui_turn_on_symmetry_patterns(i, sym_num, sym_size, true);
-            umt_ui_set_symmetry_listbox_and_slider(i, sym_num, sym_size);
+            umt_ui_turn_on_symmetry_patterns(i, sym_size, true);
+            umt_ui_set_symmetry_listbox_and_slider(i, sym_size);
             symmetry_pattern = g_umt.ui_params.voice[i].symmetry[sym_size].pattern;
             /* symmetry listbox */
-            umt_ui_set_listbox_by_value(document.getElementById("sel_symmetry" + i + "_" + sym_num), symmetry_pattern);
-            umt_ui_show_or_hide_appropriate_symmetry_sliders(symmetry_pattern, i + "_" + sym_num);
+            umt_ui_set_listbox_by_value(document.getElementById("sel_symmetry" + i + "_" + sym_size), symmetry_pattern);
+            umt_ui_show_or_hide_appropriate_symmetry_sliders(symmetry_pattern, i + "_" + sym_size);
             sym_size = sym_size * 2;
             sym_num = sym_num + 1;
         }
@@ -2269,7 +2524,7 @@ function umt_exec_add_voice() {
     var voice_num, songnum;
     voice_num = g_umt.ui_params.parts;
     songnum = voice_num + 1;
-    g_umt.ui_params.voice[voice_num] = {playing: false, volume: 1.0, song_number: songnum, octave: 5, note_distance: 0.0, restyness: 0.0, amp_variation: 0.9, min_note: 4, chunk_size: 4, frame_size: 32, symmetry: { 1: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 2: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 4: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 8: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 16: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 32: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 64: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 128: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 256: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 512: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0}, 1024: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0} } };
+    g_umt.ui_params.voice[voice_num] = {playing: false, volume: 1.0, song_number: songnum, octave: 5, note_distance: 0.0, restyness: 0.0, amp_variation: 0.9, min_note: 4, chunk_size: 4, frame_size: 32, symmetry: { 1: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 2: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 4: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 8: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 16: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 32: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 64: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 128: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 256: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 512: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 1024: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0} } };
     g_umt.ui_params.parts = g_umt.ui_params.parts + 1;
     if (g_umt.ui_params.parts > g_umt.ui_params.max_parts_ever) {
         g_umt.ui_params.max_parts_ever = g_umt.ui_params.parts;
@@ -2285,7 +2540,7 @@ function umt_exec_test_dumt_gmt() {
 
 /* main */
 
-g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 2, idem_compose: false, idem_adding_voice: false, ui_params: { tempo: 360, scale: 'maj7reg', centernote: 432, parts: 0, voice: [], loop_duration: 128 }, max_parts_ever: 4 };
+g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 0, idem_compose: false, idem_adding_voice: false, ui_params: { tempo: 360, scale: 'maj7reg', centernote: 432, parts: 0, voice: [], loop_duration: 128 }, max_parts_ever: 4 };
 
 jQuery(function () {
     "use strict";
@@ -2333,6 +2588,7 @@ jQuery(function () {
     <input type="button" id="test_play_raw" value="Test Play Raw" />
     <input type="button" id="test_dump_gumt" value="Test Dump g_umt" />
     <input type="button" id="test_symmetry_system" value="Test Symmetry System" />
+    Composition time (RA) <input type="text" id="test_composition_time" value="0" />
 </p>
 
 <p> Scale:
@@ -2474,9 +2730,15 @@ jQuery(function () {
 						</td><td valign="top">
 							<select name="sel_symmetryxx_yyy" id="sel_symmetryxx_yyy" style="display:none;">
 								<option value="trans">Transpose</option>
-								<option value="reverse">Reverse</option>
+								<option value="invert">Invert</option>
 								<option value="scale">Scale</option>
 								<option value="tilt">Tilt</option>
+								<option value="reverseboth">Reverse</option>
+								<option value="reverserhythm">Reverse-rhythm</option>
+								<option value="reversepitch">Reverse-pitch</option>
+								<option value="scrollboth">Scroll</option>
+								<option value="scrollrhythm">Scroll-rhythm</option>
+								<option value="scrollpitch">Scroll-pitch</option>
 							</select>
 						</td><td valign="top" align="center">
 							<div id="slider_symmetry_trans_paramxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
@@ -2485,6 +2747,12 @@ jQuery(function () {
 							<span id="display_symmetry_scale_paramxx_yyy" style="display:none;">readout</span>
 							<div id="slider_symmetry_tilt_paramxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
 							<span id="display_symmetry_tilt_paramxx_yyy" style="display:none;">readout</span>
+							<div id="slider_symmetry_scrollrhythm_paramxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
+							<span id="display_symmetry_scrollrhythm_paramxx_yyy" style="display:none;">readout</span>
+							<div id="slider_symmetry_scrollpitch_paramxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
+							<span id="display_symmetry_scrollpitch_paramxx_yyy" style="display:none;">readout</span>
+							<div id="slider_symmetry_scrollboth_paramxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
+							<span id="display_symmetry_scrollboth_paramxx_yyy" style="display:none;">readout</span>
 						</td>
 					</tr>
 					<!-- insertion_point -->
