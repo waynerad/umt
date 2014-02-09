@@ -5,3 +5,26 @@ It runs in the web browser and is written entirely in Javascript and uses the We
 Tested to work on Chrome but should work on any HTML5-compliant browser.
 
 by Wayne Radinsky
+
+Demo
+
+The demo is not online yet.
+
+Install
+
+To "install", just download or clone and load umt.html into a web browser. Relavant libraries (such as jQuery) are all included, even though that's not really necessary.
+
+Conventions
+
+Goal of doing everything the simplest possible way.
+
+- All UMT code must pass JSLint. No exceptions. JSLint is treated as the target language. This includes stylistic conventions. None of the default options for disabling checks are allowed. The comment line at the beginning of the code specifies all the JSLint flags that will be used, which is currently only one: browser: true.
+
+- Modularity is achieved by prefixing all the functions with umt_. Yes, this is more tedious than other methods, but it is the simplest possible way I could think of and unambiguous. All data is put into a single global variable called g_umt. This should eliminate variable name collisions if UMT is used as part of another project. In general, I tried to design the system using the simplest possible design decisions at each stage, so the code is as unambiguous as possible and as easy to understand as possible. (Not saying it's *actually* easy to understand, since there is a certain level of unavoidable complexity, only that an effort was made to make it easy and reduce ambiguity at every stage as much as possible.)
+
+- The UI is done with only jQuery sliders. (And built-in HTML controls such as listboxes). There are no custom UI elements and no other UI elements in the system. This was partly for simplicity and partly because my primary focus has been getting the actual music composition working properly.
+
+- Since jQuery sliders are shadowed in data variables (stored in g_umt.ui_params), the decision was made to shadow all UI imputs, and implement a function that transfers data *from* the shadowed variables to the UI -- this will make it possible to "load" settings saved earlier into the UI. If you develop an alternate UI for UMT you will need to implement this.
+
+- The instrument UI (under development) uses camelCase but the rest of the system uses underscores for identifier names. This is because I didn't realize camelCase was the standard for Javascript until after the composition engine had been written. This enambles all you instrument writers to use camelCase without needing to worry that the core of the system is written with underscores. The core of the system may or may not someday be converted to camelCase -- that will depend on how many people work on it and whether they feel the conversion is worth it. If most people working on the system turn out to be instrument designers, and not core developers working on the composition engine, then the core of the system might never be converted to camelCase.
+
