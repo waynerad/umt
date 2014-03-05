@@ -2004,7 +2004,9 @@ function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voi
                 newvalue = ui.value / 10;
                 window.document.getElementById("display_symmetry_trans_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
                 g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].trans_param = newvalue;
-                umt_automatically_recompose_loop_from_ui_params();
+                if (g_umt.ui_params.voice[voice_number].playing) {
+                    umt_automatically_recompose_loop_from_ui_params();
+                }
             }
         }
     }
@@ -2017,7 +2019,9 @@ function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voi
                 newvalue = (ui.value - 12) / 10;
                 window.document.getElementById("display_symmetry_scale_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
                 g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].scale_param = newvalue;
-                umt_automatically_recompose_loop_from_ui_params();
+                if (g_umt.ui_params.voice[voice_number].playing) {
+                    umt_automatically_recompose_loop_from_ui_params();
+                }
             }
         }
     }
@@ -2030,7 +2034,9 @@ function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voi
                 newvalue = (ui.value - 12) / 10;
                 window.document.getElementById("display_symmetry_tilt_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
                 g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].tilt_param = newvalue;
-                umt_automatically_recompose_loop_from_ui_params();
+                if (g_umt.ui_params.voice[voice_number].playing) {
+                    umt_automatically_recompose_loop_from_ui_params();
+                }
             }
         }
     }
@@ -2043,7 +2049,9 @@ function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voi
                 newvalue = ui.value / 10;
                 window.document.getElementById("display_symmetry_scrollrhythm_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
                 g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].scrollrhythm_param = newvalue;
-                umt_automatically_recompose_loop_from_ui_params();
+                if (g_umt.ui_params.voice[voice_number].playing) {
+                    umt_automatically_recompose_loop_from_ui_params();
+                }
             }
         }
     }
@@ -2056,7 +2064,9 @@ function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voi
                 newvalue = ui.value / 10;
                 window.document.getElementById("display_symmetry_scrollpitch_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
                 g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].scrollpitch_param = newvalue;
-                umt_automatically_recompose_loop_from_ui_params();
+                if (g_umt.ui_params.voice[voice_number].playing) {
+                    umt_automatically_recompose_loop_from_ui_params();
+                }
             }
         }
     }
@@ -2069,7 +2079,9 @@ function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voi
                 newvalue = ui.value / 10;
                 window.document.getElementById("display_symmetry_scrollboth_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
                 g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].scrollboth_param = newvalue;
-                umt_automatically_recompose_loop_from_ui_params();
+                if (g_umt.ui_params.voice[voice_number].playing) {
+                    umt_automatically_recompose_loop_from_ui_params();
+                }
             }
         }
     }
@@ -2143,7 +2155,9 @@ function umt_exec_pervoice_symmetry_change(event) {
     sym_size = elemid.substring(i + 1);
     symmetry_pattern = selectedvalue;
     g_umt.ui_params.voice[voice_number].symmetry[sym_size].pattern = symmetry_pattern;
-    umt_automatically_recompose_loop_from_ui_params();
+    if (g_umt.ui_params.voice[voice_number].playing) {
+        umt_automatically_recompose_loop_from_ui_params();
+    }
 }
 
 function umt_ui_turn_on_symmetry_patterns(row, pattern_label, is_on) {
@@ -2330,7 +2344,9 @@ function umt_ui_add_row(voice_number) {
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_volume" + voice_number).innerHTML = aspercentage + "%";
                 g_umt.ui_params.voice[voice_number].volume = absvalue;
-                umt_automatically_recompose_loop_from_ui_params();
+                if (g_umt.ui_params.voice[voice_number].playing) {
+                    umt_automatically_recompose_loop_from_ui_params();
+                }
             }
         }
     }
@@ -2342,7 +2358,9 @@ function umt_ui_add_row(voice_number) {
                 newvalue = ui.value;
                 window.document.getElementById("display_octave" + voice_number).innerHTML = newvalue;
                 g_umt.ui_params.voice[voice_number].octave = newvalue;
-                umt_automatically_recompose_loop_from_ui_params();
+                if (g_umt.ui_params.voice[voice_number].playing) {
+                    umt_automatically_recompose_loop_from_ui_params();
+                }
             }
         }
     }
@@ -2356,7 +2374,9 @@ function umt_ui_add_row(voice_number) {
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_notedistance" + voice_number).innerHTML = aspercentage + "%";
                 g_umt.ui_params.voice[voice_number].note_distance = absvalue;
-                umt_automatically_recompose_loop_from_ui_params();
+                if (g_umt.ui_params.voice[voice_number].playing) {
+                    umt_automatically_recompose_loop_from_ui_params();
+                }
             }
         }
     }
@@ -2370,7 +2390,9 @@ function umt_ui_add_row(voice_number) {
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_restyness" + voice_number).innerHTML = aspercentage + "%";
                 g_umt.ui_params.voice[voice_number].restyness = absvalue;
-                umt_automatically_recompose_loop_from_ui_params();
+                if (g_umt.ui_params.voice[voice_number].playing) {
+                    umt_automatically_recompose_loop_from_ui_params();
+                }
             }
         }
     }
@@ -2384,7 +2406,9 @@ function umt_ui_add_row(voice_number) {
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_ampvariation" + voice_number).innerHTML = aspercentage + "%";
                 g_umt.ui_params.voice[voice_number].amp_variation = absvalue;
-                umt_automatically_recompose_loop_from_ui_params();
+                if (g_umt.ui_params.voice[voice_number].playing) {
+                    umt_automatically_recompose_loop_from_ui_params();
+                }
             }
         }
     }
@@ -2400,7 +2424,9 @@ function umt_ui_add_row(voice_number) {
                 g_umt.idem_adding_voice = true;
                 umt_ui_cascade_min_note_changes(voice_number, newvalue);
                 g_umt.idem_adding_voice = false;
-                umt_automatically_recompose_loop_from_ui_params();
+                if (g_umt.ui_params.voice[voice_number].playing) {
+                    umt_automatically_recompose_loop_from_ui_params();
+                }
             }
         }
     }
@@ -2416,7 +2442,9 @@ function umt_ui_add_row(voice_number) {
                 g_umt.idem_adding_voice = true;
                 umt_ui_cascade_chunk_size_changes(voice_number, newvalue);
                 g_umt.idem_adding_voice = false;
-                umt_automatically_recompose_loop_from_ui_params();
+                if (g_umt.ui_params.voice[voice_number].playing) {
+                    umt_automatically_recompose_loop_from_ui_params();
+                }
             }
         }
     }
@@ -2433,7 +2461,9 @@ function umt_ui_add_row(voice_number) {
                 g_umt.idem_adding_voice = true;
                 umt_ui_cascade_frame_size_changes(voice_number, newvalue);
                 g_umt.idem_adding_voice = false;
-                umt_automatically_recompose_loop_from_ui_params();
+                if (g_umt.ui_params.voice[voice_number].playing) {
+                    umt_automatically_recompose_loop_from_ui_params();
+                }
             }
         }
     }
