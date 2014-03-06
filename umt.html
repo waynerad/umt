@@ -140,15 +140,16 @@ function umt_generate_a_note(frequency, duration, amplitude) {
     "use strict";
     /* consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html */
     var num_samples, the_buffer, buf_data, i, fade;
+    var master_rescaler = 0.9;
     num_samples = duration * g_umt.SAMPLE_RATE;
     the_buffer = g_umt.global_ctx.createBuffer(1, num_samples, g_umt.SAMPLE_RATE); /* numberOfChannels, length, sampleRate */
     buf_data = the_buffer.getChannelData(0);
     for (i = 0; i < num_samples; i = i + 1) {
-        fade = 1 - (i / num_samples);
+        fade = 1.0 - (i / num_samples);
         // buf_data[i] = Math.sin((g_umt.TAU * i * frequency) / g_umt.SAMPLE_RATE) * ((amplitude * fade) / 8);
         // buf_data[i] = Math.sin((g_umt.TAU * i * frequency) / g_umt.SAMPLE_RATE) * (amplitude / 2);
         // buf_data[i] = Math.sin((g_umt.TAU * i * frequency) / g_umt.SAMPLE_RATE) * 0.1;
-        buf_data[i] = Math.sin((g_umt.TAU * i * (frequency / g_umt.SAMPLE_RATE))) * ((amplitude * fade) / 8);
+        buf_data[i] = Math.sin((g_umt.TAU * i * (frequency / g_umt.SAMPLE_RATE))) * ((amplitude * fade * master_rescaler) / 8);
         // umt_test_check_for_float(buf_data[i]);
         // umt_cx("buf_data[i] = " + umt_ctstr(buf_data[i]));
         // if ((buf_data[i] < -1.0) || (buf_data[i] > 1.0)) {
@@ -1976,6 +1977,8 @@ function umt_exec_play_voice_change(event) {
     if (g_umt.idem_adding_voice === false) {
         umt_automatically_recompose_loop_from_ui_params();
     }
+    document.getElementById("start_automatic").disabled = false;
+    document.getElementById("stop_automatic").disabled = false;
 }
 
 function umt_exec_song_number_change(event) {
@@ -2629,6 +2632,7 @@ jQuery(function () {
         }
     }
          });
+    umt_exec_add_voice();
 });
 
 </script>
@@ -2643,8 +2647,8 @@ jQuery(function () {
 <p> Stuff that applies to whole score </p>
 
 <p>
-    <input type="button" id="start_automatic" value="Start Music" />
-    <input type="button" id="stop_automatic" value="Stop Music" />
+    <input type="button" id="start_automatic" value="Start Music" disabled="disabled" />
+    <input type="button" id="stop_automatic" value="Stop Music" disabled="disabled" />
     <input type="button" id="test_play_raw" value="Test Play Raw" />
     <input type="button" id="test_dump_gumt" value="Test Dump g_umt" />
     <input type="button" id="test_symmetry_system" value="Test Symmetry System" />
