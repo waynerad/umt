@@ -11,7 +11,7 @@
 <script src="mt19937class.js" ></script>
 <script>
 
-/* (C) 2011-2013 Wayne Radinsky */
+/* (C) 2011-2014 Wayne Radinsky */
 
 /*jslint browser: true */
 
@@ -139,8 +139,8 @@ function umt_test_check_for_float(anyparameter) {
 function umt_generate_a_note(frequency, duration, amplitude) {
     "use strict";
     /* consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html */
-    var num_samples, the_buffer, buf_data, i, fade;
-    var master_rescaler = 0.9;
+    var num_samples, the_buffer, buf_data, i, fade, master_rescaler;
+    master_rescaler = 0.9;
     num_samples = duration * g_umt.SAMPLE_RATE;
     the_buffer = g_umt.global_ctx.createBuffer(1, num_samples, g_umt.SAMPLE_RATE); /* numberOfChannels, length, sampleRate */
     buf_data = the_buffer.getChannelData(0);
@@ -162,7 +162,7 @@ function umt_generate_a_note(frequency, duration, amplitude) {
 function umt_que_up_a_note(from_moment, frequency, start_time, duration, amplitude, inst_specific_params) {
     "use strict";
     // umt_cx("play from " + umt_ctstr(from_moment) + ", frequency " + umt_ctstr(frequency) + ", start_time " + umt_ctstr(start_time) + ", duration " + umt_ctstr(duration) + ", amplitude " + umt_ctstr(amplitude));
-    var idxname, the_buffer, node, our_start, start_mmt, buf_data, z, val;
+    var idxname, the_buffer, node, our_start, start_mmt;
     idxname = inst_specific_params; /* delete_me */
     idxname = frequency + "x" + duration + "x" + amplitude;
     if (g_umt.cached_notes.hasOwnProperty(idxname)) {
