@@ -31,7 +31,7 @@ inst_params -- instrument parameters -- not used yet but will hold
 fpt -- "floating-point" -- floating point value of pitches for scale notes
        (notes are expressed as both a ratio, num/dnom, and a floating-point
        value where 2^fpt is proportional to the pitch
-       pitch values in g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].pitch
+       pitch values in g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].pitch
        are RAW pitches and in floating-point format.
 */
 
@@ -212,24 +212,24 @@ function umt_get_rando(seed_num) {
 
 function umt_clear_loop(lpnum, x_tempo, center_note, x_scale) {
     "use strict";
-    g_umt.loop[lpnum] = { score: {tempo: x_tempo, centernote_log: (Math.log(center_note) / g_umt.LOG2) - 5, scale: x_scale, playback_time_offset: 0, voice: [] } };
+    g_umt.loop[lpnum] = { score: {tempo: x_tempo, centernote_log: (Math.log(center_note) / g_umt.LOG2) - 5, scale: x_scale, playback_time_offset: 0, song_tab: [ { voice: [] } ] } };
 }
 
 function umt_add_voice(lpnum, idx, song_number, range_min, range_max) {
     "use strict";
     g_umt.loop[lpnum].score.parts = idx + 1;
-    g_umt.loop[lpnum].score.voice[idx] = { instrument: 'tuningfork', selection: 0, cursor: 0, next_start: 0, range_top: range_max, range_bottom: range_min, notes: [], rand_rhythm: umt_get_rando(song_number * 40), rand_pitch: umt_get_rando(song_number * 40 + 1), rand_amp: umt_get_rando(song_number * 40 + 5), rand_rests: umt_get_rando(song_number * 40 + 2), rand_syms: umt_get_rando(song_number * 40 + 3), rand_trans: umt_get_rando(song_number * 40 + 4), rand_scale: umt_get_rando(song_number * 40 + 5), rand_tilt: umt_get_rando(song_number * 40 + 6), rand_scrollrhythm: umt_get_rando(song_number * 40 + 7), rand_scrollpitch: umt_get_rando(song_number * 40 + 8), rand_scrollboth: umt_get_rando(song_number * 40 + 9) };
+    g_umt.loop[lpnum].score.song_tab[0].voice[idx] = { instrument: 'tuningfork', selection: 0, cursor: 0, next_start: 0, range_top: range_max, range_bottom: range_min, notes: [], rand_rhythm: umt_get_rando(song_number * 40), rand_pitch: umt_get_rando(song_number * 40 + 1), rand_amp: umt_get_rando(song_number * 40 + 5), rand_rests: umt_get_rando(song_number * 40 + 2), rand_syms: umt_get_rando(song_number * 40 + 3), rand_trans: umt_get_rando(song_number * 40 + 4), rand_scale: umt_get_rando(song_number * 40 + 5), rand_tilt: umt_get_rando(song_number * 40 + 6), rand_scrollrhythm: umt_get_rando(song_number * 40 + 7), rand_scrollpitch: umt_get_rando(song_number * 40 + 8), rand_scrollboth: umt_get_rando(song_number * 40 + 9) };
 }
 
 function umt_add_note(lpnum, voicenum, rest, pitch, duration, amplitude, inst_params) {
     "use strict";
     var idx, cursorval;
     idx = voicenum;
-    cursorval = g_umt.loop[lpnum].score.voice[idx].cursor;
-    g_umt.loop[lpnum].score.voice[idx].notes[cursorval] = { starttime: g_umt.loop[lpnum].score.voice[idx].next_start, rest: rest, pitch: pitch, duration: duration, amplitude: amplitude, inst_params: inst_params, harm_octave: -1, harm_num: -1, harm_dnom: -1 };
+    cursorval = g_umt.loop[lpnum].score.song_tab[0].voice[idx].cursor;
+    g_umt.loop[lpnum].score.song_tab[0].voice[idx].notes[cursorval] = { starttime: g_umt.loop[lpnum].score.song_tab[0].voice[idx].next_start, rest: rest, pitch: pitch, duration: duration, amplitude: amplitude, inst_params: inst_params, harm_octave: -1, harm_num: -1, harm_dnom: -1 };
     cursorval = cursorval + 1;
-    g_umt.loop[lpnum].score.voice[idx].cursor = cursorval;
-    g_umt.loop[lpnum].score.voice[idx].next_start += duration;
+    g_umt.loop[lpnum].score.song_tab[0].voice[idx].cursor = cursorval;
+    g_umt.loop[lpnum].score.song_tab[0].voice[idx].next_start += duration;
 }
 
 function umt_test_play_raw_score(lpnum) {
@@ -240,15 +240,15 @@ function umt_test_play_raw_score(lpnum) {
     tempo_scalar = 60 / g_umt.loop[lpnum].score.tempo;
     num_voices = g_umt.loop[lpnum].score.parts;
     for (voicenum = 0; voicenum < num_voices; voicenum = voicenum + 1) {
-        for (notenum = 0; notenum < g_umt.loop[lpnum].score.voice[voicenum].cursor; notenum = notenum + 1) {
-            if (g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].rest === false) {
-                pitch = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].pitch;
-                duration = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].duration * tempo_scalar;
-                amplitude = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].amplitude;
+        for (notenum = 0; notenum < g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].cursor; notenum = notenum + 1) {
+            if (g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].rest === false) {
+                pitch = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].pitch;
+                duration = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].duration * tempo_scalar;
+                amplitude = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].amplitude;
                 amplitude = amplitude / num_voices;
-                inst_specific_params = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].inst_params;
+                inst_specific_params = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].inst_params;
                 frequency = Math.exp((pitch + center) * g_umt.LOG2);
-                start_time = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].starttime * tempo_scalar;
+                start_time = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].starttime * tempo_scalar;
                 umt_que_up_a_note(from_moment, frequency, start_time, duration, amplitude, inst_specific_params);
             }
         }
@@ -693,11 +693,11 @@ function umt_sanit_test_entire_score(lpnum, do_output) {
         playing_now = [];
         pncount = 0;
         for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
-            partlen = g_umt.loop[lpnum].score.voice[vcnum].cursor;
+            partlen = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].cursor;
             for (i = 0; i < partlen; i = i + 1) {
-                if (g_umt.loop[lpnum].score.voice[vcnum].notes[i].harm_dnom >= 0) {
-                    if (g_umt.loop[lpnum].score.voice[vcnum].notes[i].starttime <= current_time) {
-                        if (g_umt.loop[lpnum].score.voice[vcnum].notes[i].starttime + g_umt.loop[lpnum].score.voice[vcnum].notes[i].duration > current_time) {
+                if (g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[i].harm_dnom >= 0) {
+                    if (g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[i].starttime <= current_time) {
+                        if (g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[i].starttime + g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[i].duration > current_time) {
                             playing_now[pncount] = {voice: vcnum, note: i};
                             pncount = pncount + 1;
                             beyond_all = false;
@@ -714,8 +714,8 @@ function umt_sanit_test_entire_score(lpnum, do_output) {
             for (i = 0; i < pncount; i = i + 1) {
                 vcnum = playing_now[i].voice;
                 notenum = playing_now[i].note;
-                xnum = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].harm_num;
-                xdnom = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].harm_dnom;
+                xnum = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[notenum].harm_num;
+                xdnom = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[notenum].harm_dnom;
                 descrip = descrip + ' and ' + xnum + ' / ' + xdnom;
             }
         }
@@ -723,14 +723,14 @@ function umt_sanit_test_entire_score(lpnum, do_output) {
             for (y = x + 1; y < pncount; y = y + 1) {
                 vcnum = playing_now[x].voice;
                 notenum = playing_now[x].note;
-                xnum = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].harm_num;
-                xdnom = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].harm_dnom;
-                xrest = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].rest;
+                xnum = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[notenum].harm_num;
+                xdnom = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[notenum].harm_dnom;
+                xrest = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[notenum].rest;
                 vcnum = playing_now[y].voice;
                 notenum = playing_now[y].note;
-                ynum = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].harm_num;
-                ydnom = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].harm_dnom;
-                yrest = g_umt.loop[lpnum].score.voice[vcnum].notes[notenum].rest;
+                ynum = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[notenum].harm_num;
+                ydnom = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[notenum].harm_dnom;
+                yrest = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[notenum].rest;
                 if ((xrest === false) && (yrest === false)) {
                     result = umt_is_cons_order_ind(xnum, xdnom, ynum, ydnom);
                     if (result === false) {
@@ -809,11 +809,11 @@ function umt_harmonize_score(lpnum) {
     /* clear old data */
     parts = g_umt.loop[lpnum].score.parts;
     for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
-        notecount = g_umt.loop[lpnum].score.voice[vcnum].cursor;
+        notecount = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].cursor;
         for (i = 0; i < notecount; i = i + 1) {
-            g_umt.loop[lpnum].score.voice[vcnum].notes[i].harm_octave = -1;
-            g_umt.loop[lpnum].score.voice[vcnum].notes[i].harm_num = -1;
-            g_umt.loop[lpnum].score.voice[vcnum].notes[i].harm_dnom = -1;
+            g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[i].harm_octave = -1;
+            g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[i].harm_num = -1;
+            g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[i].harm_dnom = -1;
         }
     }
     /* and off we go */
@@ -841,11 +841,11 @@ function umt_harmonize_score(lpnum) {
     }
     time_remaining = [];
     for (i = 0; i < parts; i = i + 1) {
-        time_remaining[i] = g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].duration;
+        time_remaining[i] = g_umt.loop[lpnum].score.song_tab[0].voice[i].notes[current_position[i]].duration;
     }
     off_end = [];
     for (i = 0; i < parts; i = i + 1) {
-        if (current_position[i] === g_umt.loop[lpnum].score.voice[i].cursor) {
+        if (current_position[i] === g_umt.loop[lpnum].score.song_tab[0].voice[i].cursor) {
             off_end[i] = true;
         } else {
             off_end[i] = false;
@@ -906,43 +906,43 @@ function umt_harmonize_score(lpnum) {
             /* here is the actual "harmonization" code -- everything else is
                just looping
             */
-            if (g_umt.loop[lpnum].score.voice[max_idx].notes[current_position[max_idx]].harm_dnom === -1) {
+            if (g_umt.loop[lpnum].score.song_tab[0].voice[max_idx].notes[current_position[max_idx]].harm_dnom === -1) {
                 poz = current_position[max_idx];
                 /* find all other notes that are turned on at the same time */
                 list_of_notes_already_playing = [];
                 lonap_cursr = 0;
                 for (i = 0; i < parts; i = i + 1) {
-                    if (current_position[i] < g_umt.loop[lpnum].score.voice[i].cursor) { /* check that we're not off the end */
-                        if (g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].harm_dnom !== -1) {
+                    if (current_position[i] < g_umt.loop[lpnum].score.song_tab[0].voice[i].cursor) { /* check that we're not off the end */
+                        if (g_umt.loop[lpnum].score.song_tab[0].voice[i].notes[current_position[i]].harm_dnom !== -1) {
                             /* sanity check 2 */
-                            if (current_time < g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].starttime) {
+                            if (current_time < g_umt.loop[lpnum].score.song_tab[0].voice[i].notes[current_position[i]].starttime) {
                                 umt_jsabort('START TIME IS AFTER CURRENT TIME! OH NO!');
                             }
-                            if (current_time >= (g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].starttime + g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].duration)) {
+                            if (current_time >= (g_umt.loop[lpnum].score.song_tab[0].voice[i].notes[current_position[i]].starttime + g_umt.loop[lpnum].score.song_tab[0].voice[i].notes[current_position[i]].duration)) {
                                 umt_jsabort('START TIME + DURATION IS BEFORE CURRENT TIME!! OH NO!!');
                             }
-                            if (g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].rest === false) {
-                                list_of_notes_already_playing[lonap_cursr] = {octave: g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].harm_octave, num: g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].harm_num, dnom: g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].harm_dnom};
+                            if (g_umt.loop[lpnum].score.song_tab[0].voice[i].notes[current_position[i]].rest === false) {
+                                list_of_notes_already_playing[lonap_cursr] = {octave: g_umt.loop[lpnum].score.song_tab[0].voice[i].notes[current_position[i]].harm_octave, num: g_umt.loop[lpnum].score.song_tab[0].voice[i].notes[current_position[i]].harm_num, dnom: g_umt.loop[lpnum].score.song_tab[0].voice[i].notes[current_position[i]].harm_dnom};
                                 lonap_cursr = lonap_cursr + 1;
                             }
                         }
                     }
                 }
-                harmonized_info = umt_find_most_harmonic_note(g_umt.loop[lpnum].score.voice[max_idx].notes[poz].pitch, the_scale, list_of_notes_already_playing);
+                harmonized_info = umt_find_most_harmonic_note(g_umt.loop[lpnum].score.song_tab[0].voice[max_idx].notes[poz].pitch, the_scale, list_of_notes_already_playing);
                 /* sanity check 1 */
-                if (current_time !== g_umt.loop[lpnum].score.voice[max_idx].notes[current_position[max_idx]].starttime) {
+                if (current_time !== g_umt.loop[lpnum].score.song_tab[0].voice[max_idx].notes[current_position[max_idx]].starttime) {
                     umt_cx('START TIMES DO NOT MATCH! OH NO!');
                     umt_cx('current_time is ' + current_time);
-                    umt_cx('g_umt.loop[lpnum].score.voice[max_idx].notes[current_position[max_idx]].starttime is ' + g_umt.loop[lpnum].score.voice[max_idx].notes[current_position[max_idx]].starttime);
+                    umt_cx('g_umt.loop[lpnum].score.song_tab[0].voice[max_idx].notes[current_position[max_idx]].starttime is ' + g_umt.loop[lpnum].score.song_tab[0].voice[max_idx].notes[current_position[max_idx]].starttime);
                     umt_cx('lpnum is ' + lpnum);
                     umt_cx('max_idx is ' + max_idx);
                     umt_cx('current_position[max_idx] is ' + current_position[max_idx]);
                     console.log('g_umt', g_umt);
                     umt_jsabort('START TIMES DO NOT MATCH! OH NO!');
                 }
-                g_umt.loop[lpnum].score.voice[max_idx].notes[current_position[max_idx]].harm_octave = harmonized_info.octave;
-                g_umt.loop[lpnum].score.voice[max_idx].notes[current_position[max_idx]].harm_num = harmonized_info.num;
-                g_umt.loop[lpnum].score.voice[max_idx].notes[current_position[max_idx]].harm_dnom = harmonized_info.dnom;
+                g_umt.loop[lpnum].score.song_tab[0].voice[max_idx].notes[current_position[max_idx]].harm_octave = harmonized_info.octave;
+                g_umt.loop[lpnum].score.song_tab[0].voice[max_idx].notes[current_position[max_idx]].harm_num = harmonized_info.num;
+                g_umt.loop[lpnum].score.song_tab[0].voice[max_idx].notes[current_position[max_idx]].harm_dnom = harmonized_info.dnom;
                 umt_sanit_test_entire_score(lpnum, false);
             }
             /* end of actual "harmonization" code" */
@@ -981,16 +981,16 @@ function umt_harmonize_score(lpnum) {
             if (off_end[i] === false) {
                 if (time_remaining[i] === 0) {
                     current_position[i] = current_position[i] + 1;
-                    if (current_position[i] === g_umt.loop[lpnum].score.voice[i].cursor) {
+                    if (current_position[i] === g_umt.loop[lpnum].score.song_tab[0].voice[i].cursor) {
                         off_end[i] = true;
                     } else {
-                        time_remaining[i] = g_umt.loop[lpnum].score.voice[i].notes[current_position[i]].duration;
+                        time_remaining[i] = g_umt.loop[lpnum].score.song_tab[0].voice[i].notes[current_position[i]].duration;
                     }
                 }
             }
         }
         for (i = 0; i < parts; i = i + 1) {
-            if (current_position[i] === g_umt.loop[lpnum].score.voice[i].cursor) {
+            if (current_position[i] === g_umt.loop[lpnum].score.song_tab[0].voice[i].cursor) {
                 off_end[i] = true;
             }
         }
@@ -1018,18 +1018,18 @@ function umt_play_harmonized(lpnum) {
     tempo_scalar = 60 / g_umt.loop[lpnum].score.tempo;
     num_voices = g_umt.loop[lpnum].score.parts;
     for (voicenum = 0; voicenum < num_voices; voicenum = voicenum + 1) {
-        for (notenum = 0; notenum < g_umt.loop[lpnum].score.voice[voicenum].cursor; notenum = notenum + 1) {
-            if (g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].rest === false) {
-                harmonized_octave = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_octave;
-                harmonized_num = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_num;
-                harmonized_dnom = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_dnom;
-                duration = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].duration * tempo_scalar;
-                amplitude = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].amplitude;
+        for (notenum = 0; notenum < g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].cursor; notenum = notenum + 1) {
+            if (g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].rest === false) {
+                harmonized_octave = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].harm_octave;
+                harmonized_num = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].harm_num;
+                harmonized_dnom = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].harm_dnom;
+                duration = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].duration * tempo_scalar;
+                amplitude = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].amplitude;
                 amplitude = amplitude / num_voices;
-                inst_specific_params = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].inst_params;
+                inst_specific_params = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].inst_params;
                 frequency = Math.exp((harmonized_octave + center) * g_umt.LOG2);
                 frequency = frequency * (harmonized_num / harmonized_dnom);
-                start_time = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].starttime * tempo_scalar;
+                start_time = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].starttime * tempo_scalar;
                 umt_que_up_a_note(from_moment, frequency, start_time, duration, amplitude, inst_specific_params);
             }
         }
@@ -1043,15 +1043,15 @@ function umt_dump_harmonized(lpnum) {
     umt_cx('num_voices is ' + num_voices);
     for (voicenum = 0; voicenum < num_voices; voicenum = voicenum + 1) {
         umt_cx('  voicenum is ' + voicenum);
-        for (notenum = 0; notenum < g_umt.loop[lpnum].score.voice[voicenum].cursor; notenum = notenum + 1) {
-            harmonized_octave = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_octave;
-            harmonized_num = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_num;
-            harmonized_dnom = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_dnom;
-            duration = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].duration;
-            amplitude = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].amplitude;
+        for (notenum = 0; notenum < g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].cursor; notenum = notenum + 1) {
+            harmonized_octave = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].harm_octave;
+            harmonized_num = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].harm_num;
+            harmonized_dnom = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].harm_dnom;
+            duration = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].duration;
+            amplitude = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].amplitude;
             amplitude = amplitude / num_voices;
-            start_time = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].starttime;
-            if (g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].rest) {
+            start_time = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].starttime;
+            if (g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].rest) {
                 umt_cx('    note ' + notenum + ', start ' + start_time + ', duration ' + duration + ', rest');
             } else {
                 umt_cx('    note ' + notenum + ', start ' + start_time + ', duration ' + duration + ', octave ' + harmonized_octave + ', num ' + harmonized_num + ', dnom ' + harmonized_dnom + ', amplitude ' + amplitude);
@@ -1150,15 +1150,15 @@ function umt_add_sym_base_to_voice(lpnum, vcnum, min_size, chunk_size, total_len
     var rhythm, len_rhy, idx, duration, pitch, amplitude, volscalar;
     volscalar = 2.7;
     volume = Math.exp(volume * volscalar) / Math.exp(volscalar); /* this is done to "logarithmize" the volume slider */
-    rhythm = umt_generate_rhythm(g_umt.loop[lpnum].score.voice[vcnum].rand_rhythm, min_size, chunk_size, total_length);
+    rhythm = umt_generate_rhythm(g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].rand_rhythm, min_size, chunk_size, total_length);
     len_rhy = rhythm.length;
     for (idx = 0; idx < len_rhy; idx = idx + 1) {
         duration = rhythm[idx];
-        pitch = (g_umt.loop[lpnum].score.voice[vcnum].rand_pitch.genrand_real2() * (2 * note_distance)) - note_distance;
-        if (g_umt.loop[lpnum].score.voice[vcnum].rand_rests.genrand_real2() < restyness) {
+        pitch = (g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].rand_pitch.genrand_real2() * (2 * note_distance)) - note_distance;
+        if (g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].rand_rests.genrand_real2() < restyness) {
             umt_add_note(lpnum, vcnum, true, center_octave, duration, 1, null);
         } else {
-            amplitude = (1.0 - (g_umt.loop[lpnum].score.voice[vcnum].rand_amp.genrand_real2() * amp_variation)) * volume;
+            amplitude = (1.0 - (g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].rand_amp.genrand_real2() * amp_variation)) * volume;
             if (idx === 0) {
                 pitch = Math.floor(pitch + 0.5);
             }
@@ -1187,34 +1187,34 @@ function umt_schedule_play_of_segment() {
     }
     anything_played = false;
     if (g_umt.loop[g_umt.currently_playing_loop].score.parts > 0) {
-        loop_unit_len = g_umt.loop[lpnum].score.voice[0].next_start;
+        loop_unit_len = g_umt.loop[lpnum].score.song_tab[0].voice[0].next_start;
         tempo_scalar = 60 / g_umt.loop[lpnum].score.tempo;
         loop_len = loop_unit_len * tempo_scalar;
         from_moment = Math.floor(window_start / loop_len) * loop_len;
         center = g_umt.loop[lpnum].score.centernote_log;
         num_voices = g_umt.loop[lpnum].score.parts;
         for (voicenum = 0; voicenum < num_voices; voicenum = voicenum + 1) {
-            for (notenum = 0; notenum < g_umt.loop[lpnum].score.voice[voicenum].cursor; notenum = notenum + 1) {
-                adjusted_start_time = (g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].starttime * tempo_scalar) + from_moment;
+            for (notenum = 0; notenum < g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].cursor; notenum = notenum + 1) {
+                adjusted_start_time = (g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].starttime * tempo_scalar) + from_moment;
                 if (adjusted_start_time < window_start) {
                     adjusted_start_time = adjusted_start_time + loop_len;
                 }
                 if (adjusted_start_time < window_stop) {
-                    if (g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].rest === false) {
-                        harmonized_octave = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_octave;
-                        harmonized_num = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_num;
-                        harmonized_dnom = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].harm_dnom;
-                        duration = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].duration * tempo_scalar;
-                        amplitude = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].amplitude;
+                    if (g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].rest === false) {
+                        harmonized_octave = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].harm_octave;
+                        harmonized_num = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].harm_num;
+                        harmonized_dnom = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].harm_dnom;
+                        duration = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].duration * tempo_scalar;
+                        amplitude = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].amplitude;
                         if (num_voices === 1) {
                             amplitude = amplitude / 1.4142135623730951;
                         } else {
                             amplitude = amplitude / num_voices;
                         }
-                        inst_specific_params = g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].inst_params;
+                        inst_specific_params = g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].inst_params;
                         frequency = Math.exp((harmonized_octave + center) * g_umt.LOG2);
                         frequency = frequency * (harmonized_num / harmonized_dnom);
-                        start_time = adjusted_start_time - from_moment; /* g_umt.loop[lpnum].score.voice[voicenum].notes[notenum].starttime * tempo_scalar; */
+                        start_time = adjusted_start_time - from_moment; /* g_umt.loop[lpnum].score.song_tab[0].voice[voicenum].notes[notenum].starttime * tempo_scalar; */
                         umt_que_up_a_note(from_moment - ctx_offset, frequency, start_time, duration, amplitude, inst_specific_params);
                         anything_played = true;
                     }
@@ -1256,35 +1256,35 @@ function umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direc
     segment_start = -1;
     ts_rh_cursor = -1; /* ts == "time scroll"; rh == "rhythm", pi == "pitch" */
     ts_pi_cursor = -1;
-    for (ix = 0; ix < g_umt.loop[lpnum].score.voice[vcnum].cursor; ix = ix + 1) {
+    for (ix = 0; ix < g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].cursor; ix = ix + 1) {
         /* yes, we search the whole voice -- this is ok because loops are short.
            If the sytem is ever used for long compositions, this will need to
            be replaced with interval halving
         */
         if (segment_start === -1) {
-            if (g_umt.loop[lpnum].score.voice[vcnum].notes[ix].starttime >= start_time) {
+            if (g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[ix].starttime >= start_time) {
                 segment_start = ix;
-                max_pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch;
+                max_pitch = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[ix].pitch;
                 min_pitch = max_pitch;
             }
         }
-        if (g_umt.loop[lpnum].score.voice[vcnum].notes[ix].starttime < end_time) {
+        if (g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[ix].starttime < end_time) {
             segment_end = ix;
         }
         if (ts_rh_cursor === -1) {
-            if (g_umt.loop[lpnum].score.voice[vcnum].notes[ix].starttime >= (start_time + time_rhythm_scroll)) {
+            if (g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[ix].starttime >= (start_time + time_rhythm_scroll)) {
                 ts_rh_cursor = ix;
             }
         }
         if (ts_pi_cursor === -1) {
-            if (g_umt.loop[lpnum].score.voice[vcnum].notes[ix].starttime >= (start_time + time_pitch_scroll)) {
+            if (g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[ix].starttime >= (start_time + time_pitch_scroll)) {
                 ts_pi_cursor = ix;
             }
         }
-        if ((g_umt.loop[lpnum].score.voice[vcnum].notes[ix].starttime >= start_time) && (g_umt.loop[lpnum].score.voice[vcnum].notes[ix].starttime < end_time)) {
+        if ((g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[ix].starttime >= start_time) && (g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[ix].starttime < end_time)) {
             /* if notes are "playing" get min and max */
             /* we need min and max for scrolling effect */
-            this_pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch;
+            this_pitch = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[ix].pitch;
             if (this_pitch > max_pitch) {
                 max_pitch = this_pitch;
             }
@@ -1306,14 +1306,14 @@ function umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direc
         pitch_cursor = segment_end - (ts_pi_cursor - segment_start);
     }
     termination_cursor = segment_start;
-    range_test_start = g_umt.loop[lpnum].score.voice[vcnum].cursor;
+    range_test_start = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].cursor;
     /* execute the copy+transform */
     while (termination_cursor <= segment_end) {
-        rest = g_umt.loop[lpnum].score.voice[vcnum].notes[pitch_cursor].rest;
-        this_pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[pitch_cursor].pitch;
-        duration = g_umt.loop[lpnum].score.voice[vcnum].notes[rhythm_cursor].duration;
-        amplitude = g_umt.loop[lpnum].score.voice[vcnum].notes[rhythm_cursor].amplitude;
-        inst_params = g_umt.loop[lpnum].score.voice[vcnum].notes[rhythm_cursor].inst_params;
+        rest = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[pitch_cursor].rest;
+        this_pitch = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[pitch_cursor].pitch;
+        duration = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[rhythm_cursor].duration;
+        amplitude = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[rhythm_cursor].amplitude;
+        inst_params = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[rhythm_cursor].inst_params;
         /* actual pitch scroll handles "vertical" scrolling */
         if (actual_pitch_scroll !== 0) {
             this_pitch = this_pitch    + actual_pitch_scroll;
@@ -1334,7 +1334,7 @@ function umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direc
            subtracted from transpose
         */
         if (pitch_bevel !== 0) {
-            percent = (g_umt.loop[lpnum].score.voice[vcnum].notes[termination_cursor].starttime - start_time) / (end_time - start_time);
+            percent = (g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[termination_cursor].starttime - start_time) / (end_time - start_time);
             bevel_amount = pitch_bevel * percent;
             this_pitch = this_pitch + bevel_amount;
         }
@@ -1361,11 +1361,11 @@ function umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direc
     /* see if we went out of range, and if so, transpose in direction of proper
        range (allowing for slight overshoot)
     */
-    range_test_end = g_umt.loop[lpnum].score.voice[vcnum].cursor;
-    min_pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[range_test_start].pitch;
+    range_test_end = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].cursor;
+    min_pitch = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[range_test_start].pitch;
     max_pitch = min_pitch;
     for (range_test_cursor = range_test_start; range_test_cursor < range_test_end; range_test_cursor = range_test_cursor + 1) {
-        range_pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[range_test_cursor].pitch;
+        range_pitch = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[range_test_cursor].pitch;
         if (range_pitch < min_pitch) {
             min_pitch = range_pitch;
         }
@@ -1373,27 +1373,27 @@ function umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direc
             max_pitch = range_pitch;
         }
     }
-    range_min = g_umt.loop[lpnum].score.voice[vcnum].range_bottom;
-    range_max = g_umt.loop[lpnum].score.voice[vcnum].range_top;
+    range_min = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].range_bottom;
+    range_max = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].range_top;
     if ((min_pitch < range_min) && (max_pitch > range_max)) {
         umt_jsabort('exceeded both min and max for range');
         /* exceeded both min and max -- need to scale and transpose */
         range_scalar = (range_max - range_min) / (max_pitch - min_pitch);
         range_transpose = ((max_pitch - min_pitch) / 2) - ((range_max - range_min) / 2);
         for (ix = range_test_start; ix < range_test_end; ix = ix + 1) {
-            g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch = (g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch * range_scalar) - range_transpose;
+            g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[ix].pitch = (g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[ix].pitch * range_scalar) - range_transpose;
         }
     } else {
         if (min_pitch < range_min) {
             range_transpose = (range_min - min_pitch) / 2;
             for (ix = range_test_start; ix < range_test_end; ix = ix + 1) {
-                g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch + range_transpose;
+                g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[ix].pitch = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[ix].pitch + range_transpose;
             }
         } else {
             if (max_pitch > range_max) {
                 range_transpose = (max_pitch - range_max) / 2;
                 for (ix = range_test_start; ix < range_test_end; ix = ix + 1) {
-                    g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch = g_umt.loop[lpnum].score.voice[vcnum].notes[ix].pitch - range_transpose;
+                    g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[ix].pitch = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[ix].pitch - range_transpose;
                 }
             }
         }
@@ -1419,7 +1419,7 @@ function umt_test_check_copytrans_pitches(pitch_list, starting_index, fail_messa
     x = starting_index;
     for (pt in pitch_list) {
         if (pitch_list.hasOwnProperty(pt)) {
-            if (g_umt.loop[0].score.voice[0].notes[x].pitch !== pitch_list[pt]) {
+            if (g_umt.loop[0].score.song_tab[0].voice[0].notes[x].pitch !== pitch_list[pt]) {
                 umt_jsabort("test failed: pitches/" + fail_message);
             }
             x = x + 1;
@@ -1434,7 +1434,7 @@ function umt_test_check_copytrans_durations(duration_list, starting_index, fail_
     x = starting_index;
     for (dr in duration_list) {
         if (duration_list.hasOwnProperty(dr)) {
-            if (g_umt.loop[0].score.voice[0].notes[x].duration !== duration_list[dr]) {
+            if (g_umt.loop[0].score.song_tab[0].voice[0].notes[x].duration !== duration_list[dr]) {
                 umt_jsabort("test failed: durations/" + fail_message);
             }
             x = x + 1;
@@ -1743,9 +1743,9 @@ function umt_exec_test_copy_trans(lpnum) {
     parts = g_umt.loop[lpnum].score.parts;
     for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
         start_time = 0;
-        csr_pos = g_umt.loop[lpnum].score.voice[vcnum].cursor;
-        csr_start = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].starttime;
-        duration = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].duration;
+        csr_pos = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].cursor;
+        csr_start = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[csr_pos - 1].starttime;
+        duration = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[csr_pos - 1].duration;
         end_time = csr_start + duration;
         rhythm_direction = 1;
         pitches_direction = 1;
@@ -1756,15 +1756,15 @@ function umt_exec_test_copy_trans(lpnum) {
         pitch_bevel = 0;
         pitch_transpose = 0.5;
         umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
-        csr_pos = g_umt.loop[lpnum].score.voice[vcnum].cursor;
-        csr_start = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].starttime;
-        duration = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].duration;
+        csr_pos = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].cursor;
+        csr_start = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[csr_pos - 1].starttime;
+        duration = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[csr_pos - 1].duration;
         end_time = csr_start + duration;
         pitch_transpose = 0.7;
         umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
-        csr_pos = g_umt.loop[lpnum].score.voice[vcnum].cursor;
-        csr_start = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].starttime;
-        duration = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].duration;
+        csr_pos = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].cursor;
+        csr_start = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[csr_pos - 1].starttime;
+        duration = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[csr_pos - 1].duration;
         end_time = csr_start + duration;
         pitch_transpose = -1.33;
         pitch_scale = 2.0;
@@ -1814,26 +1814,26 @@ function umt_compose_real_composition(lpnum) {
     ui_voice = 0;
     loop_duration = g_umt.ui_params.loop_duration;
     while (umt_ui_is_part_in_ui(ui_voice)) {
-        if (g_umt.ui_params.voice[ui_voice].playing) {
-            song_number = g_umt.ui_params.voice[ui_voice].song_number;
-            octave = g_umt.ui_params.voice[ui_voice].octave;
+        if (g_umt.ui_params.song_tab[0].voice[ui_voice].playing) {
+            song_number = g_umt.ui_params.song_tab[0].voice[ui_voice].song_number;
+            octave = g_umt.ui_params.song_tab[0].voice[ui_voice].octave;
             range_min = octave - 1.25;
             range_max = octave + 1.25;
             umt_add_voice(lpnum, composition_voice, song_number, range_min, range_max);
-            min_size = g_umt.ui_params.voice[ui_voice].min_note;
-            chunk_size = g_umt.ui_params.voice[ui_voice].chunk_size;
-            total_length = g_umt.ui_params.voice[ui_voice].frame_size;
+            min_size = g_umt.ui_params.song_tab[0].voice[ui_voice].min_note;
+            chunk_size = g_umt.ui_params.song_tab[0].voice[ui_voice].chunk_size;
+            total_length = g_umt.ui_params.song_tab[0].voice[ui_voice].frame_size;
             center_octave = octave;
-            restyness = g_umt.ui_params.voice[ui_voice].restyness;
-            amp_variation = g_umt.ui_params.voice[ui_voice].amp_variation;
-            note_distance = g_umt.ui_params.voice[ui_voice].note_distance;
-            volume = g_umt.ui_params.voice[ui_voice].volume;
+            restyness = g_umt.ui_params.song_tab[0].voice[ui_voice].restyness;
+            amp_variation = g_umt.ui_params.song_tab[0].voice[ui_voice].amp_variation;
+            note_distance = g_umt.ui_params.song_tab[0].voice[ui_voice].note_distance;
+            volume = g_umt.ui_params.song_tab[0].voice[ui_voice].volume;
             umt_add_sym_base_to_voice(lpnum, composition_voice, min_size, chunk_size, total_length, center_octave, restyness, note_distance, amp_variation, volume);
             /* we have voices and base rhythms; now need symmetry */
             start_time = 0;
-            csr_pos = g_umt.loop[lpnum].score.voice[composition_voice].cursor;
-            csr_start = g_umt.loop[lpnum].score.voice[composition_voice].notes[csr_pos - 1].starttime; /* can eliminate intermediaries */
-            duration = g_umt.loop[lpnum].score.voice[composition_voice].notes[csr_pos - 1].duration;
+            csr_pos = g_umt.loop[lpnum].score.song_tab[0].voice[composition_voice].cursor;
+            csr_start = g_umt.loop[lpnum].score.song_tab[0].voice[composition_voice].notes[csr_pos - 1].starttime; /* can eliminate intermediaries */
+            duration = g_umt.loop[lpnum].score.song_tab[0].voice[composition_voice].notes[csr_pos - 1].duration;
             end_time = csr_start + duration;
             while (end_time < loop_duration) {
                 /* set default parameters, then modify defaults according to UI */
@@ -1845,19 +1845,19 @@ function umt_compose_real_composition(lpnum) {
                 pitch_scale = 1.0;
                 pitch_bevel = 0;
                 pitch_transpose = 0;
-                symmetry_pattern = g_umt.ui_params.voice[ui_voice].symmetry[end_time].pattern;
+                symmetry_pattern = g_umt.ui_params.song_tab[0].voice[ui_voice].symmetry[end_time].pattern;
                 switch (symmetry_pattern) {
                 case 'trans':
-                    pitch_transpose = (2 * g_umt.ui_params.voice[ui_voice].symmetry[end_time].trans_param) * (g_umt.loop[lpnum].score.voice[composition_voice].rand_trans.genrand_real1() - 0.5);
+                    pitch_transpose = (2 * g_umt.ui_params.song_tab[0].voice[ui_voice].symmetry[end_time].trans_param) * (g_umt.loop[lpnum].score.song_tab[0].voice[composition_voice].rand_trans.genrand_real1() - 0.5);
                     break;
                 case 'invert':
                     pitch_scale = -1.0;
                     break;
                 case 'scale':
-                    pitch_scale = g_umt.ui_params.voice[ui_voice].symmetry[end_time].scale_param * g_umt.loop[lpnum].score.voice[composition_voice].rand_scale.genrand_real1();
+                    pitch_scale = g_umt.ui_params.song_tab[0].voice[ui_voice].symmetry[end_time].scale_param * g_umt.loop[lpnum].score.song_tab[0].voice[composition_voice].rand_scale.genrand_real1();
                     break;
                 case 'tilt':
-                    pitch_bevel = g_umt.ui_params.voice[ui_voice].symmetry[end_time].tilt_param * g_umt.loop[lpnum].score.voice[composition_voice].rand_tilt.genrand_real1();
+                    pitch_bevel = g_umt.ui_params.song_tab[0].voice[ui_voice].symmetry[end_time].tilt_param * g_umt.loop[lpnum].score.song_tab[0].voice[composition_voice].rand_tilt.genrand_real1();
                     pitch_transpose = -(pitch_bevel / 2);
                     break;
                 case 'reverserhythm':
@@ -1871,13 +1871,13 @@ function umt_compose_real_composition(lpnum) {
                     pitches_direction = -1;
                     break;
                 case 'scrollrhythm':
-                    time_rhythm_scroll = (g_umt.ui_params.voice[ui_voice].symmetry[end_time].scrollboth_param * g_umt.loop[lpnum].score.voice[composition_voice].rand_tilt.genrand_real1()) * (end_time - start_time);
+                    time_rhythm_scroll = (g_umt.ui_params.song_tab[0].voice[ui_voice].symmetry[end_time].scrollboth_param * g_umt.loop[lpnum].score.song_tab[0].voice[composition_voice].rand_tilt.genrand_real1()) * (end_time - start_time);
                     break;
                 case 'scrollpitch':
-                    time_pitch_scroll = (g_umt.ui_params.voice[ui_voice].symmetry[end_time].scrollboth_param * g_umt.loop[lpnum].score.voice[composition_voice].rand_tilt.genrand_real1()) * (end_time - start_time);
+                    time_pitch_scroll = (g_umt.ui_params.song_tab[0].voice[ui_voice].symmetry[end_time].scrollboth_param * g_umt.loop[lpnum].score.song_tab[0].voice[composition_voice].rand_tilt.genrand_real1()) * (end_time - start_time);
                     break;
                 case 'scrollboth':
-                    time_rhythm_scroll = (g_umt.ui_params.voice[ui_voice].symmetry[end_time].scrollboth_param * g_umt.loop[lpnum].score.voice[composition_voice].rand_tilt.genrand_real1()) * (end_time - start_time);
+                    time_rhythm_scroll = (g_umt.ui_params.song_tab[0].voice[ui_voice].symmetry[end_time].scrollboth_param * g_umt.loop[lpnum].score.song_tab[0].voice[composition_voice].rand_tilt.genrand_real1()) * (end_time - start_time);
                     time_pitch_scroll = time_rhythm_scroll;
                     break;
                 default:
@@ -1887,9 +1887,9 @@ function umt_compose_real_composition(lpnum) {
                 vcnum = composition_voice;
                 umt_copy_and_transform(lpnum, vcnum, start_time, end_time, rhythm_direction, pitches_direction, time_rhythm_scroll, time_pitch_scroll, actual_pitch_scroll, pitch_scale, pitch_bevel, pitch_transpose);
                 start_time = 0;
-                csr_pos = g_umt.loop[lpnum].score.voice[vcnum].cursor;
-                csr_start = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].starttime;
-                duration = g_umt.loop[lpnum].score.voice[vcnum].notes[csr_pos - 1].duration;
+                csr_pos = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].cursor;
+                csr_start = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[csr_pos - 1].starttime;
+                duration = g_umt.loop[lpnum].score.song_tab[0].voice[vcnum].notes[csr_pos - 1].duration;
                 end_time = csr_start + duration;
             }
             composition_voice = composition_voice + 1;
@@ -1950,7 +1950,7 @@ function umt_automatically_recompose_loop_from_ui_params() {
     // current_units = current_time / old_tempo_scalar;
     // virtual_new_time = current_units * new_tempo_scalar;
     // offset_difference = current_time - virtual_new_time;
-    // loop_unit_len = g_umt.loop[new_loop].score.voice[0].next_start;
+    // loop_unit_len = g_umt.loop[new_loop].score.song_tab[0].voice[0].next_start;
     // loop_len = loop_unit_len * new_tempo_scalar;
     // offset_difference = offset_difference - (Math.floor(offset_difference / loop_len) * loop_len);  // modulo
     // g_umt.loop[new_loop].score.playback_time_offset = offset_difference;
@@ -1982,7 +1982,7 @@ function umt_exec_play_voice_change(event) {
     elemid = event.target.id;
     ui_voice_num = Number(elemid.substring(9));
     checkd = document.getElementById(elemid).checked;
-    g_umt.ui_params.voice[ui_voice_num].playing = checkd;
+    g_umt.ui_params.song_tab[0].voice[ui_voice_num].playing = checkd;
     if (g_umt.idem_adding_voice === false) {
         umt_automatically_recompose_loop_from_ui_params();
     }
@@ -1996,7 +1996,7 @@ function umt_exec_song_number_change(event) {
     elemid = event.target.id;
     ui_voice_num = Number(elemid.substring(10));
     listbox = window.document.getElementById("songnumber" + ui_voice_num);
-    g_umt.ui_params.voice[ui_voice_num].song_number = Number(listbox.options[listbox.selectedIndex].value);
+    g_umt.ui_params.song_tab[0].voice[ui_voice_num].song_number = Number(listbox.options[listbox.selectedIndex].value);
     if (g_umt.idem_adding_voice === false) {
         umt_automatically_recompose_loop_from_ui_params();
     }
@@ -2015,8 +2015,8 @@ function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voi
             if (event.type === "slidechange") {
                 newvalue = ui.value / 10;
                 window.document.getElementById("display_symmetry_trans_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
-                g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].trans_param = newvalue;
-                if (g_umt.ui_params.voice[voice_number].playing) {
+                g_umt.ui_params.song_tab[0].voice[voice_number].symmetry[pattern_duration].trans_param = newvalue;
+                if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
                     umt_automatically_recompose_loop_from_ui_params();
                 }
             }
@@ -2030,8 +2030,8 @@ function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voi
             if (event.type === "slidechange") {
                 newvalue = (ui.value - 12) / 10;
                 window.document.getElementById("display_symmetry_scale_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
-                g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].scale_param = newvalue;
-                if (g_umt.ui_params.voice[voice_number].playing) {
+                g_umt.ui_params.song_tab[0].voice[voice_number].symmetry[pattern_duration].scale_param = newvalue;
+                if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
                     umt_automatically_recompose_loop_from_ui_params();
                 }
             }
@@ -2045,8 +2045,8 @@ function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voi
             if (event.type === "slidechange") {
                 newvalue = (ui.value - 12) / 10;
                 window.document.getElementById("display_symmetry_tilt_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
-                g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].tilt_param = newvalue;
-                if (g_umt.ui_params.voice[voice_number].playing) {
+                g_umt.ui_params.song_tab[0].voice[voice_number].symmetry[pattern_duration].tilt_param = newvalue;
+                if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
                     umt_automatically_recompose_loop_from_ui_params();
                 }
             }
@@ -2060,8 +2060,8 @@ function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voi
             if (event.type === "slidechange") {
                 newvalue = ui.value / 10;
                 window.document.getElementById("display_symmetry_scrollrhythm_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
-                g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].scrollrhythm_param = newvalue;
-                if (g_umt.ui_params.voice[voice_number].playing) {
+                g_umt.ui_params.song_tab[0].voice[voice_number].symmetry[pattern_duration].scrollrhythm_param = newvalue;
+                if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
                     umt_automatically_recompose_loop_from_ui_params();
                 }
             }
@@ -2075,8 +2075,8 @@ function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voi
             if (event.type === "slidechange") {
                 newvalue = ui.value / 10;
                 window.document.getElementById("display_symmetry_scrollpitch_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
-                g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].scrollpitch_param = newvalue;
-                if (g_umt.ui_params.voice[voice_number].playing) {
+                g_umt.ui_params.song_tab[0].voice[voice_number].symmetry[pattern_duration].scrollpitch_param = newvalue;
+                if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
                     umt_automatically_recompose_loop_from_ui_params();
                 }
             }
@@ -2090,8 +2090,8 @@ function umt_ui_create_closure_functions_for_symmetry_sliders_outside_a_loop(voi
             if (event.type === "slidechange") {
                 newvalue = ui.value / 10;
                 window.document.getElementById("display_symmetry_scrollboth_param" + voice_number + "_" + pattern_duration).innerHTML = (newvalue * 100) + "%";
-                g_umt.ui_params.voice[voice_number].symmetry[pattern_duration].scrollboth_param = newvalue;
-                if (g_umt.ui_params.voice[voice_number].playing) {
+                g_umt.ui_params.song_tab[0].voice[voice_number].symmetry[pattern_duration].scrollboth_param = newvalue;
+                if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
                     umt_automatically_recompose_loop_from_ui_params();
                 }
             }
@@ -2166,8 +2166,8 @@ function umt_exec_pervoice_symmetry_change(event) {
     voice_number = elemid.substring(0, i);
     sym_size = elemid.substring(i + 1);
     symmetry_pattern = selectedvalue;
-    g_umt.ui_params.voice[voice_number].symmetry[sym_size].pattern = symmetry_pattern;
-    if (g_umt.ui_params.voice[voice_number].playing) {
+    g_umt.ui_params.song_tab[0].voice[voice_number].symmetry[sym_size].pattern = symmetry_pattern;
+    if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
         umt_automatically_recompose_loop_from_ui_params();
     }
 }
@@ -2204,34 +2204,34 @@ function umt_ui_set_symmetry_listbox_and_slider(row, pattern_duration) {
     "use strict";
     var suffix, absvalue, slidervalue;
     suffix = row + "_" + pattern_duration;
-    window.document.getElementById("sel_symmetry" + suffix).value = g_umt.ui_params.voice[row].symmetry[pattern_duration].pattern;
+    window.document.getElementById("sel_symmetry" + suffix).value = g_umt.ui_params.song_tab[0].voice[row].symmetry[pattern_duration].pattern;
     /* trans param */
-    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].trans_param;
+    absvalue = g_umt.ui_params.song_tab[0].voice[row].symmetry[pattern_duration].trans_param;
     slidervalue = absvalue * 10;
     window.document.getElementById("display_symmetry_trans_param" + suffix).innerHTML = (absvalue * 100) + "%";
     jQuery("#slider_symmetry_trans_param" + suffix).slider({ value: slidervalue });
     /* scale param */
-    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].scale_param;
+    absvalue = g_umt.ui_params.song_tab[0].voice[row].symmetry[pattern_duration].scale_param;
     slidervalue = (absvalue * 10) + 12;
     window.document.getElementById("display_symmetry_scale_param" + suffix).innerHTML = (absvalue * 100) + "%";
     jQuery("#slider_symmetry_scale_param" + suffix).slider({ value: slidervalue });
     /* tilt param */
-    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].tilt_param;
+    absvalue = g_umt.ui_params.song_tab[0].voice[row].symmetry[pattern_duration].tilt_param;
     slidervalue = (absvalue * 10) + 12;
     window.document.getElementById("display_symmetry_tilt_param" + suffix).innerHTML = (absvalue * 100) + "%";
     jQuery("#slider_symmetry_tilt_param" + suffix).slider({ value: slidervalue });
     /* scrollrhythm param */
-    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].scrollrhythm_param;
+    absvalue = g_umt.ui_params.song_tab[0].voice[row].symmetry[pattern_duration].scrollrhythm_param;
     slidervalue = absvalue * 10;
     window.document.getElementById("display_symmetry_scrollrhythm_param" + suffix).innerHTML = (absvalue * 100) + "%";
     jQuery("#slider_symmetry_scrollrhythm_param" + suffix).slider({ value: slidervalue });
     /* scrollpitch param */
-    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].scrollpitch_param;
+    absvalue = g_umt.ui_params.song_tab[0].voice[row].symmetry[pattern_duration].scrollpitch_param;
     slidervalue = absvalue * 10;
     window.document.getElementById("display_symmetry_scrollpitch_param" + suffix).innerHTML = (absvalue * 100) + "%";
     jQuery("#slider_symmetry_scrollpitch_param" + suffix).slider({ value: slidervalue });
     /* scrollboth param */
-    absvalue = g_umt.ui_params.voice[row].symmetry[pattern_duration].scrollboth_param;
+    absvalue = g_umt.ui_params.song_tab[0].voice[row].symmetry[pattern_duration].scrollboth_param;
     slidervalue = absvalue * 10;
     window.document.getElementById("display_symmetry_scrollboth_param" + suffix).innerHTML = (absvalue * 100) + "%";
     jQuery("#slider_symmetry_scrollboth_param" + suffix).slider({ value: slidervalue });
@@ -2242,13 +2242,13 @@ var umt_ui_cascade_frame_size_changes, umt_ui_cascade_chunk_size_changes, umt_ui
 umt_ui_cascade_frame_size_changes = function (voice_number, newvalue) {
     "use strict";
     var chunk_size, loop_duration, sym_size, slidervalue, symmetry_pattern;
-    chunk_size = g_umt.ui_params.voice[voice_number].chunk_size;
+    chunk_size = g_umt.ui_params.song_tab[0].voice[voice_number].chunk_size;
     if (newvalue < chunk_size) {
         chunk_size = newvalue;
         slidervalue = Math.floor((Math.log(chunk_size) / Math.log(2)) + 0.01);
         jQuery("#slider_chunksize" + voice_number).slider({ value: slidervalue });
         window.document.getElementById("display_chunksize" + voice_number).innerHTML = newvalue;
-        g_umt.ui_params.voice[voice_number].chunk_size = chunk_size;
+        g_umt.ui_params.song_tab[0].voice[voice_number].chunk_size = chunk_size;
         // umt_cx("voice_number" + umt_ctstr(voice_number) + " chunk_size" + umt_ctstr(chunk_size));
         umt_ui_cascade_chunk_size_changes(voice_number, chunk_size);
     }
@@ -2260,7 +2260,7 @@ umt_ui_cascade_frame_size_changes = function (voice_number, newvalue) {
         } else {
             umt_ui_set_symmetry_listbox_and_slider(voice_number, sym_size);
             umt_ui_turn_on_symmetry_patterns(voice_number, sym_size, true);
-            symmetry_pattern = g_umt.ui_params.voice[voice_number].symmetry[sym_size].pattern;
+            symmetry_pattern = g_umt.ui_params.song_tab[0].voice[voice_number].symmetry[sym_size].pattern;
             umt_ui_show_or_hide_appropriate_symmetry_sliders(symmetry_pattern, voice_number + "_" + sym_size);
         }
         sym_size = sym_size * 2;
@@ -2270,22 +2270,22 @@ umt_ui_cascade_frame_size_changes = function (voice_number, newvalue) {
 umt_ui_cascade_chunk_size_changes = function (voice_number, newvalue) {
     "use strict";
     var min_note, frame_size, slidervalue;
-    min_note = g_umt.ui_params.voice[voice_number].min_note;
+    min_note = g_umt.ui_params.song_tab[0].voice[voice_number].min_note;
     if (newvalue < min_note) {
         min_note = newvalue;
         slidervalue = Math.floor((Math.log(min_note) / Math.log(2)) + 0.01);
         jQuery("#slider_minnote" + voice_number).slider({ value: slidervalue });
         window.document.getElementById("display_minnote" + voice_number).innerHTML = newvalue;
-        g_umt.ui_params.voice[voice_number].min_note = min_note;
+        g_umt.ui_params.song_tab[0].voice[voice_number].min_note = min_note;
         umt_ui_cascade_min_note_changes(voice_number, min_note);
     }
-    frame_size = g_umt.ui_params.voice[voice_number].frame_size;
+    frame_size = g_umt.ui_params.song_tab[0].voice[voice_number].frame_size;
     if (newvalue > frame_size) {
         frame_size = newvalue;
         slidervalue = Math.floor((Math.log(frame_size) / Math.log(2)) + 0.01);
         jQuery("#slider_framesize" + voice_number).slider({ value: slidervalue });
         window.document.getElementById("display_framesize" + voice_number).innerHTML = newvalue;
-        g_umt.ui_params.voice[voice_number].frame_size = frame_size;
+        g_umt.ui_params.song_tab[0].voice[voice_number].frame_size = frame_size;
         umt_ui_cascade_frame_size_changes(voice_number, frame_size);
     }
 };
@@ -2293,13 +2293,13 @@ umt_ui_cascade_chunk_size_changes = function (voice_number, newvalue) {
 umt_ui_cascade_min_note_changes = function (voice_number, newvalue) {
     "use strict";
     var chunk_size, slidervalue;
-    chunk_size = g_umt.ui_params.voice[voice_number].chunk_size;
+    chunk_size = g_umt.ui_params.song_tab[0].voice[voice_number].chunk_size;
     if (newvalue > chunk_size) {
         chunk_size = newvalue;
         slidervalue = Math.floor((Math.log(chunk_size) / Math.log(2)) + 0.01);
         jQuery("#slider_chunksize" + voice_number).slider({ value: slidervalue });
         window.document.getElementById("display_chunksize" + voice_number).innerHTML = newvalue;
-        g_umt.ui_params.voice[voice_number].chunk_size = chunk_size;
+        g_umt.ui_params.song_tab[0].voice[voice_number].chunk_size = chunk_size;
         umt_ui_cascade_chunk_size_changes(voice_number, chunk_size);
     }
 };
@@ -2355,8 +2355,8 @@ function umt_ui_add_row(voice_number) {
                 absvalue = newvalue / 10;
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_volume" + voice_number).innerHTML = aspercentage + "%";
-                g_umt.ui_params.voice[voice_number].volume = absvalue;
-                if (g_umt.ui_params.voice[voice_number].playing) {
+                g_umt.ui_params.song_tab[0].voice[voice_number].volume = absvalue;
+                if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
                     umt_automatically_recompose_loop_from_ui_params();
                 }
             }
@@ -2369,8 +2369,8 @@ function umt_ui_add_row(voice_number) {
             if (event.type === "slidechange") {
                 newvalue = ui.value;
                 window.document.getElementById("display_octave" + voice_number).innerHTML = newvalue;
-                g_umt.ui_params.voice[voice_number].octave = newvalue;
-                if (g_umt.ui_params.voice[voice_number].playing) {
+                g_umt.ui_params.song_tab[0].voice[voice_number].octave = newvalue;
+                if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
                     umt_automatically_recompose_loop_from_ui_params();
                 }
             }
@@ -2385,8 +2385,8 @@ function umt_ui_add_row(voice_number) {
                 absvalue = newvalue / 10;
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_notedistance" + voice_number).innerHTML = aspercentage + "%";
-                g_umt.ui_params.voice[voice_number].note_distance = absvalue;
-                if (g_umt.ui_params.voice[voice_number].playing) {
+                g_umt.ui_params.song_tab[0].voice[voice_number].note_distance = absvalue;
+                if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
                     umt_automatically_recompose_loop_from_ui_params();
                 }
             }
@@ -2401,8 +2401,8 @@ function umt_ui_add_row(voice_number) {
                 absvalue = newvalue / 10;
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_restyness" + voice_number).innerHTML = aspercentage + "%";
-                g_umt.ui_params.voice[voice_number].restyness = absvalue;
-                if (g_umt.ui_params.voice[voice_number].playing) {
+                g_umt.ui_params.song_tab[0].voice[voice_number].restyness = absvalue;
+                if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
                     umt_automatically_recompose_loop_from_ui_params();
                 }
             }
@@ -2417,8 +2417,8 @@ function umt_ui_add_row(voice_number) {
                 absvalue = newvalue / 10;
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_ampvariation" + voice_number).innerHTML = aspercentage + "%";
-                g_umt.ui_params.voice[voice_number].amp_variation = absvalue;
-                if (g_umt.ui_params.voice[voice_number].playing) {
+                g_umt.ui_params.song_tab[0].voice[voice_number].amp_variation = absvalue;
+                if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
                     umt_automatically_recompose_loop_from_ui_params();
                 }
             }
@@ -2432,11 +2432,11 @@ function umt_ui_add_row(voice_number) {
                 newvalue = ui.value;
                 newvalue = Math.pow(2, newvalue);
                 window.document.getElementById("display_minnote" + voice_number).innerHTML = newvalue;
-                g_umt.ui_params.voice[voice_number].min_note = newvalue;
+                g_umt.ui_params.song_tab[0].voice[voice_number].min_note = newvalue;
                 g_umt.idem_adding_voice = true;
                 umt_ui_cascade_min_note_changes(voice_number, newvalue);
                 g_umt.idem_adding_voice = false;
-                if (g_umt.ui_params.voice[voice_number].playing) {
+                if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
                     umt_automatically_recompose_loop_from_ui_params();
                 }
             }
@@ -2450,11 +2450,11 @@ function umt_ui_add_row(voice_number) {
                 newvalue = ui.value;
                 newvalue = Math.pow(2, newvalue);
                 window.document.getElementById("display_chunksize" + voice_number).innerHTML = newvalue;
-                g_umt.ui_params.voice[voice_number].chunk_size = newvalue;
+                g_umt.ui_params.song_tab[0].voice[voice_number].chunk_size = newvalue;
                 g_umt.idem_adding_voice = true;
                 umt_ui_cascade_chunk_size_changes(voice_number, newvalue);
                 g_umt.idem_adding_voice = false;
-                if (g_umt.ui_params.voice[voice_number].playing) {
+                if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
                     umt_automatically_recompose_loop_from_ui_params();
                 }
             }
@@ -2469,11 +2469,11 @@ function umt_ui_add_row(voice_number) {
                 newvalue = ui.value;
                 newvalue = Math.pow(2, newvalue);
                 window.document.getElementById("display_framesize" + voice_number).innerHTML = newvalue;
-                g_umt.ui_params.voice[voice_number].frame_size = newvalue;
+                g_umt.ui_params.song_tab[0].voice[voice_number].frame_size = newvalue;
                 g_umt.idem_adding_voice = true;
                 umt_ui_cascade_frame_size_changes(voice_number, newvalue);
                 g_umt.idem_adding_voice = false;
-                if (g_umt.ui_params.voice[voice_number].playing) {
+                if (g_umt.ui_params.song_tab[0].voice[voice_number].playing) {
                     umt_automatically_recompose_loop_from_ui_params();
                 }
             }
@@ -2521,50 +2521,50 @@ function umt_ui_copy_ui_params_to_actual_ui() {
     loop_duration = g_umt.ui_params.loop_duration;
     for (i = 0; i < parts; i = i + 1) {
         /* checkbox */
-        if (g_umt.ui_params.voice[i].playing) {
+        if (g_umt.ui_params.song_tab[0].voice[i].playing) {
             document.getElementById("playvoice" + i).checked = true;
         } else {
             document.getElementById("playvoice" + i).checked = false;
         }
         /* song number */
-        umt_ui_set_listbox_by_value(document.getElementById("songnumber" + i), g_umt.ui_params.voice[i].song_number);
+        umt_ui_set_listbox_by_value(document.getElementById("songnumber" + i), g_umt.ui_params.song_tab[0].voice[i].song_number);
         /* volume */
-        absvalue = g_umt.ui_params.voice[i].volume;
+        absvalue = g_umt.ui_params.song_tab[0].voice[i].volume;
         window.document.getElementById("display_volume" + i).innerHTML = (absvalue * 100) + "%";
         slidervalue = absvalue * 10;
         jQuery("#slider_volume" + i).slider({ value: slidervalue });
         /* octave */
-        absvalue = g_umt.ui_params.voice[i].octave;
+        absvalue = g_umt.ui_params.song_tab[0].voice[i].octave;
         window.document.getElementById("display_octave" + i).innerHTML = absvalue;
         slidervalue = absvalue;
         jQuery("#slider_octave" + i).slider({ value: slidervalue });
         /* note distance */
-        absvalue = g_umt.ui_params.voice[i].note_distance;
+        absvalue = g_umt.ui_params.song_tab[0].voice[i].note_distance;
         window.document.getElementById("display_notedistance" + i).innerHTML = (absvalue * 100) + "%";
         slidervalue = absvalue * 10;
         jQuery("#slider_notedistance" + i).slider({ value: slidervalue });
         /* restyness */
-        absvalue = g_umt.ui_params.voice[i].restyness;
+        absvalue = g_umt.ui_params.song_tab[0].voice[i].restyness;
         window.document.getElementById("display_restyness" + i).innerHTML = (absvalue * 100) + "%";
         slidervalue = absvalue * 10;
         jQuery("#slider_restyness" + i).slider({ value: slidervalue });
         /* amplitude variation*/
-        absvalue = g_umt.ui_params.voice[i].amp_variation;
+        absvalue = g_umt.ui_params.song_tab[0].voice[i].amp_variation;
         window.document.getElementById("display_ampvariation" + i).innerHTML = (absvalue * 100) + "%";
         slidervalue = absvalue * 10;
         jQuery("#slider_ampvariation" + i).slider({ value: slidervalue });
         /* min note */
-        absvalue = g_umt.ui_params.voice[i].min_note;
+        absvalue = g_umt.ui_params.song_tab[0].voice[i].min_note;
         window.document.getElementById("display_minnote" + i).innerHTML = absvalue;
         slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
         jQuery("#slider_minnote" + i).slider({ value: slidervalue });
         /* chunk size */
-        absvalue = g_umt.ui_params.voice[i].chunk_size;
+        absvalue = g_umt.ui_params.song_tab[0].voice[i].chunk_size;
         window.document.getElementById("display_chunksize" + i).innerHTML = absvalue;
         slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
         jQuery("#slider_chunksize" + i).slider({ value: slidervalue });
         /* frame size */
-        absvalue = g_umt.ui_params.voice[i].frame_size;
+        absvalue = g_umt.ui_params.song_tab[0].voice[i].frame_size;
         window.document.getElementById("display_framesize" + i).innerHTML = absvalue;
         slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
         jQuery("#slider_framesize" + i).slider({ value: slidervalue });
@@ -2575,12 +2575,12 @@ function umt_ui_copy_ui_params_to_actual_ui() {
             umt_ui_turn_on_symmetry_patterns(i, k, false);
             k = k * 2;
         }
-        sym_size = g_umt.ui_params.voice[i].frame_size;
+        sym_size = g_umt.ui_params.song_tab[0].voice[i].frame_size;
         sym_num = Math.floor((Math.log(sym_size) / Math.log(2)) + 0.01);
         while (sym_size < loop_duration) {
             umt_ui_turn_on_symmetry_patterns(i, sym_size, true);
             umt_ui_set_symmetry_listbox_and_slider(i, sym_size);
-            symmetry_pattern = g_umt.ui_params.voice[i].symmetry[sym_size].pattern;
+            symmetry_pattern = g_umt.ui_params.song_tab[0].voice[i].symmetry[sym_size].pattern;
             /* symmetry listbox */
             umt_ui_set_listbox_by_value(document.getElementById("sel_symmetry" + i + "_" + sym_size), symmetry_pattern);
             umt_ui_show_or_hide_appropriate_symmetry_sliders(symmetry_pattern, i + "_" + sym_size);
@@ -2596,7 +2596,7 @@ function umt_exec_add_voice() {
     var voice_num, songnum;
     voice_num = g_umt.ui_params.parts;
     songnum = voice_num + 1;
-    g_umt.ui_params.voice[voice_num] = {playing: false, volume: 1.0, song_number: songnum, octave: 5, note_distance: 0.0, restyness: 0.0, amp_variation: 0.9, min_note: 4, chunk_size: 4, frame_size: 32, symmetry: { 1: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 2: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 4: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 8: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 16: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 32: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 64: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 128: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 256: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 512: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 1024: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0} } };
+    g_umt.ui_params.song_tab[0].voice[voice_num] = {playing: false, volume: 1.0, song_number: songnum, octave: 5, note_distance: 0.0, restyness: 0.0, amp_variation: 0.9, min_note: 4, chunk_size: 4, frame_size: 32, symmetry: { 1: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 2: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 4: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 8: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 16: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 32: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 64: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 128: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 256: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 512: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0}, 1024: {pattern: "trans", trans_param: 0, scale_param: 0, tilt_param: 0, scrollrhythm_param: 0, scrollpitch_param: 0, scrollboth_param: 0} } };
     g_umt.ui_params.parts = g_umt.ui_params.parts + 1;
     if (g_umt.ui_params.parts > g_umt.ui_params.max_parts_ever) {
         g_umt.ui_params.max_parts_ever = g_umt.ui_params.parts;
@@ -2612,7 +2612,9 @@ function umt_exec_test_dumt_gmt() {
 
 /* main */
 
-g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, voice: [] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 0, idem_compose: false, idem_adding_voice: false, ui_params: { tempo: 360, scale: 'maj7reg', centernote: 432, parts: 0, voice: [], loop_duration: 128 }, max_parts_ever: 4 };
+g_umt = {SAMPLE_RATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), global_ctx: umt_get_audio_context(), global_rng: umt_get_rando(0), cached_notes: {}, loop: [ { score: {tempo: 700, centernote_log: (Math.log(432) / Math.log(2)) - 5, song_tab: [ { voice: [] } ] } } ], played_up_to: 0, timer_is_on: false, currently_playing_loop: 0, composition_lag: 0, idem_compose: false, idem_adding_voice: false, ui_params: { tempo: 360, scale: 'maj7reg', centernote: 432, parts: 0, song_tab: [ { voice: [] } ], loop_duration: 128 }, max_parts_ever: 4 };
+
+console.log(g_umt);
 
 jQuery(function () {
     "use strict";
@@ -2643,7 +2645,7 @@ jQuery(function () {
          });
     umt_exec_add_voice();
     document.getElementById("playvoice0").checked = true;
-    g_umt.ui_params.voice[0].playing = true;
+    g_umt.ui_params.song_tab[0].voice[0].playing = true;
     umt_exec_automatic_start();
 });
 
