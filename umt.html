@@ -203,6 +203,48 @@ function umtGenerateANoteSquareVar(frequency, duration, amplitude, threshold) {
     return theBuffer;
 }
 
+function umtGenerateANoteTriangle(frequency, duration, amplitude) {
+    "use strict";
+    // consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
+    var numSamples, theBuffer, bufData, i, fade, masterRescaler, numCycles, numWholeCycles, whereInCycle, sampleVal;
+    masterRescaler = 0.9;
+    numSamples = duration * gUmt.SAMPLERATE;
+    theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.SAMPLERATE); // numberOfChannels, length, sampleRate
+    bufData = theBuffer.getChannelData(0);
+    for (i = 0; i < numSamples; i = i + 1) {
+        fade = 1.0 - (i / numSamples);
+        numCycles = i * (frequency / gUmt.SAMPLERATE);
+        numWholeCycles = Math.floor(numCycles);
+        whereInCycle = numCycles - numWholeCycles;
+        if (whereInCycle < 0.5) {
+            sampleVal = (4.0 * whereInCycle) - 1.0;
+        } else {
+            sampleVal = (4.0 * (1.0 - whereInCycle)) - 1.0;
+        }
+        bufData[i] = sampleVal * (amplitude * fade * masterRescaler);
+    }
+    return theBuffer;
+}
+
+function umtGenerateANoteSawtooth(frequency, duration, amplitude) {
+    "use strict";
+    // consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
+    var numSamples, theBuffer, bufData, i, fade, masterRescaler, numCycles, numWholeCycles, whereInCycle, sampleVal;
+    masterRescaler = 0.9;
+    numSamples = duration * gUmt.SAMPLERATE;
+    theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.SAMPLERATE); // numberOfChannels, length, sampleRate
+    bufData = theBuffer.getChannelData(0);
+    for (i = 0; i < numSamples; i = i + 1) {
+        fade = 1.0 - (i / numSamples);
+        numCycles = i * (frequency / gUmt.SAMPLERATE);
+        numWholeCycles = Math.floor(numCycles);
+        whereInCycle = numCycles - numWholeCycles;
+        sampleVal = (2.0 * whereInCycle) - 1.0;
+        bufData[i] = sampleVal * (amplitude * fade * masterRescaler);
+    }
+    return theBuffer;
+}
+
 function umtGenerateANoteNoise(frequency, duration, amplitude) {
     "use strict";
     // consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
@@ -215,6 +257,24 @@ function umtGenerateANoteNoise(frequency, duration, amplitude) {
     rng = umtGetRando(0);
     for (i = 0; i < numSamples; i = i + 1) {
         fade = 1.0 - (i / numSamples);
+        noiseSample = (rng.genrandReal3() * 2.0) - 1.0;
+        bufData[i] = noiseSample * (amplitude * fade * masterRescaler);
+    }
+    return theBuffer;
+}
+
+function umtGenerateANoteBackwardsNoise(frequency, duration, amplitude) {
+    "use strict";
+    // consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
+    var numSamples, theBuffer, bufData, rng, i, fade, masterRescaler, noiseSample;
+    noiseSample = frequency; // delete me -- just to pass camelCaseJSLint
+    masterRescaler = 0.9;
+    numSamples = duration * gUmt.SAMPLERATE;
+    theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.SAMPLERATE); // numberOfChannels, length, sampleRate
+    bufData = theBuffer.getChannelData(0);
+    rng = umtGetRando(0);
+    for (i = 0; i < numSamples; i = i + 1) {
+        fade = i / numSamples;
         noiseSample = (rng.genrandReal3() * 2.0) - 1.0;
         bufData[i] = noiseSample * (amplitude * fade * masterRescaler);
     }
@@ -305,16 +365,79 @@ function InstantiateSquareVarObj() {
     };
 }
 
+function InstantiateTriangleWaveObj() {
+    "use strict";
+    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
+        var idxname, theBuffer, node, ourStart, startMoment;
+        idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
+        idxname = "triangle" + frequency + "x" + duration + "x" + amplitude;
+        if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
+            theBuffer = gUmt.cachedNotes[idxname];
+        } else {
+            theBuffer = umtGenerateANoteTriangle(frequency, duration, amplitude);
+            gUmt.cachedNotes[idxname] = theBuffer;
+        }
+        node = gUmt.globalCtx.createBufferSource();
+        node.buffer = theBuffer;
+        node.connect(gUmt.globalCtx.destination);
+        ourStart = Number(startTime);
+        startMoment = fromMoment + ourStart;
+        node.start(startMoment);
+    };
+}
+
+function InstantiateSawtoothWaveObj() {
+    "use strict";
+    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
+        var idxname, theBuffer, node, ourStart, startMoment;
+        idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
+        idxname = "sawtooth" + frequency + "x" + duration + "x" + amplitude;
+        if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
+            theBuffer = gUmt.cachedNotes[idxname];
+        } else {
+            theBuffer = umtGenerateANoteSawtooth(frequency, duration, amplitude);
+            gUmt.cachedNotes[idxname] = theBuffer;
+        }
+        node = gUmt.globalCtx.createBufferSource();
+        node.buffer = theBuffer;
+        node.connect(gUmt.globalCtx.destination);
+        ourStart = Number(startTime);
+        startMoment = fromMoment + ourStart;
+        node.start(startMoment);
+    };
+}
+
 function InstantiateNoiseObj() {
     "use strict";
     this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
         var idxname, theBuffer, node, ourStart, startMoment;
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
-        idxname = "noise" + frequency + "x" + duration + "x" + amplitude;
+        idxname = "forwardsnoise" + frequency + "x" + duration + "x" + amplitude;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
             theBuffer = gUmt.cachedNotes[idxname];
         } else {
             theBuffer = umtGenerateANoteNoise(frequency, duration, amplitude);
+            gUmt.cachedNotes[idxname] = theBuffer;
+        }
+        node = gUmt.globalCtx.createBufferSource();
+        node.buffer = theBuffer;
+        node.connect(gUmt.globalCtx.destination);
+        ourStart = Number(startTime);
+        startMoment = fromMoment + ourStart;
+        node.start(startMoment);
+    };
+}
+
+function InstantiateBackwardsNoiseObj() {
+    "use strict";
+    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
+        var idxname, theBuffer, node, ourStart, startMoment;
+        idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
+        idxname = "backwardsnoise" + frequency + "x" + duration + "x" + amplitude;
+        if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
+            theBuffer = gUmt.cachedNotes[idxname];
+        } else {
+            theBuffer = umtGenerateANoteBackwardsNoise(frequency, duration, amplitude);
             gUmt.cachedNotes[idxname] = theBuffer;
         }
         node = gUmt.globalCtx.createBufferSource();
@@ -332,7 +455,10 @@ function umtCreateInstrumentBank() {
         tuningfork: new InstantiateTuningForkObj(),
         squarewave: new InstantiateSquareWaveObj(),
         squarevar: new InstantiateSquareVarObj(),
-        noise: new InstantiateNoiseObj()
+        trianglewave: new InstantiateTriangleWaveObj(),
+        sawtoothwave: new InstantiateSawtoothWaveObj(),
+        forwardsnoise: new InstantiateNoiseObj(),
+        backwardsnoise: new InstantiateBackwardsNoiseObj()
     };
 }
 
@@ -1133,8 +1259,8 @@ function umtHarmonizeScore(lpnum) {
             }
         }
     }
-    umtSanitTestEntireScore(lpnum, true);
-    umtCx('umtHarmonizeScore(lpnum) done');
+    // umtSanitTestEntireScore(lpnum, true);
+    // umtCx('umtHarmonizeScore(lpnum) done');
 }
 
 function umtExecHarmonizeScore() {
@@ -1354,7 +1480,6 @@ function umtSchedulePlayOfSegment() {
                         frequency = frequency * (harmonizedNum / harmonizedDnom);
                         startTime = adjustedStartTime - fromMoment; // gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].starttime * tempoScalar;
                         instrument = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].instrument;
-                        umtCx("instrument" + instrument);
                         gUmt.instrumentBank[instrument].queUpANote(fromMoment - ctxOffset, frequency, startTime, duration, amplitude, instSpecificParams);
                         anythingPlayed = true;
                     }
@@ -2766,7 +2891,19 @@ function umtExecTestDumtGmt() {
 
 function umtExecReSeed() {
     "use strict";
+    var currentTime, timeInMs, rng, i;
+    currentTime = new Date(); // year, month [, day, hour, minute, second, millisecond]);
+    timeInMs = currentTime.getTime();
+    timeInMs = timeInMs - (Math.floor(timeInMs / 256) * 256);
+    rng = umtGetRando(timeInMs);
     console.log("called umtExecReSeed");
+    for (i = 0; i < gUmt.UIParams.parts; i = i + 1) {
+        gUmt.UIParams.songTab[0].voice[i].songNumber = Math.floor(rng.genrandReal2() * 50 + 1);
+    }
+    umtUiCopyUiParamsToActualUi();
+    if (gUmt.idemAddingVoice === false) {
+        umtAutomaticallyRecomposeLoopFromUIParams();
+    }
 }
 
 // main
@@ -2882,10 +3019,13 @@ jQuery(function () {
 			</td><td id="voiceinstrumentcellxx" valign="top" align="center">
 				Instrument: <br />
 				<select name="instrumentxx" id="instrumentxx">
-					<option value="tuningfork">Sine wave</option>
-					<option value="squarewave">Square wave</option>
-					<option value="squarevar">Var square wave</option>
-					<option value="noise">Noise</option>
+					<option value="tuningfork">Sine</option>
+					<option value="squarewave">Square</option>
+					<option value="squarevar">Var square</option>
+					<option value="trianglewave">Triangle</option>
+					<option value="sawtoothwave">Sawtooth</option>
+					<option value="forwardsnoise">Noise</option>
+					<option value="backwardsnoise">Backwards noise</option>
 				</select>
 			</td><td id="voicesongnumcellxx" valign="top" align="center">
 				Song Number: <br />
@@ -3005,6 +3145,9 @@ jQuery(function () {
 					</tr>
 					<!-- insertion_point -->
 				</table>
+			</td><td id="instparameterscellxx" valign="top" align="center">
+				Instrument Specific Parameters: <br />
+				<!-- inst_specific_param_ins_point -->
 			</td>
 		</tr>
 	</table>
