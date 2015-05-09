@@ -147,50 +147,61 @@ function umtTestCheckForFloat(anyparameter) {
 }
 
 function umtFMSine(revs) {
+    "use strict";
     return Math.sin(gUmt.TAU * revs);
 }
 
 function umtFMSquare(revs) {
-     skip = Math.floor(revs);
-     revs = revs - skip;
-     if (revs > 0.5) {
-         return 1.0;
-     }
-     return -1.0;
+    "use strict";
+    var skip;
+    skip = Math.floor(revs);
+    revs = revs - skip;
+    if (revs > 0.5) {
+        return 1.0;
+    }
+    return -1.0;
 }
 
-function umtFMVarSquare(revs, var) {
-     // var == range 0.5 to 1.0
-     skip = Math.floor(revs);
-     revs = revs - skip;
-     if (revs > var) {
-         return 1.0;
-     }
-     return -1.0;
+function umtFMVarSquare(revs, variance) {
+    "use strict";
+    var skip;
+    // variance == range 0.5 to 1.0
+    skip = Math.floor(revs);
+    revs = revs - skip;
+    if (revs > variance) {
+        return 1.0;
+    }
+    return -1.0;
 }
 
 function umtFMTriangle(revs) {
-     skip = Math.floor(revs);
-     revs = revs - skip;
-     if (revs > 0.5) {
-         return 1.0 - ((revs - 0.5) * 2.0);
-     }
-     return (revs * 2.0) - 1.0;
+    "use strict";
+    var skip;
+    skip = Math.floor(revs);
+    revs = revs - skip;
+    if (revs > 0.5) {
+        return 1.0 - ((revs - 0.5) * 2.0);
+    }
+    return (revs * 2.0) - 1.0;
 }
 
-function umtFMVarTriangle(revs, var, mult1, mult2) {
-     // var == range 0.5 to 1.0
-     // mult1 = 2.0 / var;
-     // mult2 = 2.0 / (1.0 - var);
-     skip = Math.floor(revs);
-     revs = revs - skip;
-     if (revs > var) {
-         return 1.0 - ((revs - var) * mult2);
-     }
-     return (revs * mult1) - 1.0;
+function umtFMVarTriangle(revs, variance, mult1, mult2) {
+    "use strict";
+    var skip;
+    // variance is in range 0.5 to 1.0
+    // mult1 is 2.0 / variance;
+    // mult2 is 2.0 / (1.0 - variance);
+    skip = Math.floor(revs);
+    revs = revs - skip;
+    if (revs > variance) {
+        return 1.0 - ((revs - variance) * mult2);
+    }
+    return (revs * mult1) - 1.0;
 }
 
 function umtFMSawtooth(revs) {
+    "use strict";
+    var skip;
     skip = Math.floor(revs);
     revs = revs - skip;
     return (revs - 0.5) * 2.0;
@@ -199,7 +210,6 @@ function umtFMSawtooth(revs) {
 function umtGenerateANoteSineWave(frequency, duration, amplitude) {
     "use strict";
     // consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
-    console.log("point 156");
     var numSamples, theBuffer, bufData, i, fade;
     numSamples = duration * gUmt.SAMPLERATE;
     theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.SAMPLERATE); // numberOfChannels, length, sampleRate
@@ -228,7 +238,7 @@ function umtGenerateANoteSquareWave(frequency, duration, amplitude) {
 function umtGenerateANoteSquareVar(frequency, duration, amplitude, threshold) {
     "use strict";
     // consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
-    var numSamples, theBuffer, bufData, i, fade, sinePart, squarePart;
+    var numSamples, theBuffer, bufData, i, fade;
     threshold = (threshold / 2.0) + 0.5;
     numSamples = duration * gUmt.SAMPLERATE;
     theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.SAMPLERATE); // numberOfChannels, length, sampleRate
@@ -243,7 +253,7 @@ function umtGenerateANoteSquareVar(frequency, duration, amplitude, threshold) {
 function umtGenerateANoteTriangle(frequency, duration, amplitude) {
     "use strict";
     // consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
-    var numSamples, theBuffer, bufData, i, fade, numCycles, numWholeCycles, whereInCycle, sampleVal;
+    var numSamples, theBuffer, bufData, i, fade;
     numSamples = duration * gUmt.SAMPLERATE;
     theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.SAMPLERATE); // numberOfChannels, length, sampleRate
     bufData = theBuffer.getChannelData(0);
@@ -257,7 +267,7 @@ function umtGenerateANoteTriangle(frequency, duration, amplitude) {
 function umtGenerateANoteSawtooth(frequency, duration, amplitude) {
     "use strict";
     // consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
-    var numSamples, theBuffer, bufData, i, fade, numCycles, numWholeCycles, whereInCycle, sampleVal;
+    var numSamples, theBuffer, bufData, i, fade;
     numSamples = duration * gUmt.SAMPLERATE;
     theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.SAMPLERATE); // numberOfChannels, length, sampleRate
     bufData = theBuffer.getChannelData(0);
@@ -540,9 +550,9 @@ function umtCreateInstrumentBank() {
     };
 }
 
-function umtClearLoop(lpnum, xTempo, centerNote, xScale) {
+function umtClearLoop(lpnum, xTempo, centerNote, xScale, xChord) {
     "use strict";
-    gUmt.loop[lpnum] = { score: {tempo: xTempo, centernoteLog: (Math.log(centerNote) / gUmt.LOG2) - 5, scale: xScale, playbackTimeOffset: 0, songTab: [ { voice: [] } ] } };
+    gUmt.loop[lpnum] = { score: {tempo: xTempo, centernoteLog: (Math.log(centerNote) / gUmt.LOG2) - 5, scale: xScale, chord: xChord, playbackTimeOffset: 0, songTab: [ { voice: [] } ] } };
 }
 
 function umtAddVoice(lpnum, idx, songNumber, rangeMin, rangeMax, instrumentName) {
@@ -807,20 +817,47 @@ function umtReduceFraction(num, dnom) {
     return rv;
 }
 
-function umtIsConsonant(lowNum, lowDnom, highNum, highDnom) {
+function umtIsConsonant(lowNum, lowDnom, highNum, highDnom, allow7th) {
     "use strict";
     var ratioNum, ratioDnom, red;
+    if (allow7th === "any") {
+        return true;
+    }
     ratioNum = highNum * lowDnom;
     ratioDnom = highDnom * lowNum;
     red = umtReduceFraction(ratioNum, ratioDnom);
     if (red.dnom > 6) {
-        return false;
+        if (allow7th === "reg") {
+            if ((red.dnom !== 9) && (red.dnom !== 15) && (red.dnom !== 18) && (red.dnom !== 25)) {
+                return false;
+            }
+        } else {
+            if (allow7th === "alt") {
+                if ((red.dnom !== 8) && (red.dnom !== 9) && (red.dnom !== 15) && (red.dnom !== 16) && (red.dnom !== 18) && (red.dnom !== 25) && (red.dnom !== 27) && (red.dnom !== 32) && (red.dnom !== 45)) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
     }
     ratioNum = 2 * lowNum * highDnom;
     ratioDnom = lowDnom * highNum;
     red = umtReduceFraction(ratioNum, ratioDnom);
     if (red.dnom > 6) {
-        return false;
+        if (allow7th === "reg") {
+            if ((red.dnom !== 9) && (red.dnom !== 15) && (red.dnom !== 18) && (red.dnom !== 25)) {
+                return false;
+            }
+        } else {
+            if (allow7th === "alt") {
+                if ((red.dnom !== 8) && (red.dnom !== 9) && (red.dnom !== 15) && (red.dnom !== 16) && (red.dnom !== 18) && (red.dnom !== 25) && (red.dnom !== 27) && (red.dnom !== 32) && (red.dnom !== 45)) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
     }
     return true;
 }
@@ -828,51 +865,52 @@ function umtIsConsonant(lowNum, lowDnom, highNum, highDnom) {
 function umtTestIsConsonant() {
     "use strict";
     var what;
-    what = umtIsConsonant(6, 5, 7, 5);
+    // BUGBUG umtIsConsonant() was modified to allow 7th chords, but this test function does not test for the 7th chords
+    what = umtIsConsonant(6, 5, 7, 5, false);
     if (what !== false) {
         umtJSabort('dissonance test 1 failed');
     }
-    what = umtIsConsonant(6, 5, 8, 5);
+    what = umtIsConsonant(6, 5, 8, 5, "no");
     if (what !== true) {
         umtJSabort('dissonance test 2 failed');
     }
-    what = umtIsConsonant(6, 5, 9, 5);
+    what = umtIsConsonant(6, 5, 9, 5, "no");
     if (what !== true) {
         umtJSabort('dissonance test 3 failed');
     }
-    what = umtIsConsonant(6, 5, 5, 4);
+    what = umtIsConsonant(6, 5, 5, 4, "no");
     if (what !== false) {
         umtJSabort('dissonance test 4 failed');
     }
-    what = umtIsConsonant(6, 5, 7, 4);
+    what = umtIsConsonant(6, 5, 7, 4, "no");
     if (what !== false) {
         umtJSabort('dissonance test 5 failed');
     }
-    what = umtIsConsonant(6, 5, 4, 3);
+    what = umtIsConsonant(6, 5, 4, 3, "no");
     if (what !== false) {
         umtJSabort('dissonance test 6 failed');
     }
-    what = umtIsConsonant(6, 5, 5, 3);
+    what = umtIsConsonant(6, 5, 5, 3, "no");
     if (what !== false) {
         umtJSabort('dissonance test 7 failed');
     }
-    what = umtIsConsonant(6, 5, 3, 2);
+    what = umtIsConsonant(6, 5, 3, 2, "no");
     if (what !== true) {
         umtJSabort('dissonance test 8 failed');
     }
-    what = umtIsConsonant(5, 4, 4, 3);
+    what = umtIsConsonant(5, 4, 4, 3, "no");
     if (what !== false) {
         umtJSabort('dissonance test 9 failed');
     }
-    what = umtIsConsonant(5, 4, 5, 3);
+    what = umtIsConsonant(5, 4, 5, 3, "no");
     if (what !== true) {
         umtJSabort('dissonance test 10 failed');
     }
-    what = umtIsConsonant(5, 4, 3, 2);
+    what = umtIsConsonant(5, 4, 3, 2, "no");
     if (what !== true) {
         umtJSabort('dissonance test 11 failed');
     }
-    what = umtIsConsonant(4, 3, 3, 2);
+    what = umtIsConsonant(4, 3, 3, 2, "no");
     if (what !== false) {
         umtJSabort('dissonance test 12 failed');
     }
@@ -897,24 +935,24 @@ function umtFractSubtract(firstNum, firstDnom, secondNum, secondDnom) {
     return rv;
 }
 
-function umtIsConsOrderInd(xnum, xdnom, ynum, ydnom) {
+function umtIsConsOrderInd(xnum, xdnom, ynum, ydnom, allow7th) {
     "use strict";
     var diff;
     // is consonant? order independent
     diff = umtFractSubtract(xnum, xdnom, ynum, ydnom);
     if (diff.num < 0) {
         // y is bigger
-        return umtIsConsonant(xnum, xdnom, ynum, ydnom);
+        return umtIsConsonant(xnum, xdnom, ynum, ydnom, allow7th);
     }
     // x is bigger
-    return umtIsConsonant(ynum, ydnom, xnum, xdnom);
+    return umtIsConsonant(ynum, ydnom, xnum, xdnom, allow7th);
 }
 
 // need caching for this function -- recalculating dissonance every time is computationally expensive
-function umtDetermineIfFits(num, dnom, listOfNotesAlreadyPlaying) {
+function umtDetermineIfFits(num, dnom, listOfNotesAlreadyPlaying, allow7th) {
     "use strict";
     var lx, i, diff, cacheidxname;
-    cacheidxname = "udif" + num + "," + dnom;
+    cacheidxname = "udif" + num + "," + dnom + "," + allow7th;
     lx = listOfNotesAlreadyPlaying.length;
     for (i = 0; i < lx; i = i + 1) {
         cacheidxname = cacheidxname + "," + listOfNotesAlreadyPlaying[i].num + "," + listOfNotesAlreadyPlaying[i].dnom;
@@ -926,13 +964,13 @@ function umtDetermineIfFits(num, dnom, listOfNotesAlreadyPlaying) {
         diff = umtFractSubtract(num, dnom, listOfNotesAlreadyPlaying[i].num, listOfNotesAlreadyPlaying[i].dnom);
         if (diff.num < 0) {
             // already playing is bigger
-            if (umtIsConsonant(num, dnom, listOfNotesAlreadyPlaying[i].num, listOfNotesAlreadyPlaying[i].dnom) === false) {
+            if (umtIsConsonant(num, dnom, listOfNotesAlreadyPlaying[i].num, listOfNotesAlreadyPlaying[i].dnom, allow7th) === false) {
                 gUmt.cachedFittings[cacheidxname] = false;
                 return false;
             }
         } else {
             // num/dom is bigger
-            if (umtIsConsonant(listOfNotesAlreadyPlaying[i].num, listOfNotesAlreadyPlaying[i].dnom, num, dnom) === false) {
+            if (umtIsConsonant(listOfNotesAlreadyPlaying[i].num, listOfNotesAlreadyPlaying[i].dnom, num, dnom, allow7th) === false) {
                 gUmt.cachedFittings[cacheidxname] = false;
                 return false;
             }
@@ -942,7 +980,7 @@ function umtDetermineIfFits(num, dnom, listOfNotesAlreadyPlaying) {
     return true;
 }
 
-function umtFindMostHarmonicNote(pitch, scale, listOfNotesAlreadyPlaying) {
+function umtFindMostHarmonicNote(pitch, scale, listOfNotesAlreadyPlaying, allow7th) {
     "use strict";
     var octave, minIdx, minDist, i, dist, rv, originalFullPitch, numOfNotes, topPos, topOctave, bottomPos, bottomOctave, cycCount, topDist, bottomDist, currentPos, currentOctave;
     originalFullPitch = pitch;
@@ -1008,14 +1046,14 @@ function umtFindMostHarmonicNote(pitch, scale, listOfNotesAlreadyPlaying) {
                 bottomPos = numOfNotes - 1;
             }
         }
-        if (umtDetermineIfFits(scale[currentPos].num, scale[currentPos].dnom, listOfNotesAlreadyPlaying)) {
+        if (umtDetermineIfFits(scale[currentPos].num, scale[currentPos].dnom, listOfNotesAlreadyPlaying, allow7th)) {
             rv = {octave: currentOctave, scalenote: currentPos, num: scale[currentPos].num, dnom: scale[currentPos].dnom, fpt: scale[currentPos].fpt };
             return rv;
         }
     }
 }
 
-function umtSanitTestEntireScore(lpnum, doOutput) {
+function umtSanitTestEntireScore(lpnum, doOutput, allow7th) {
     "use strict";
     var parts, currentTime, beyondAll, stillGoing, bustOutCount, playingNow, pncount, vcnum, notenum, partlen, i, x, y, result, xnum, ynum, xdnom, ydnom, xrest, yrest, descrip;
     parts = gUmt.loop[lpnum].score.parts;
@@ -1070,7 +1108,7 @@ function umtSanitTestEntireScore(lpnum, doOutput) {
                 ydnom = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[notenum].harmDnom;
                 yrest = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[notenum].rest;
                 if ((xrest === false) && (yrest === false)) {
-                    result = umtIsConsOrderInd(xnum, xdnom, ynum, ydnom);
+                    result = umtIsConsOrderInd(xnum, xdnom, ynum, ydnom, allow7th);
                     if (result === false) {
                         umtJSabort('BANG!! we just ran into dissonance!');
                     }
@@ -1142,8 +1180,9 @@ function umtGetScaleByAbbrv(scaleAbbrv) {
 
 function umtHarmonizeScore(lpnum) {
     "use strict";
-    var theScale, parts, vcnum, notecount, i, currentTime, currentPosition, timeRemaining, offEnd, stillGoing, maxFound, cycleCount, stillUnfoundMaxes, cycleUnfoundCount, maxIdx, poz, listOfNotesAlreadyPlaying, harmonizedInfo, minIdx, dist, lonapCursr;
+    var theScale, allow7th, parts, vcnum, notecount, i, currentTime, currentPosition, timeRemaining, offEnd, stillGoing, maxFound, cycleCount, stillUnfoundMaxes, cycleUnfoundCount, maxIdx, poz, listOfNotesAlreadyPlaying, harmonizedInfo, minIdx, dist, lonapCursr;
     theScale = umtAddFloatsToScale(umtGetScaleByAbbrv(gUmt.loop[lpnum].score.scale));
+    allow7th = gUmt.loop[lpnum].score.chord;
     // clear old data
     parts = gUmt.loop[lpnum].score.parts;
     for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
@@ -1264,7 +1303,7 @@ function umtHarmonizeScore(lpnum) {
                         }
                     }
                 }
-                harmonizedInfo = umtFindMostHarmonicNote(gUmt.loop[lpnum].score.songTab[0].voice[maxIdx].notes[poz].pitch, theScale, listOfNotesAlreadyPlaying);
+                harmonizedInfo = umtFindMostHarmonicNote(gUmt.loop[lpnum].score.songTab[0].voice[maxIdx].notes[poz].pitch, theScale, listOfNotesAlreadyPlaying, allow7th);
                 // sanity check 1
                 if (currentTime !== gUmt.loop[lpnum].score.songTab[0].voice[maxIdx].notes[currentPosition[maxIdx]].starttime) {
                     umtCx('START TIMES DO NOT MATCH! OH NO!');
@@ -1434,11 +1473,11 @@ function umtExecDisonanceTest() {
     if (diff.num < 0) {
         // second is bigger
         umtCx('second is bigger');
-        result = umtIsConsonant(firstNum, firstDnom, secondNum, secondDnom);
+        result = umtIsConsonant(firstNum, firstDnom, secondNum, secondDnom, "no");
     } else {
         // first is bigger
         umtCx('first is bigger');
-        result = umtIsConsonant(secondNum, secondDnom, firstNum, firstDnom);
+        result = umtIsConsonant(secondNum, secondDnom, firstNum, firstDnom, "no");
     }
     umtCx('result is ' + result);
     if (result) {
@@ -1744,7 +1783,7 @@ function umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, 
 
 function umtTestResetCopytransTestSequence() {
     "use strict";
-    umtClearLoop(0, 400, 432, "maj7reg");
+    umtClearLoop(0, 400, 432, "maj7reg", "triad");
     umtAddVoice(0, 0, 0, 4, 6, "tuningfork");
     umtAddNote(0, 0, false, 5.0, 1, 0.99, false);
     umtAddNote(0, 0, false, 5.1, 1, 0.99, false);
@@ -2120,7 +2159,7 @@ function umtExecTestCopyTrans(lpnum) {
 function umtComposeSampleComposition(lpnum) {
     "use strict";
     umtJSabort("old function called for composition.");
-    umtClearLoop(lpnum, gUmt.UIParams.tempo, gUmt.UIParams.centernote, gUmt.UIParams.scale);
+    umtClearLoop(lpnum, gUmt.UIParams.tempo, gUmt.UIParams.centernote, gUmt.UIParams.scale, gUmt.UIParams.chord);
     umtAddVoice(lpnum, 0, 0, 4, 6, "tuningfork"); // 5 - 1, 5 + 1
     umtAddSymBaseToVoice(lpnum, 0, 1, 8, 32, 5, 0, 0.5);
     umtAddVoice(lpnum, 1, 1, 2, 4, "tuningfork");
@@ -2151,7 +2190,7 @@ function umtComposeRealComposition(lpnum) {
     if (gUmt.idemAddingVoice) {
         umtJSabort("umtComposeRealComposition called during add voice");
     }
-    umtClearLoop(lpnum, gUmt.UIParams.tempo, gUmt.UIParams.centernote, gUmt.UIParams.scale);
+    umtClearLoop(lpnum, gUmt.UIParams.tempo, gUmt.UIParams.centernote, gUmt.UIParams.scale, gUmt.UIParams.chord);
     compositionVoice = 0;
     UIVoice = 0;
     loopDuration = gUmt.UIParams.loopDuration;
@@ -2316,6 +2355,17 @@ function umtExecScaleChange() {
     listbox = window.document.getElementById("lb_scale");
     scaleparam = listbox.options[listbox.selectedIndex].value;
     gUmt.UIParams.scale = scaleparam;
+    if (gUmt.idemAddingVoice === false) {
+        umtAutomaticallyRecomposeLoopFromUIParams();
+    }
+}
+
+function umtExecChordChange() {
+    "use strict";
+    var listbox, chordparam;
+    listbox = window.document.getElementById("lb_chord");
+    chordparam = listbox.options[listbox.selectedIndex].value;
+    gUmt.UIParams.chord = chordparam;
     if (gUmt.idemAddingVoice === false) {
         umtAutomaticallyRecomposeLoopFromUIParams();
     }
@@ -2989,7 +3039,7 @@ function umtExecReSeed() {
 
 // main
 
-gUmt = {SAMPLERATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), globalCtx: umtGetAudioContext(), globalRng: umtGetRando(0), cachedNotes: {}, instrumentBank: {}, cachedFittings: {}, loop: [ { score: {tempo: 700, centernoteLog: (Math.log(432) / Math.log(2)) - 5, songTab: [ { voice: [] } ] } } ], playedUpTo: 0, timerIsOn: false, currentlyPlayingLoop: 0, compositionLag: 0, idemCompose: false, idemAddingVoice: false, UIParams: { tempo: 360, scale: 'maj7reg', centernote: 432, mastervol: 0.9, parts: 0, songTab: [ { voice: [] } ], loopDuration: 128 }, maxPartsEver: 4 };
+gUmt = {SAMPLERATE: 44100, TAU: Math.PI * 2, LOG2: Math.log(2), globalCtx: umtGetAudioContext(), globalRng: umtGetRando(0), cachedNotes: {}, instrumentBank: {}, cachedFittings: {}, loop: [ { score: {tempo: 700, centernoteLog: (Math.log(432) / Math.log(2)) - 5, songTab: [ { voice: [] } ] } } ], playedUpTo: 0, timerIsOn: false, currentlyPlayingLoop: 0, compositionLag: 0, idemCompose: false, idemAddingVoice: false, UIParams: { tempo: 360, scale: 'maj7reg', chord: "triad", centernote: 432, mastervol: 0.9, parts: 0, songTab: [ { voice: [] } ], loopDuration: 128 }, maxPartsEver: 4 };
 
 console.log(gUmt);
 
@@ -3071,6 +3121,17 @@ jQuery(function () {
     <option value="pentatonic23reg">Pentatonic 5 (2+3 standard)</option>
     <option value="quad">Quadtonic 4</option>
     <option value="tri">Tritonic 3</option>
+</select>
+
+</p>
+
+<p> Chords allowed:
+
+<select id="lb_chord">
+    <option value="triad">Triads only (most harmonic)</option>
+    <option value="reg">Allow 7th chords (reg)</option>
+    <option value="alt">Allow 7th chords (alt)</option>
+    <option value="any">Allow all chords (allow dissonance)</option>
 </select>
 
 </p>
@@ -3277,6 +3338,9 @@ umtListenElement.addEventListener("click", umtExecAutomaticStop, true);
 
 umtListenElement = document.getElementById("lb_scale");
 umtListenElement.addEventListener("change", umtExecScaleChange, true);
+
+umtListenElement = document.getElementById("lb_chord");
+umtListenElement.addEventListener("change", umtExecChordChange, true);
 
 var umtListenElement = document.getElementById("reseed");
 umtListenElement.addEventListener("click", umtExecReSeed, true);
