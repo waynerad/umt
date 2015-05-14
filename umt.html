@@ -313,6 +313,29 @@ function umtGenerateANoteBackwardsNoise(frequency, duration, amplitude) {
     return theBuffer;
 }
 
+function umtGenerateANoteSteamPop(frequency, duration, amplitude) {
+    "use strict";
+    // consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
+    var numSamples, theBuffer, bufData, rng, i, fadeLin, fadeRecip, fadeActual, noiseSample;
+    noiseSample = frequency; // delete me -- just to pass camelCaseJSLint
+    numSamples = duration * gUmt.globalCtx.sampleRate;
+    theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.globalCtx.sampleRate); // numberOfChannels, length, sampleRate
+    bufData = theBuffer.getChannelData(0);
+    rng = umtGetRando(0);
+    for (i = 0; i < numSamples; i = i + 1) {
+        fadeLin = 1.0 - (i / numSamples);
+        fadeRecip = 1.0 / (100.0 * (i / numSamples) + 1.0);
+        if (fadeLin < fadeRecip) {
+            fadeActual = fadeLin;
+        } else {
+            fadeActual = fadeRecip;
+        }
+        noiseSample = (rng.genrandReal3() * 2.0) - 1.0;
+        bufData[i] = noiseSample * (amplitude * fadeActual);
+    }
+    return theBuffer;
+}
+
 function umtGenerateANoteFMSynth(frequency, duration, amplitude) {
     "use strict";
     // consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
@@ -489,7 +512,7 @@ function InstantiateSawtoothWaveObj() {
 function InstantiateNoiseObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: false };
+        return { percussion: true };
     };
     this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
         var idxname, theBuffer, node, ourStart, startMoment;
@@ -513,7 +536,7 @@ function InstantiateNoiseObj() {
 function InstantiateBackwardsNoiseObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: false };
+        return { percussion: true };
     };
     this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
         var idxname, theBuffer, node, ourStart, startMoment;
@@ -523,6 +546,30 @@ function InstantiateBackwardsNoiseObj() {
             theBuffer = gUmt.cachedNotes[idxname];
         } else {
             theBuffer = umtGenerateANoteBackwardsNoise(frequency, duration, amplitude);
+            gUmt.cachedNotes[idxname] = theBuffer;
+        }
+        node = gUmt.globalCtx.createBufferSource();
+        node.buffer = theBuffer;
+        node.connect(gUmt.globalCtx.destination);
+        ourStart = Number(startTime);
+        startMoment = fromMoment + ourStart;
+        node.start(startMoment);
+    };
+}
+
+function InstantiateSteamPopObj() {
+    "use strict";
+    this.getParams = function () {
+        return { percussion: true };
+    };
+    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
+        var idxname, theBuffer, node, ourStart, startMoment;
+        idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
+        idxname = "steampop" + frequency + "x" + duration + "x" + amplitude;
+        if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
+            theBuffer = gUmt.cachedNotes[idxname];
+        } else {
+            theBuffer = umtGenerateANoteSteamPop(frequency, duration, amplitude);
             gUmt.cachedNotes[idxname] = theBuffer;
         }
         node = gUmt.globalCtx.createBufferSource();
@@ -569,6 +616,7 @@ function umtCreateInstrumentBank() {
         sawtoothwave: new InstantiateSawtoothWaveObj(),
         forwardsnoise: new InstantiateNoiseObj(),
         backwardsnoise: new InstantiateBackwardsNoiseObj(),
+        steampop: new InstantiateSteamPopObj(),
         fmsynth: new InstantiateFMSynthObj()
     };
     gUmt.instrumentParams = {};
@@ -1570,7 +1618,8 @@ function umtAddSymBaseToVoice(lpnum, vcnum, minSize, chunkSize, totalLength, cen
         if (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randRests.genrandReal2() < restyness) {
             umtAddNote(lpnum, vcnum, true, centerOctave, duration, 1, null);
         } else {
-            amplitude = (1.0 - (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randAmp.genrandReal2() * ampVariation)) * volume;
+            // amplitude = (1.0 - (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randAmp.genrandReal2() * ampVariation)) * volume;
+            amplitude = (1.0 - (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randAmp.genrandReal2() * ampVariation) * 0.9) * volume;
             if (idx === 0) {
                 pitch = Math.floor(pitch + 0.5);
             }
@@ -1707,6 +1756,12 @@ function umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, 
                 minPitch = thisPitch;
             }
         }
+    }
+    if (tsRhCursor === -1) {
+        tsRhCursor = 0;
+    }
+    if (tsPiCursor === -1) {
+        tsPiCursor = 0;
     }
     segmentLen = segmentEnd - segmentStart + 1;
     midpointPitch = (minPitch + maxPitch) / 2;
@@ -3038,7 +3093,7 @@ function umtExecAddVoice() {
     var voiceNum, songnum;
     voiceNum = gUmt.UIParams.parts;
     songnum = voiceNum + 1;
-    gUmt.UIParams.songTab[0].voice[voiceNum] = {playing: false, instrument: "tuningfork", volume: 1.0, songNumber: songnum, octave: 5, noteDistance: 0.3, restyness: 0.0, ampVariation: 0.9, minNote: 4, chunkSize: 4, frameSize: 32, symmetry: { 1: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 2: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 4: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 8: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 16: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 32: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 64: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 128: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 256: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 512: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 1024: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0} } };
+    gUmt.UIParams.songTab[0].voice[voiceNum] = {playing: false, instrument: "tuningfork", volume: 1.0, songNumber: songnum, octave: 5, noteDistance: 0.3, restyness: 0.0, ampVariation: 1.0, minNote: 4, chunkSize: 4, frameSize: 32, symmetry: { 1: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 2: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 4: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 8: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 16: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 32: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 64: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 128: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 256: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 512: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 1024: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0} } };
     gUmt.UIParams.parts = gUmt.UIParams.parts + 1;
     if (gUmt.UIParams.parts > gUmt.UIParams.maxPartsEver) {
         gUmt.UIParams.maxPartsEver = gUmt.UIParams.parts;
@@ -3219,6 +3274,7 @@ jQuery(function () {
 					<option value="sawtoothwave">Sawtooth</option>
 					<option value="forwardsnoise">Noise</option>
 					<option value="backwardsnoise">Backwards noise</option>
+					<option value="steampop">Steam Pop</option>
 					<option value="fmsynth">FM Synthesis</option>
 				</select>
 			</td><td id="voicesongnumcellxx" valign="top" align="center">
