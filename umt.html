@@ -391,7 +391,7 @@ function umtTestQueUpANoteSineWave(fromMoment, frequency, startTime, duration, a
 function InstantiateTuningForkObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: false };
+        return { percussion: false, parameters: [] };
     };
     this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
         var idxname, theBuffer, node, ourStart, startMoment;
@@ -415,7 +415,7 @@ function InstantiateTuningForkObj() {
 function InstantiateSquareWaveObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: false };
+        return { percussion: false, parameters: [] };
     };
     this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
         var idxname, theBuffer, node, ourStart, startMoment;
@@ -439,7 +439,7 @@ function InstantiateSquareWaveObj() {
 function InstantiateSquareVarObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: false, parameters: [ { name: "var", display: "Variation", distribution: "continuous-uniform" } ] };
+        return { percussion: false, parameters: [ { name: "var", display: "Variation" } ] };
     };
     this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
         var idxname, theBuffer, node, ourStart, startMoment, threshold;
@@ -464,7 +464,7 @@ function InstantiateSquareVarObj() {
 function InstantiateTriangleWaveObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: false };
+        return { percussion: false, parameters: [] };
     };
     this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
         var idxname, theBuffer, node, ourStart, startMoment;
@@ -488,7 +488,7 @@ function InstantiateTriangleWaveObj() {
 function InstantiateSawtoothWaveObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: false };
+        return { percussion: false, parameters: [] };
     };
     this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
         var idxname, theBuffer, node, ourStart, startMoment;
@@ -512,7 +512,7 @@ function InstantiateSawtoothWaveObj() {
 function InstantiateNoiseObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: true };
+        return { percussion: true, parameters: [] };
     };
     this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
         var idxname, theBuffer, node, ourStart, startMoment;
@@ -536,7 +536,7 @@ function InstantiateNoiseObj() {
 function InstantiateBackwardsNoiseObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: true };
+        return { percussion: true, parameters: [] };
     };
     this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
         var idxname, theBuffer, node, ourStart, startMoment;
@@ -560,7 +560,7 @@ function InstantiateBackwardsNoiseObj() {
 function InstantiateSteamPopObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: true };
+        return { percussion: true, parameters: [] };
     };
     this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
         var idxname, theBuffer, node, ourStart, startMoment;
@@ -584,7 +584,7 @@ function InstantiateSteamPopObj() {
 function InstantiateFMSynthObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: false };
+        return { percussion: false, parameters: [] };
     };
     this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
         var idxname, theBuffer, node, ourStart, startMoment;
@@ -2785,13 +2785,100 @@ umtUiCascadeMinNoteChanges = function (voiceNumber, newvalue) {
     }
 };
 
+function umtUICreateClosureFunctionsForInstrumentSpecificParametersOutsideALoop(instrumentName, paramName, voiceNumber) {
+    "use strict";
+    jQuery("#slider_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_patterns").slider({min: 0, max: 10, step: 1, value: 5, orientation: "vertical", change: function (event, ui) {
+        var newvalue, absvalue, aspercentage;
+        if (gUmt.idemAddingVoice === false) {
+            if (event.type === "slidechange") {
+                newvalue = ui.value;
+                absvalue = newvalue / 10;
+                aspercentage = newvalue * 10;
+                window.document.getElementById("display_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_patterns").innerHTML = aspercentage + "%";
+                // gUmt.UIParams.songTab[0].voice[voiceNumber].volume = absvalue;
+                // if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                //     umtAutomaticallyRecomposeLoopFromUIParams();
+                // }
+                console.log(absvalue);
+            }
+        }
+    }
+        });
+    jQuery("#slider_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_variants").slider({min: 0, max: 10, step: 1, value: 5, orientation: "vertical", change: function (event, ui) {
+        var newvalue, absvalue, aspercentage;
+        if (gUmt.idemAddingVoice === false) {
+            if (event.type === "slidechange") {
+                newvalue = ui.value;
+                absvalue = newvalue / 10;
+                aspercentage = newvalue * 10;
+                window.document.getElementById("display_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_variants").innerHTML = aspercentage + "%";
+                // gUmt.UIParams.songTab[0].voice[voiceNumber].volume = absvalue;
+                // if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                //     umtAutomaticallyRecomposeLoopFromUIParams();
+                // }
+                console.log(absvalue);
+            }
+        }
+    }
+        });
+}
+
+function umtSetInstrumentSpecificParameterControls(voiceNumber, instrumentName) {
+    "use strict";
+    var cellidname, text, i, instrSpecificControlHTML, parameters, idx, instpar, template;
+    cellidname = "instparameterscell";
+    text = document.getElementById(cellidname + "xx").innerHTML;
+    i = text.indexOf("xx");
+    while (i >= 0) {
+        text = text.substring(0, i) + voiceNumber + text.substring(i + 2);
+        i = text.indexOf("xx");
+    }
+    instrSpecificControlHTML = '<table border="0"><tr>';
+    parameters = gUmt.instrumentParams[instrumentName].parameters;
+    for (idx in parameters) {
+        if (parameters.hasOwnProperty(idx)) {
+            instpar = parameters[idx];
+            instrSpecificControlHTML = instrSpecificControlHTML + '<td>' + instpar.display + '<br />';
+            template = document.getElementById("instrument_parameter_template").innerHTML;
+            i = template.indexOf("ZZ");
+            while (i >= 0) {
+                template = template.substring(0, i) + instrumentName + template.substring(i + 2);
+                i = template.indexOf("ZZ");
+            }
+            i = template.indexOf("YY");
+            while (i >= 0) {
+                template = template.substring(0, i) + instpar.name + template.substring(i + 2);
+                i = template.indexOf("YY");
+            }
+            i = template.indexOf("XX");
+            while (i >= 0) {
+                template = template.substring(0, i) + voiceNumber + template.substring(i + 2);
+                i = template.indexOf("XX");
+            }
+            instrSpecificControlHTML = instrSpecificControlHTML + template + '</td>';
+        }
+    }
+    instrSpecificControlHTML = instrSpecificControlHTML + '</tr></table>';
+    i = text.indexOf("<!-- inst_specific_param_ins_point -->");
+    text = text.substring(0, i) + instrSpecificControlHTML + text.substring(i); // paste
+    document.getElementById(cellidname + voiceNumber).innerHTML = text;
+    for (idx in parameters) {
+        if (parameters.hasOwnProperty(idx)) {
+            instpar = parameters[idx];
+            umtUICreateClosureFunctionsForInstrumentSpecificParametersOutsideALoop(instrumentName, instpar.name, voiceNumber);
+        }
+    }
+}
+
 function umtExecInstrumentChange() {
     "use strict";
-    var elemid, UIVoiceNum, listbox;
+    var elemid, UIVoiceNum, listbox, newinstr;
     elemid = event.target.id;
     UIVoiceNum = Number(elemid.substring(10));
     listbox = window.document.getElementById("instrument" + UIVoiceNum);
-    gUmt.UIParams.songTab[0].voice[UIVoiceNum].instrument = listbox.options[listbox.selectedIndex].value;
+    newinstr = listbox.options[listbox.selectedIndex].value;
+    gUmt.UIParams.songTab[0].voice[UIVoiceNum].instrument = newinstr;
+    umtSetInstrumentSpecificParameterControls(UIVoiceNum, newinstr);
     if (gUmt.idemAddingVoice === false) {
         umtAutomaticallyRecomposeLoopFromUIParams();
     }
@@ -2800,13 +2887,13 @@ function umtExecInstrumentChange() {
 function umtUiAddRow(voiceNumber) {
     "use strict";
     var text, i, displayNumber, columnidlist, idx, cellidname, j, rowcontent, y, yyy, currentrowhtml, listenElement;
-    jQuery('#voices_table > tbody:last').append('<tr id="voice_row_' + voiceNumber + '"><td id="voicedescriptcell' + voiceNumber + '" valign="top"> Voice Description Cell ' + voiceNumber + '</td></td><td id="voiceplaycell' + voiceNumber + '" valign="top"></td></td><td id="voiceinstrumentcell' + voiceNumber + '" valign="top"><td id="voicevolumecell' + voiceNumber + '" valign="top"></td><td id="voicesongnumcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceoctavecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicenotedistcell' + voiceNumber + '" valign="top" align="center"></td><td id="voicerestynesscell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceampvariationcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceminnotecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicechunksizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceframesizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicesymmetriescell' + voiceNumber + '" valign="top" align="center"></td></tr>');
+    jQuery('#voices_table > tbody:last').append('<tr id="voice_row_' + voiceNumber + '"><td id="voicedescriptcell' + voiceNumber + '" valign="top"> Voice Description Cell ' + voiceNumber + '</td><td id="voiceplaycell' + voiceNumber + '" valign="top"></td><td id="voiceinstrumentcell' + voiceNumber + '" valign="top"><td id="voicevolumecell' + voiceNumber + '" valign="top"></td><td id="voicesongnumcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceoctavecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicenotedistcell' + voiceNumber + '" valign="top" align="center"></td><td id="voicerestynesscell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceampvariationcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceminnotecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicechunksizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceframesizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicesymmetriescell' + voiceNumber + '" valign="top" align="center"></td><td id="instparameterscell' + voiceNumber + '" valign="top" align="center"></td></tr>');
     text = document.getElementById("voicedescriptcellxx").innerHTML;
     displayNumber = voiceNumber + 1;
     i = text.indexOf("XX");
     text = text.substring(0, i) + displayNumber + text.substring(i + 2);
     document.getElementById("voicedescriptcell" + voiceNumber).innerHTML = text;
-    columnidlist = ["voiceplaycell", "voiceinstrumentcell", "voicevolumecell", "voicesongnumcell", "voiceoctavecell", "voicenotedistcell", "voicerestynesscell", "voiceampvariationcell", "voiceminnotecell", "voicechunksizecell", "voiceframesizecell", "voicesymmetriescell"];
+    columnidlist = ["voiceplaycell", "voiceinstrumentcell", "voicevolumecell", "voicesongnumcell", "voiceoctavecell", "voicenotedistcell", "voicerestynesscell", "voiceampvariationcell", "voiceminnotecell", "voicechunksizecell", "voiceframesizecell", "voicesymmetriescell", "instparameterscell"];
     for (idx in columnidlist) {
         if (columnidlist.hasOwnProperty(idx)) {
             cellidname = columnidlist[idx];
@@ -3400,6 +3487,21 @@ jQuery(function () {
 				<!-- inst_specific_param_ins_point -->
 			</td>
 		</tr>
+	</table>
+</div>
+
+<div id="instrument_parameter_template" style="display:none;" >
+	<table border="0"><tr>
+		<td>
+			<div id="slider_instr_ZZ_YY_XX_patterns" class="ddrg" style="height:100px;"></div> <br />
+			<div id="display_instr_ZZ_YY_XX_patterns"></div><br />
+			P
+		</td>
+		<td>
+			<div id="slider_instr_ZZ_YY_XX_variants" class="ddrg" style="height:100px;"></div> <br />
+			<div id="display_instr_ZZ_YY_XX_variants"></div><br />
+			V
+		</td>
 	</table>
 </div>
 
