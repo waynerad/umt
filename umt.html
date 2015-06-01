@@ -11,7 +11,7 @@
 <script src="mt19937class.js" ></script>
 <script>
 
-// (C) 2011-2014 Wayne Radinsky
+// (C) 2011-2015 Wayne Radinsky
 
 /*jslint browser: true, devel: true, passfail: true */
 /*global MersenneTwister19937 */
@@ -439,16 +439,15 @@ function InstantiateSquareWaveObj() {
 function InstantiateSquareVarObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: false, parameters: [ { name: "var", display: "Variation" } ] };
+        return { percussion: false, parameters: [ { name: "var", display: "Variation", directional: true } ] };
     };
     this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
         var idxname, theBuffer, node, ourStart, startMoment, threshold;
-        idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
-        idxname = "squarevar" + frequency + "x" + duration + "x" + amplitude;
+        threshold = instSpecificParams["var"];
+        idxname = "squarevar" + frequency + "x" + duration + "x" + amplitude + "x" + threshold;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
             theBuffer = gUmt.cachedNotes[idxname];
         } else {
-            threshold = 0.9;
             theBuffer = umtGenerateANoteSquareVar(frequency, duration, amplitude, threshold);
             gUmt.cachedNotes[idxname] = theBuffer;
         }
@@ -635,7 +634,7 @@ function umtClearLoop(lpnum, xTempo, centerNote, xScale, xChord) {
 function umtAddVoice(lpnum, idx, songNumber, rangeMin, rangeMax, instrumentName, xPercussion) {
     "use strict";
     gUmt.loop[lpnum].score.parts = idx + 1;
-    gUmt.loop[lpnum].score.songTab[0].voice[idx] = { instrument: instrumentName, selection: 0, cursor: 0, nextStart: 0, rangeTop: rangeMax, rangeBottom: rangeMin, percussion: xPercussion, notes: [], randRhythm: umtGetRando(songNumber * 40), randPitch: umtGetRando(songNumber * 40 + 1), randAmp: umtGetRando(songNumber * 40 + 5), randRests: umtGetRando(songNumber * 40 + 2), randSyms: umtGetRando(songNumber * 40 + 3), randTrans: umtGetRando(songNumber * 40 + 4), randScale: umtGetRando(songNumber * 40 + 5), randTilt: umtGetRando(songNumber * 40 + 6), randScrollrhythm: umtGetRando(songNumber * 40 + 7), randScrollpitch: umtGetRando(songNumber * 40 + 8), randScrollboth: umtGetRando(songNumber * 40 + 9) };
+    gUmt.loop[lpnum].score.songTab[0].voice[idx] = { instrument: instrumentName, selection: 0, cursor: 0, nextStart: 0, rangeTop: rangeMax, rangeBottom: rangeMin, percussion: xPercussion, notes: [], randRhythm: umtGetRando(songNumber * 40), randPitch: umtGetRando(songNumber * 40 + 1), randAmp: umtGetRando(songNumber * 40 + 5), randRests: umtGetRando(songNumber * 40 + 2), randSyms: umtGetRando(songNumber * 40 + 3), randTrans: umtGetRando(songNumber * 40 + 4), randScale: umtGetRando(songNumber * 40 + 5), randTilt: umtGetRando(songNumber * 40 + 6), randScrollrhythm: umtGetRando(songNumber * 40 + 7), randScrollpitch: umtGetRando(songNumber * 40 + 8), randScrollboth: umtGetRando(songNumber * 40 + 9), randInstPat: umtGetRando(songNumber * 40 + 10), randInstSymVars: umtGetRando(songNumber * 40 + 11) };
 }
 
 function umtAddNote(lpnum, voicenum, rest, pitch, duration, amplitude, instParams) {
@@ -1605,9 +1604,9 @@ function umtGenerateRhythm(randomObj, minSize, chunkSize, totalLength) {
     return rv;
 }
 
-function umtAddSymBaseToVoice(lpnum, vcnum, minSize, chunkSize, totalLength, centerOctave, restyness, noteDistance, ampVariation, volume) {
+function umtAddSymmetryBaseToVoice(lpnum, vcnum, minSize, chunkSize, totalLength, centerOctave, restyness, noteDistance, ampVariation, volume, instrumentName, instrumentParamNames, instSpecificParams) {
     "use strict";
-    var rhythm, lenRhy, idx, duration, pitch, amplitude, volscalar;
+    var rhythm, lenRhy, idx, duration, pitch, amplitude, volscalar, instParamCurrent, instParCount, instParamIdx, ourParamName, paramvalue;
     volscalar = 2.7;
     volume = Math.exp(volume * volscalar) / Math.exp(volscalar); // this is done to "logarithmize" the volume slider
     rhythm = umtGenerateRhythm(gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randRhythm, minSize, chunkSize, totalLength);
@@ -1620,10 +1619,27 @@ function umtAddSymBaseToVoice(lpnum, vcnum, minSize, chunkSize, totalLength, cen
         } else {
             // amplitude = (1.0 - (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randAmp.genrandReal2() * ampVariation)) * volume;
             amplitude = (1.0 - (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randAmp.genrandReal2() * ampVariation) * 0.9) * volume;
-            if (idx === 0) {
-                pitch = Math.floor(pitch + 0.5);
+            // if (idx === 0) {
+                // pitch = Math.floor(pitch + 0.5);
+            // }
+            // The idea here is to go through the param names for this instrument and pull out the corresponding "patterns" value from instSpecificParams
+            // We ignore all parameters that don't apply to the current instrument. This way the user can flip between instruments and the system won't forget their previous settings.
+            instParamCurrent = {};
+            instParCount = 0;
+            for (instParamIdx in instrumentParamNames) {
+                if (instrumentParamNames.hasOwnProperty(instParamIdx)) {
+                    ourParamName = instrumentParamNames[instParamIdx].name;
+                    if (instSpecificParams.hasOwnProperty(instrumentName + "_" + ourParamName + "_patterns")) {
+                        paramvalue = instSpecificParams[instrumentName + "_" + ourParamName + "_patterns"];
+                        instParamCurrent[ourParamName] = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randInstPat.genrandReal2() * paramvalue;
+                        instParCount = instParCount + 1;
+                    }
+                }
             }
-            umtAddNote(lpnum, vcnum, false, centerOctave + pitch, duration, amplitude, null);
+            if (instParCount === 0) {
+                instParamCurrent = null;
+            }
+            umtAddNote(lpnum, vcnum, false, centerOctave + pitch, duration, amplitude, instParamCurrent);
         }
     }
 }
@@ -1647,7 +1663,7 @@ function umtSchedulePlayOfSegment() {
         windowStart = gUmt.playedUpTo;
     }
     anythingPlayed = false;
-    masterVolScaler = Math.exp((gUmt.UIParams.mastervol - 1.0) * 2.0);
+    masterVolScaler = gUmt.UIParams.mastervol; // Math.exp((gUmt.UIParams.mastervol - 1.0) * 2.0);
     if (gUmt.loop[gUmt.currentlyPlayingLoop].score.parts > 0) {
         loopUnitLen = gUmt.loop[lpnum].score.songTab[0].voice[0].nextStart;
         tempoScalar = 60 / gUmt.loop[lpnum].score.tempo;
@@ -1714,9 +1730,35 @@ function umtAutomaticStop() {
     gUmt.timerIsOn = false;
 }
 
-function umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose) {
+function umtTransposeInstrumentSpecificParameters(instParams, transposeParams) {
     "use strict";
-    var segmentStart, ix, segmentEnd, tsRhCursor, tsPiCursor, minPitch, maxPitch, thisPitch, midpointPitch, rhythmCursor, pitchCursor, terminationCursor, rest, duration, amplitude, instParams, percent, bevelAmount, segmentLen, rangeTestStart, rangeTestEnd, rangeTestCursor, rangePitch, rangeMin, rangeMax, rangeScalar, rangeTranspose;
+    var rv, par, replacement;
+    if (instParams === null) {
+        return null;
+    }
+    rv = {};
+    for (par in instParams) {
+        if (instParams.hasOwnProperty(par)) {
+            if (transposeParams.hasOwnProperty(par)) {
+                replacement = instParams[par] + transposeParams[par];
+                if (replacement < 0.0) {
+                    replacement = replacement + 1.0;
+                }
+                if (replacement > 1.0) {
+                    replacement = replacement - 1.0;
+                }
+                rv[par] = replacement;
+            } else {
+                rv[par] = instParams[par];
+            }
+        }
+    }
+    return rv;
+}
+
+function umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose) {
+    "use strict";
+    var segmentStart, ix, segmentEnd, tsRhCursor, tsPiCursor, minPitch, maxPitch, thisPitch, midpointPitch, rhythmCursor, pitchCursor, terminationCursor, rest, duration, amplitude, instParams, instNewParams, percent, bevelAmount, segmentLen, rangeTestStart, rangeTestEnd, rangeTestCursor, rangePitch, rangeMin, rangeMax, rangeScalar, rangeTranspose;
     // first find the start and end of the segment, and the starting point for the rhythm cursor (tsRhCursor) and pitch cursor (tsPiCursor) which can be different if there is rhythm or pitch scrolling
     segmentStart = -1;
     tsRhCursor = -1; // ts == "time scroll"; rh == "rhythm", pi == "pitch"
@@ -1809,7 +1851,8 @@ function umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, 
         if (pitchTranspose !== 0) {
             thisPitch = thisPitch + pitchTranspose;
         }
-        umtAddNote(lpnum, vcnum, rest, thisPitch, duration, amplitude, instParams);
+        instNewParams = umtTransposeInstrumentSpecificParameters(instParams, instrumentTranspose);
+        umtAddNote(lpnum, vcnum, rest, thisPitch, duration, amplitude, instNewParams);
         rhythmCursor = rhythmCursor + rhythmDirection;
         if (rhythmCursor > segmentEnd) {
             rhythmCursor = rhythmCursor - segmentLen;
@@ -1911,7 +1954,7 @@ function umtTestCheckCopytransDurations(durationList, startingIndex, failMessage
 
 function umtTestSetupCopyTransTestSection() {
     "use strict";
-    var lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose;
+    var lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose;
 
     // exact copy
     umtTestResetCopytransTestSequence();
@@ -1927,7 +1970,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = 1.0;
     pitchBevel = 0;
     pitchTranspose = 0;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.0, 5.1, 5.2, 5.3, 5.4, 5.5], 6, "exact copy");
     umtTestCheckCopytransDurations([1, 1, 2, 4, 8, 16], 6, "exact copy");
 
@@ -1945,7 +1989,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = 1.0;
     pitchBevel = 0;
     pitchTranspose = 0.4;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.4, 5.5, 5.6000000000000005, 5.7, 5.800000000000001, 5.9], 6, "transpose");
     umtTestCheckCopytransDurations([1, 1, 2, 4, 8, 16], 6, "transpose");
 
@@ -1963,7 +2008,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = 1.0;
     pitchBevel = 0;
     pitchTranspose = 0;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.0, 5.1, 5.2, 5.3, 5.4, 5.5], 6, "reverse-rhythm");
     umtTestCheckCopytransDurations([16, 8, 4, 2, 1, 1], 6, "reverse-rhythm");
 
@@ -1981,7 +2027,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = 1.0;
     pitchBevel = 0;
     pitchTranspose = 0;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.5, 5.4, 5.3, 5.2, 5.1, 5.0], 6, "reverse-pitch");
     umtTestCheckCopytransDurations([1, 1, 2, 4, 8, 16], 6, "reverse-pitch");
 
@@ -1999,7 +2046,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = 1.0;
     pitchBevel = 0;
     pitchTranspose = 0;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.5, 5.4, 5.3, 5.2, 5.1, 5.0], 6, "reverse-both");
     umtTestCheckCopytransDurations([16, 8, 4, 2, 1, 1], 6, "reverse-both");
 
@@ -2017,7 +2065,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = 0.5;
     pitchBevel = 0;
     pitchTranspose = 0;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.125, 5.175, 5.225, 5.275, 5.325, 5.375], 6, "scale-positive");
     umtTestCheckCopytransDurations([1, 1, 2, 4, 8, 16], 6, "scale-positive");
 
@@ -2035,7 +2084,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = -1.0;
     pitchBevel = 0;
     pitchTranspose = 0;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.5, 5.4, 5.3, 5.2, 5.1, 5.0], 6, "scale-1");
     umtTestCheckCopytransDurations([1, 1, 2, 4, 8, 16], 6, "scale-1");
 
@@ -2053,7 +2103,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = -0.5;
     pitchBevel = 0;
     pitchTranspose = 0;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.375, 5.325, 5.275, 5.225, 5.175, 5.125], 6, "scale-negative");
     umtTestCheckCopytransDurations([1, 1, 2, 4, 8, 16], 6, "scale-negative");
 
@@ -2071,7 +2122,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = 1.0;
     pitchBevel = 1.0;
     pitchTranspose = -0.5;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([4.5, 4.63125, 4.7625, 4.925, 5.15, 5.5], 6, "tilt-ascending");
     umtTestCheckCopytransDurations([1, 1, 2, 4, 8, 16], 6, "tilt-ascending");
 
@@ -2089,7 +2141,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = 1.0;
     pitchBevel = -1.0;
     pitchTranspose = 0.5;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.5, 5.56875, 5.6375, 5.675, 5.65, 5.5], 6, "tilt-descending");
     umtTestCheckCopytransDurations([1, 1, 2, 4, 8, 16], 6, "tilt-descending");
 
@@ -2107,7 +2160,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = 1.0;
     pitchBevel = 0;
     pitchTranspose = 0;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.0, 5.1, 5.2, 5.3, 5.4, 5.5], 6, "scroll-rhythm");
     umtTestCheckCopytransDurations([8, 16, 1, 1, 2, 4], 6, "scroll-rhythm");
 
@@ -2125,7 +2179,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = 1.0;
     pitchBevel = 0;
     pitchTranspose = 0;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.4, 5.5, 5.0, 5.1, 5.2, 5.3], 6, "scroll-pitch");
     umtTestCheckCopytransDurations([1, 1, 2, 4, 8, 16], 6, "scroll-pitch");
 
@@ -2143,7 +2198,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = 1.0;
     pitchBevel = 0;
     pitchTranspose = 0;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.4, 5.5, 5.0, 5.1, 5.2, 5.3], 6, "scroll-both");
     umtTestCheckCopytransDurations([8, 16, 1, 1, 2, 4], 6, "scroll-both");
 
@@ -2161,7 +2217,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = 1.0;
     pitchBevel = 0;
     pitchTranspose = 0;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.0, 5.1, 5.2, 5.3, 5.4, 5.5], 6, "reverse-rhythm");
     umtTestCheckCopytransDurations([16, 8, 4, 2, 1, 1], 6, "reverse-rhythm");
 
@@ -2179,7 +2236,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = 1.0;
     pitchBevel = 0;
     pitchTranspose = 0;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.5, 5.4, 5.3, 5.2, 5.1, 5.0], 6, "reverse-pitch");
     umtTestCheckCopytransDurations([1, 1, 2, 4, 8, 16], 6, "reverse-pitch");
 
@@ -2197,7 +2255,8 @@ function umtTestSetupCopyTransTestSection() {
     pitchScale = 1.0;
     pitchBevel = 0;
     pitchTranspose = 0;
-    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+    instrumentTranspose = 0;
+    umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     umtTestCheckCopytransPitches([5.5, 5.4, 5.3, 5.2, 5.1, 5.0], 6, "reverse-both");
     umtTestCheckCopytransDurations([16, 8, 4, 2, 1, 1], 6, "reverse-both");
 
@@ -2206,7 +2265,7 @@ function umtTestSetupCopyTransTestSection() {
 
 function umtExecTestCopyTrans(lpnum) {
     "use strict";
-    var parts, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, csrPos, csrStart, duration;
+    var parts, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose, csrPos, csrStart, duration;
     parts = gUmt.loop[lpnum].score.parts;
     for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
         startTime = 0;
@@ -2222,13 +2281,15 @@ function umtExecTestCopyTrans(lpnum) {
         pitchScale = 1.0;
         pitchBevel = 0;
         pitchTranspose = 0.5;
-        umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+        instrumentTranspose = 0;
+        umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
         csrPos = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].cursor;
         csrStart = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[csrPos - 1].starttime;
         duration = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[csrPos - 1].duration;
         endTime = csrStart + duration;
         pitchTranspose = 0.7;
-        umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+        instrumentTranspose = 0;
+        umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
         csrPos = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].cursor;
         csrStart = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[csrPos - 1].starttime;
         duration = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[csrPos - 1].duration;
@@ -2237,29 +2298,10 @@ function umtExecTestCopyTrans(lpnum) {
         pitchScale = 2.0;
         rhythmDirection = 1;
         pitchesDirection = -1;
-        umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+        instrumentTranspose = 0;
+        umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
     }
     umtCx('umtExecTestCopyTrans() done');
-}
-
-function umtComposeSampleComposition(lpnum) {
-    "use strict";
-    umtJSabort("old function called for composition.");
-    umtClearLoop(lpnum, gUmt.UIParams.tempo, gUmt.UIParams.centernote, gUmt.UIParams.scale, gUmt.UIParams.chord);
-    umtAddVoice(lpnum, 0, 0, 4, 6, "tuningfork", false); // 5 - 1, 5 + 1
-    umtAddSymBaseToVoice(lpnum, 0, 1, 8, 32, 5, 0, 0.5);
-    umtAddVoice(lpnum, 1, 1, 2, 4, "tuningfork", false);
-    umtAddSymBaseToVoice(lpnum, 1, 4, 8, 32, 3, 10, 0.5);
-    umtAddVoice(lpnum, 2, 2, 1, 3, "tuningfork", false);
-    umtAddSymBaseToVoice(lpnum, 2, 16, 16, 32, 2, 20, 0.5);
-    umtAddVoice(lpnum, 3, 3, 7, 9, "tuningfork", false);
-    umtAddSymBaseToVoice(lpnum, 3, 1, 2, 32, 8, 30, 0.5);
-    umtAddVoice(lpnum, 4, 4, 6, 8, "tuningfork", false);
-    umtAddSymBaseToVoice(lpnum, 4, 1, 2, 32, 7, 40, 0.5);
-    umtAddVoice(lpnum, 5, 5, 5, 7, "tuningfork", false);
-    umtAddSymBaseToVoice(lpnum, 5, 1, 8, 32, 6, 50, 0.5);
-    umtExecTestCopyTrans(lpnum);
-    umtHarmonizeScore(lpnum);
 }
 
 function umtUIIsPartInUI(ptnum) {
@@ -2270,11 +2312,31 @@ function umtUIIsPartInUI(ptnum) {
     return false;
 }
 
-function umtComposeRealComposition(lpnum) {
+function umtFigureOutInstrumentParamTranspositions(lpnum, vcnum, instrumentName, instParamNames, instSpecificParams) {
     "use strict";
-    var compositionVoice, UIVoice, songNumber, octave, rangeMin, rangeMax, instrumentName, percussion, minSize, chunkSize, totalLength, centerOctave, restyness, ampVariation, volume, noteDistance, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, symmetryPattern, csrPos, csrStart, duration, loopDuration, vcnum;
+    var rv, idx, loopParamName, value, adjustment;
+    // here we change instrument name + parameter name + "variants" into a single parameter name which is the adjustment for that instrument parameter for this iteration of the symmetry cycle
+    rv = {};
+    for (idx in instParamNames) {
+        if (instParamNames.hasOwnProperty(idx)) {
+            loopParamName = instParamNames[idx].name;
+            value = instSpecificParams[instrumentName + "_" + loopParamName + "_variants"];
+            if (instParamNames[idx].directional) {  // if the instrument is "directional", the adjustment should always be positive
+                adjustment = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randInstSymVars.genrandReal2() * value;
+            } else {
+                adjustment = (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randInstSymVars.genrandReal2() * value) - (value / 2.0);
+            }
+            rv[loopParamName] = adjustment;
+        }
+    }
+    return rv;
+}
+
+function umtCompose(lpnum) {
+    "use strict";
+    var compositionVoice, UIVoice, songNumber, octave, rangeMin, rangeMax, instrumentName, percussion, minSize, chunkSize, totalLength, centerOctave, restyness, ampVariation, volume, noteDistance, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, symmetryPattern, csrPos, csrStart, duration, loopDuration, vcnum, instParamNames, instSpecificParams, instrumentTranspose;
     if (gUmt.idemAddingVoice) {
-        umtJSabort("umtComposeRealComposition called during add voice");
+        umtJSabort("umtCompose called during add voice");
     }
     umtClearLoop(lpnum, gUmt.UIParams.tempo, gUmt.UIParams.centernote, gUmt.UIParams.scale, gUmt.UIParams.chord);
     compositionVoice = 0;
@@ -2297,7 +2359,9 @@ function umtComposeRealComposition(lpnum) {
             ampVariation = gUmt.UIParams.songTab[0].voice[UIVoice].ampVariation;
             noteDistance = gUmt.UIParams.songTab[0].voice[UIVoice].noteDistance;
             volume = gUmt.UIParams.songTab[0].voice[UIVoice].volume;
-            umtAddSymBaseToVoice(lpnum, compositionVoice, minSize, chunkSize, totalLength, centerOctave, restyness, noteDistance, ampVariation, volume);
+            instParamNames = gUmt.instrumentParams[instrumentName].parameters;
+            instSpecificParams = gUmt.UIParams.songTab[0].voice[UIVoice].instSpecificParams;
+            umtAddSymmetryBaseToVoice(lpnum, compositionVoice, minSize, chunkSize, totalLength, centerOctave, restyness, noteDistance, ampVariation, volume, instrumentName, instParamNames, instSpecificParams);
             // we have voices and base rhythms; now need symmetry
             startTime = 0;
             csrPos = gUmt.loop[lpnum].score.songTab[0].voice[compositionVoice].cursor;
@@ -2354,7 +2418,8 @@ function umtComposeRealComposition(lpnum) {
                     break;
                 }
                 vcnum = compositionVoice;
-                umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+                instrumentTranspose = umtFigureOutInstrumentParamTranspositions(lpnum, vcnum, instrumentName, instParamNames, instSpecificParams);
+                umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
                 startTime = 0;
                 csrPos = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].cursor;
                 csrStart = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[csrPos - 1].starttime;
@@ -2378,7 +2443,7 @@ function umtExecTimerPulse() {
 function umtExecAutomaticStart() {
     "use strict";
     if (gUmt.idemCompose === false) {
-        umtComposeRealComposition(1);
+        umtCompose(1);
         gUmt.idemCompose = true;
     }
     umtAutomaticStart(1);
@@ -2415,7 +2480,7 @@ function umtAutomaticallyRecomposeLoopFromUIParams() {
     }
     startTime = gUmt.globalCtx.currentTime;
     umtDisableUI();
-    umtComposeRealComposition(newLoop);
+    umtCompose(newLoop);
     // new_tempoScalar = 60 / gUmt.loop[newLoop].score.tempo;
     // currentTime = gUmt.globalCtx.currentTime + old_offset;
     // current_units = currentTime / old_tempoScalar;
@@ -2785,9 +2850,27 @@ umtUiCascadeMinNoteChanges = function (voiceNumber, newvalue) {
     }
 };
 
+function umtUISetDefaultInstSpecificParamsForNewInstrument(voiceNumber, instrumentName) {
+    "use strict";
+    var instParameters, instParamIdx, instParamSet, paramName;
+    instParameters = gUmt.instrumentParams[instrumentName].parameters;
+    for (instParamIdx in instParameters) {
+        if (instParameters.hasOwnProperty(instParamIdx)) {
+            instParamSet = instParameters[instParamIdx];
+            paramName = instParamSet.name;
+            if (!gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams.hasOwnProperty(paramName + "_patterns")) {
+                gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_patterns"] = 0.0;
+            }
+            if (!gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams.hasOwnProperty(paramName + "_variants")) {
+                gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_variants"] = 0.0;
+            }
+        }
+    }
+}
+
 function umtUICreateClosureFunctionsForInstrumentSpecificParametersOutsideALoop(instrumentName, paramName, voiceNumber) {
     "use strict";
-    jQuery("#slider_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_patterns").slider({min: 0, max: 10, step: 1, value: 5, orientation: "vertical", change: function (event, ui) {
+    jQuery("#slider_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_patterns").slider({min: 0, max: 10, step: 1, value: 0, orientation: "vertical", change: function (event, ui) {
         var newvalue, absvalue, aspercentage;
         if (gUmt.idemAddingVoice === false) {
             if (event.type === "slidechange") {
@@ -2795,16 +2878,16 @@ function umtUICreateClosureFunctionsForInstrumentSpecificParametersOutsideALoop(
                 absvalue = newvalue / 10;
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_patterns").innerHTML = aspercentage + "%";
-                // gUmt.UIParams.songTab[0].voice[voiceNumber].volume = absvalue;
-                // if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
-                //     umtAutomaticallyRecomposeLoopFromUIParams();
-                // }
+                gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_patterns"] = absvalue;
                 console.log(absvalue);
+                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                    umtAutomaticallyRecomposeLoopFromUIParams();
+                }
             }
         }
     }
         });
-    jQuery("#slider_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_variants").slider({min: 0, max: 10, step: 1, value: 5, orientation: "vertical", change: function (event, ui) {
+    jQuery("#slider_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_variants").slider({min: 0, max: 10, step: 1, value: 0, orientation: "vertical", change: function (event, ui) {
         var newvalue, absvalue, aspercentage;
         if (gUmt.idemAddingVoice === false) {
             if (event.type === "slidechange") {
@@ -2812,18 +2895,18 @@ function umtUICreateClosureFunctionsForInstrumentSpecificParametersOutsideALoop(
                 absvalue = newvalue / 10;
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_variants").innerHTML = aspercentage + "%";
-                // gUmt.UIParams.songTab[0].voice[voiceNumber].volume = absvalue;
-                // if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
-                //     umtAutomaticallyRecomposeLoopFromUIParams();
-                // }
+                gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_variants"] = absvalue;
                 console.log(absvalue);
+                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                    umtAutomaticallyRecomposeLoopFromUIParams();
+                }
             }
         }
     }
         });
 }
 
-function umtSetInstrumentSpecificParameterControls(voiceNumber, instrumentName) {
+function umtCreateInstrumentSpecificParameterControls(voiceNumber, instrumentName) {
     "use strict";
     var cellidname, text, i, instrSpecificControlHTML, parameters, idx, instpar, template;
     cellidname = "instparameterscell";
@@ -2870,6 +2953,27 @@ function umtSetInstrumentSpecificParameterControls(voiceNumber, instrumentName) 
     }
 }
 
+function umtUiSetInstrumentSpecificSliders(voiceNumber) {
+    "use strict";
+    var instrumentName, instParameters, instParamIdx, instParamSet, paramName, absvalue, slidervalue;
+    instrumentName = gUmt.UIParams.songTab[0].voice[voiceNumber].instrument;
+    instParameters = gUmt.instrumentParams[instrumentName].parameters;
+    for (instParamIdx in instParameters) {
+        if (instParameters.hasOwnProperty(instParamIdx)) {
+            instParamSet = instParameters[instParamIdx];
+            paramName = instParamSet.name;
+            absvalue = gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_patterns"];
+            slidervalue = absvalue * 10;
+            window.document.getElementById("display_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_patterns").innerHTML = (absvalue * 100) + "%";
+            jQuery("#slider_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_patterns").slider({ value: slidervalue });
+            absvalue = gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_variants"];
+            slidervalue = absvalue * 10;
+            window.document.getElementById("display_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_variants").innerHTML = (absvalue * 100) + "%";
+            jQuery("#slider_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_variants").slider({ value: slidervalue });
+        }
+    }
+}
+
 function umtExecInstrumentChange() {
     "use strict";
     var elemid, UIVoiceNum, listbox, newinstr;
@@ -2878,7 +2982,9 @@ function umtExecInstrumentChange() {
     listbox = window.document.getElementById("instrument" + UIVoiceNum);
     newinstr = listbox.options[listbox.selectedIndex].value;
     gUmt.UIParams.songTab[0].voice[UIVoiceNum].instrument = newinstr;
-    umtSetInstrumentSpecificParameterControls(UIVoiceNum, newinstr);
+    umtUISetDefaultInstSpecificParamsForNewInstrument(UIVoiceNum, newinstr);
+    umtCreateInstrumentSpecificParameterControls(UIVoiceNum, newinstr);
+    umtUiSetInstrumentSpecificSliders(UIVoiceNum);
     if (gUmt.idemAddingVoice === false) {
         umtAutomaticallyRecomposeLoopFromUIParams();
     }
@@ -3159,6 +3265,7 @@ function umtUiCopyUiParamsToActualUi() {
             umtUiTurnOnSymmetryPatterns(i, k, false);
             k = k * 2;
         }
+        umtUiSetInstrumentSpecificSliders(i);
         symSize = gUmt.UIParams.songTab[0].voice[i].frameSize;
         symNum = Math.floor((Math.log(symSize) / Math.log(2)) + 0.01);
         while (symSize < loopDuration) {
@@ -3180,7 +3287,7 @@ function umtExecAddVoice() {
     var voiceNum, songnum;
     voiceNum = gUmt.UIParams.parts;
     songnum = voiceNum + 1;
-    gUmt.UIParams.songTab[0].voice[voiceNum] = {playing: false, instrument: "tuningfork", volume: 1.0, songNumber: songnum, octave: 5, noteDistance: 0.3, restyness: 0.0, ampVariation: 1.0, minNote: 4, chunkSize: 4, frameSize: 32, symmetry: { 1: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 2: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 4: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 8: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 16: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 32: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 64: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 128: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 256: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 512: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 1024: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0} } };
+    gUmt.UIParams.songTab[0].voice[voiceNum] = { playing: false, instrument: "tuningfork", volume: 1.0, songNumber: songnum, octave: 5, noteDistance: 0.3, restyness: 0.0, ampVariation: 1.0, minNote: 4, chunkSize: 4, frameSize: 32, symmetry: { 1: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 2: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 4: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 8: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 16: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 32: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 64: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 128: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 256: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 512: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 1024: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0} }, instSpecificParams: {} };
     gUmt.UIParams.parts = gUmt.UIParams.parts + 1;
     if (gUmt.UIParams.parts > gUmt.UIParams.maxPartsEver) {
         gUmt.UIParams.maxPartsEver = gUmt.UIParams.parts;
@@ -3356,11 +3463,11 @@ jQuery(function () {
 				<select name="instrumentxx" id="instrumentxx">
 					<option value="tuningfork">Sine</option>
 					<option value="squarewave">Square</option>
-					<option value="squarevar">Var square</option>
 					<option value="trianglewave">Triangle</option>
 					<option value="sawtoothwave">Sawtooth</option>
-					<option value="forwardsnoise">Noise</option>
-					<option value="backwardsnoise">Backwards noise</option>
+					<!-- option value="forwardsnoise" Noise /option -->
+					<!-- option value="backwardsnoise" Backwards noise /option -->
+					<option value="squarevar">Var square</option>
 					<option value="steampop">Steam Pop</option>
 					<option value="fmsynth">FM Synthesis</option>
 				</select>
@@ -3483,7 +3590,7 @@ jQuery(function () {
 					<!-- insertion_point -->
 				</table>
 			</td><td id="instparameterscellxx" valign="top" align="center">
-				Instrument Specific Parameters: <br />
+				Instrument Specific: <br />
 				<!-- inst_specific_param_ins_point -->
 			</td>
 		</tr>
