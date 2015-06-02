@@ -1797,9 +1797,11 @@ function umtAddSymmetryBaseToVoice(lpnum, vcnum, minSize, chunkSize, totalLength
     }
 }
 
+var umtExecReSeed;
+
 function umtSchedulePlayOfSegment() {
     "use strict";
-    var lpnum, currentTime, ctxOffset, compositonlag, windowStart, windowStop, loopUnitLen, loopLen, fromMoment, center, tempoScalar, numVoices, voicenum, notenum, duration, amplitude, frequency, adjustedStartTime, startTime, instSpecificParams, harmonizedOctave, harmonizedNum, harmonizedDnom, anythingPlayed, masterVolScaler, instrument;
+    var lpnum, currentTime, ctxOffset, compositonlag, windowStart, windowStop, loopUnitLen, loopLen, fromMoment, center, tempoScalar, numVoices, voicenum, notenum, duration, amplitude, frequency, adjustedStartTime, startTime, instSpecificParams, harmonizedOctave, harmonizedNum, harmonizedDnom, anythingPlayed, masterVolScaler, instrument, regularTime, timeInMs, interval;
     lpnum = gUmt.currentlyPlayingLoop;
     if (gUmt.loop[lpnum].score.parts === 0) {
         return;
@@ -1858,6 +1860,15 @@ function umtSchedulePlayOfSegment() {
     }
     if (anythingPlayed) {
         gUmt.playedUpTo = windowStop;
+    }
+    // hack -- UI logic in the playback system?
+    if (document.getElementById("continuous").checked) {
+        regularTime = new Date(); // year, month [, day, hour, minute, second, millisecond]);
+        timeInMs = regularTime.getTime();
+        interval = timeInMs - gUmt.lastReSeedTime;
+        if ((interval > 210000) || (interval < 0)) {
+            umtExecReSeed();
+        }
     }
     if (gUmt.timerIsOn) {
         window.setTimeout(umtSchedulePlayOfSegment, compositonlag * 1000);
@@ -3422,6 +3433,7 @@ function umtUiCopyUiParamsToActualUi() {
             umtUiTurnOnSymmetryPatterns(i, k, false);
             k = k * 2;
         }
+        umtCreateInstrumentSpecificParameterControls(i, gUmt.UIParams.songTab[0].voice[i].instrument);
         umtUiSetInstrumentSpecificSliders(i);
         symSize = gUmt.UIParams.songTab[0].voice[i].frameSize;
         symNum = Math.floor((Math.log(symSize) / Math.log(2)) + 0.01);
@@ -3441,16 +3453,17 @@ function umtUiCopyUiParamsToActualUi() {
 
 function umtExecAddVoice() {
     "use strict";
-    var voiceNum, songnum, instrumentName;
+    var voiceNum, songnum, prev, pvsym;
     voiceNum = gUmt.UIParams.parts;
     songnum = voiceNum + 1;
     if (voiceNum === 0) {
-        instrumentName = "tuningfork";
+        gUmt.UIParams.songTab[0].voice[voiceNum] = { playing: false, instrument: "tuningfork", volume: 1.0, songNumber: songnum, octave: 5, noteDistance: 0.3, restyness: 0.0, ampVariation: 0.5, minNote: 4, chunkSize: 4, frameSize: 32, symmetry: { 1: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 2: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 4: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 8: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 16: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 32: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 64: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 128: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 256: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 512: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 1024: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0} }, instSpecificParams: {} };
     } else {
-        instrumentName = gUmt.UIParams.songTab[0].voice[voiceNum - 1].instrument;
+        prev = gUmt.UIParams.songTab[0].voice[voiceNum - 1];
+        pvsym = gUmt.UIParams.songTab[0].voice[voiceNum - 1].symmetry;
+        gUmt.UIParams.songTab[0].voice[voiceNum] = { playing: false, instrument: prev.instrument, volume: prev.volume, songNumber: songnum, octave: prev.octave, noteDistance: prev.noteDistance, restyness: prev.restyness, ampVariation: prev.ampVariation, minNote: prev.minNote, chunkSize: prev.chunkSize, frameSize: prev.frameSize, symmetry: { 1: {pattern: pvsym[1].pattern, transParam: pvsym[1].transParam, scaleParam: pvsym[1].scaleParam, tiltParam: pvsym[1].tiltParam, scrollrhythmParam: pvsym[1].scrollrhythmParam, scrollpitchParam: pvsym[1].scrollpitchParam, scrollbothParam: pvsym[1].scrollbothParam}, 2: {pattern: pvsym[2].pattern, transParam: pvsym[2].transParam, scaleParam: pvsym[2].scaleParam, tiltParam: pvsym[2].tiltParam, scrollrhythmParam: pvsym[2].scrollrhythmParam, scrollpitchParam: pvsym[2].scrollpitchParam, scrollbothParam: pvsym[2].scrollbothParam}, 4: {pattern: pvsym[4].pattern, transParam: pvsym[4].transParam, scaleParam: pvsym[4].scaleParam, tiltParam: pvsym[4].tiltParam, scrollrhythmParam: pvsym[4].scrollrhythmParam, scrollpitchParam: pvsym[4].scrollpitchParam, scrollbothParam: pvsym[4].scrollbothParam}, 8: {pattern: pvsym[8].pattern, transParam: pvsym[8].transParam, scaleParam: pvsym[8].scaleParam, tiltParam: pvsym[8].tiltParam, scrollrhythmParam: pvsym[8].scrollrhythmParam, scrollpitchParam: pvsym[8].scrollpitchParam, scrollbothParam: pvsym[8].scrollbothParam}, 16: {pattern: pvsym[16].pattern, transParam: pvsym[16].transParam, scaleParam: pvsym[16].scaleParam, tiltParam: pvsym[16].tiltParam, scrollrhythmParam: pvsym[16].scrollrhythmParam, scrollpitchParam: pvsym[16].scrollpitchParam, scrollbothParam: pvsym[16].scrollbothParam}, 32: {pattern: pvsym[32].pattern, transParam: pvsym[32].transParam, scaleParam: pvsym[32].scaleParam, tiltParam: pvsym[32].tiltParam, scrollrhythmParam: pvsym[32].scrollrhythmParam, scrollpitchParam: pvsym[32].scrollpitchParam, scrollbothParam: pvsym[32].scrollbothParam}, 64: {pattern: pvsym[64].pattern, transParam: pvsym[64].transParam, scaleParam: pvsym[64].scaleParam, tiltParam: pvsym[64].tiltParam, scrollrhythmParam: pvsym[64].scrollrhythmParam, scrollpitchParam: pvsym[64].scrollpitchParam, scrollbothParam: pvsym[64].scrollbothParam}, 128: {pattern: pvsym[128].pattern, transParam: pvsym[128].transParam, scaleParam: pvsym[128].scaleParam, tiltParam: pvsym[128].tiltParam, scrollrhythmParam: pvsym[128].scrollrhythmParam, scrollpitchParam: pvsym[128].scrollpitchParam, scrollbothParam: pvsym[128].scrollbothParam}, 256: {pattern: pvsym[256].pattern, transParam: pvsym[256].transParam, scaleParam: pvsym[256].scaleParam, tiltParam: pvsym[256].tiltParam, scrollrhythmParam: pvsym[256].scrollrhythmParam, scrollpitchParam: pvsym[256].scrollpitchParam, scrollbothParam: pvsym[256].scrollbothParam}, 512: {pattern: pvsym[512].pattern, transParam: pvsym[512].transParam, scaleParam: pvsym[512].scaleParam, tiltParam: pvsym[512].tiltParam, scrollrhythmParam: pvsym[512].scrollrhythmParam, scrollpitchParam: pvsym[512].scrollpitchParam, scrollbothParam: pvsym[512].scrollbothParam}, 1024: {pattern: pvsym[1024].pattern, transParam: pvsym[1024].transParam, scaleParam: pvsym[1024].scaleParam, tiltParam: pvsym[1024].tiltParam, scrollrhythmParam: pvsym[1024].scrollrhythmParam, scrollpitchParam: pvsym[1024].scrollpitchParam, scrollbothParam: pvsym[1024].scrollbothParam} }, instSpecificParams: {} };
     }
-    gUmt.UIParams.songTab[0].voice[voiceNum] = { playing: false, instrument: instrumentName, volume: 1.0, songNumber: songnum, octave: 5, noteDistance: 0.3, restyness: 0.0, ampVariation: 0.5, minNote: 4, chunkSize: 4, frameSize: 32, symmetry: { 1: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 2: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 4: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 8: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 16: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 32: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 64: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 128: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 256: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 512: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 1024: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0} }, instSpecificParams: {} };
-    umtUISetDefaultInstSpecificParamsForNewInstrument(voiceNum, instrumentName);
+    umtUISetDefaultInstSpecificParamsForNewInstrument(voiceNum, gUmt.UIParams.songTab[0].voice[voiceNum].instrument);
     gUmt.UIParams.parts = gUmt.UIParams.parts + 1;
     if (gUmt.UIParams.parts > gUmt.UIParams.maxPartsEver) {
         gUmt.UIParams.maxPartsEver = gUmt.UIParams.parts;
@@ -3464,11 +3477,14 @@ function umtExecTestDumtGmt() {
     console.log(gUmt);
 }
 
-function umtExecReSeed() {
+// have to use var syntax for this function to get the forward reference to pass jslint
+
+umtExecReSeed = function () {
     "use strict";
     var currentTime, timeInMs, rng, i;
     currentTime = new Date(); // year, month [, day, hour, minute, second, millisecond]);
     timeInMs = currentTime.getTime();
+    gUmt.lastReSeedTime = timeInMs;
     timeInMs = timeInMs - (Math.floor(timeInMs / 256) * 256);
     rng = umtGetRando(timeInMs);
     for (i = 0; i < gUmt.UIParams.parts; i = i + 1) {
@@ -3478,7 +3494,7 @@ function umtExecReSeed() {
     if (gUmt.idemAddingVoice === false) {
         umtAutomaticallyRecomposeLoopFromUIParams();
     }
-}
+};
 
 // main
 
@@ -3603,7 +3619,13 @@ jQuery(function () {
 
 </p>
 
+<p>
+
 <input type="button" id="reseed" value="Re-randomize" />
+
+<input type="checkbox" id="continuous" /> Continuous
+
+</p>
 
 <hr />
 
