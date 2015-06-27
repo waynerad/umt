@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="jquery-ui.css" />
 <script src="jquery-1.10.2.js"></script>
 <script src="jquery-ui.js"></script>
+<script src="wad.js"></script>
 <link rel="stylesheet" href="style.css" />
 
 <script src="mt19937class.js" ></script>
@@ -16,6 +17,7 @@
 /*jslint browser: true, devel: true, passfail: true */
 /*global MersenneTwister19937 */
 /*global jQuery */
+/*global context */
 
 var gUmt;
 
@@ -1866,7 +1868,8 @@ function umtSchedulePlayOfSegment() {
         regularTime = new Date(); // year, month [, day, hour, minute, second, millisecond]);
         timeInMs = regularTime.getTime();
         interval = timeInMs - gUmt.lastReSeedTime;
-        if ((interval > 210000) || (interval < 0)) {
+        umtCx(interval);
+        if ((interval > 120000) || (interval < 0)) {
             umtExecReSeed();
         }
     }
@@ -3498,7 +3501,11 @@ umtExecReSeed = function () {
 
 // main
 
-gUmt = {TAU: Math.PI * 2, LOG2: Math.log(2), globalCtx: umtGetAudioContext(), globalRng: umtGetRando(0), cachedNotes: {}, instrumentBank: {}, cachedFittings: {}, loop: [ { score: {tempo: 700, centernoteLog: (Math.log(432) / Math.log(2)) - 5, songTab: [ { voice: [] } ] } } ], playedUpTo: 0, timerIsOn: false, currentlyPlayingLoop: 0, compositionLag: 0, idemCompose: false, idemAddingVoice: false, UIParams: { tempo: 360, scale: 'maj7reg', chord: "triad", centernote: 432, mastervol: 0.9, parts: 0, songTab: [ { voice: [] } ], loopDuration: 128 }, maxPartsEver: 4 };
+// used to be: globalCtx: umtGetAudioContext()
+// change to use 'context' which is created by WAD
+// We should probably change WAD to use *our* audio context rather than the other way around
+
+gUmt = {TAU: Math.PI * 2, LOG2: Math.log(2), globalCtx: context, globalRng: umtGetRando(0), cachedNotes: {}, instrumentBank: {}, cachedFittings: {}, loop: [ { score: {tempo: 700, centernoteLog: (Math.log(432) / Math.log(2)) - 5, songTab: [ { voice: [] } ] } } ], playedUpTo: 0, timerIsOn: false, currentlyPlayingLoop: 0, compositionLag: 0, idemCompose: false, idemAddingVoice: false, UIParams: { tempo: 360, scale: 'maj7reg', chord: "triad", centernote: 432, mastervol: 0.9, parts: 0, songTab: [ { voice: [] } ], loopDuration: 128 }, maxPartsEver: 4 };
 
 // console.log(gUmt);
 
