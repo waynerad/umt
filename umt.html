@@ -475,8 +475,8 @@ function InstantiateTuningForkObj() {
     this.getParams = function () {
         return { percussion: false, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theBuffer, node, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theBuffer, node;
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
         idxname = "sinewave" + frequency + "x" + duration + "x" + amplitude;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
@@ -488,8 +488,6 @@ function InstantiateTuningForkObj() {
         node = gUmt.globalCtx.createBufferSource();
         node.buffer = theBuffer;
         node.connect(gUmt.globalCtx.destination);
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         node.start(startMoment);
     };
 }
@@ -499,8 +497,8 @@ function InstantiateSquareWaveObj() {
     this.getParams = function () {
         return { percussion: false, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theBuffer, node, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theBuffer, node;
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
         idxname = "squarewave" + frequency + "x" + duration + "x" + amplitude;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
@@ -512,8 +510,6 @@ function InstantiateSquareWaveObj() {
         node = gUmt.globalCtx.createBufferSource();
         node.buffer = theBuffer;
         node.connect(gUmt.globalCtx.destination);
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         node.start(startMoment);
     };
 }
@@ -523,8 +519,8 @@ function InstantiateSquareVarObj() {
     this.getParams = function () {
         return { percussion: false, parameters: [ { name: "unsquareness", display: "Un-square-ness", wraparound: false } ] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theBuffer, node, ourStart, startMoment, threshold;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theBuffer, node, threshold;
         threshold = instSpecificParams.unsquareness;
         idxname = "squarevar" + frequency + "x" + duration + "x" + amplitude + "x" + threshold;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
@@ -536,8 +532,6 @@ function InstantiateSquareVarObj() {
         node = gUmt.globalCtx.createBufferSource();
         node.buffer = theBuffer;
         node.connect(gUmt.globalCtx.destination);
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         node.start(startMoment);
     };
 }
@@ -547,8 +541,8 @@ function InstantiateTriangleWaveObj() {
     this.getParams = function () {
         return { percussion: false, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theBuffer, node, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theBuffer, node;
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
         idxname = "triangle" + frequency + "x" + duration + "x" + amplitude;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
@@ -560,8 +554,6 @@ function InstantiateTriangleWaveObj() {
         node = gUmt.globalCtx.createBufferSource();
         node.buffer = theBuffer;
         node.connect(gUmt.globalCtx.destination);
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         node.start(startMoment);
     };
 }
@@ -571,8 +563,8 @@ function InstantiateTriangleVarObj() {
     this.getParams = function () {
         return { percussion: false, parameters: [ { name: "untriangleness", display: "Un-Triangleness", wraparound: true } ] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var variance, idxname, theBuffer, node, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var variance, idxname, theBuffer, node;
         variance = instSpecificParams.untriangleness;
         idxname = "triangle" + frequency + "x" + duration + "x" + amplitude + "x" + variance;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
@@ -584,8 +576,6 @@ function InstantiateTriangleVarObj() {
         node = gUmt.globalCtx.createBufferSource();
         node.buffer = theBuffer;
         node.connect(gUmt.globalCtx.destination);
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         node.start(startMoment);
     };
 }
@@ -595,8 +585,8 @@ function InstantiateSawtoothWaveObj() {
     this.getParams = function () {
         return { percussion: false, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theBuffer, node, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theBuffer, node;
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
         idxname = "sawtooth" + frequency + "x" + duration + "x" + amplitude;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
@@ -608,8 +598,6 @@ function InstantiateSawtoothWaveObj() {
         node = gUmt.globalCtx.createBufferSource();
         node.buffer = theBuffer;
         node.connect(gUmt.globalCtx.destination);
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         node.start(startMoment);
     };
 }
@@ -619,8 +607,8 @@ function InstantiateSawtoothVarObj() {
     this.getParams = function () {
         return { percussion: false, parameters: [ { name: "unsawtoothness", display: "Un-Sawtoothness", wraparound: true } ] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var variance, idxname, theBuffer, node, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var variance, idxname, theBuffer, node;
         variance = instSpecificParams.unsawtoothness;
         idxname = "sawtoothvar" + frequency + "x" + duration + "x" + amplitude + "x" + variance;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
@@ -632,8 +620,6 @@ function InstantiateSawtoothVarObj() {
         node = gUmt.globalCtx.createBufferSource();
         node.buffer = theBuffer;
         node.connect(gUmt.globalCtx.destination);
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         node.start(startMoment);
     };
 }
@@ -643,8 +629,8 @@ function InstantiateNoiseObj() {
     this.getParams = function () {
         return { percussion: true, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theBuffer, node, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theBuffer, node;
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
         idxname = "forwardsnoise" + frequency + "x" + duration + "x" + amplitude;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
@@ -656,8 +642,6 @@ function InstantiateNoiseObj() {
         node = gUmt.globalCtx.createBufferSource();
         node.buffer = theBuffer;
         node.connect(gUmt.globalCtx.destination);
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         node.start(startMoment);
     };
 }
@@ -667,8 +651,8 @@ function InstantiateBackwardsNoiseObj() {
     this.getParams = function () {
         return { percussion: true, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theBuffer, node, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theBuffer, node;
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
         idxname = "backwardsnoise" + frequency + "x" + duration + "x" + amplitude;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
@@ -680,8 +664,6 @@ function InstantiateBackwardsNoiseObj() {
         node = gUmt.globalCtx.createBufferSource();
         node.buffer = theBuffer;
         node.connect(gUmt.globalCtx.destination);
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         node.start(startMoment);
     };
 }
@@ -691,8 +673,8 @@ function InstantiateSteamPopObj() {
     this.getParams = function () {
         return { percussion: true, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theBuffer, node, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theBuffer, node;
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
         idxname = "steampop" + frequency + "x" + duration + "x" + amplitude;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
@@ -704,8 +686,6 @@ function InstantiateSteamPopObj() {
         node = gUmt.globalCtx.createBufferSource();
         node.buffer = theBuffer;
         node.connect(gUmt.globalCtx.destination);
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         node.start(startMoment);
     };
 }
@@ -715,8 +695,8 @@ function InstantiateFMSynthOriginalObj() {
     this.getParams = function () {
         return { percussion: false, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theBuffer, node, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theBuffer, node;
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
         idxname = "fmsynthoriginal" + frequency + "x" + duration + "x" + amplitude;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
@@ -728,8 +708,6 @@ function InstantiateFMSynthOriginalObj() {
         node = gUmt.globalCtx.createBufferSource();
         node.buffer = theBuffer;
         node.connect(gUmt.globalCtx.destination);
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         node.start(startMoment);
     };
 }
@@ -742,8 +720,8 @@ function InstantiateFMSynthVarObj() {
             { name: "beta", display: "Beta", wraparound: false }
         ] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var modulator, beta, idxname, theBuffer, node, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var modulator, beta, idxname, theBuffer, node;
         modulator = instSpecificParams.modulator;
         beta = instSpecificParams.beta;
         idxname = "fmsynthvar" + frequency + "x" + duration + "x" + amplitude + "x" + modulator + "x" + beta;
@@ -756,8 +734,6 @@ function InstantiateFMSynthVarObj() {
         node = gUmt.globalCtx.createBufferSource();
         node.buffer = theBuffer;
         node.connect(gUmt.globalCtx.destination);
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         node.start(startMoment);
     };
 }
@@ -767,10 +743,9 @@ function InstantiateWadSinObj() {
     this.getParams = function () {
         return { percussion: false, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theWad, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theWad;
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
-        // idxname = "wadsin";
         idxname = "wadsin";
         if (gUmt.cachedWads.hasOwnProperty(idxname)) {
             theWad = gUmt.cachedWads[idxname];
@@ -778,11 +753,6 @@ function InstantiateWadSinObj() {
             theWad = new Wad({ source: 'sine', volume: amplitude, env: { attack: 0.0, decay: 0.1, sustain: 1.0, hold: duration, release: 0 } });
             gUmt.cachedWads[idxname] = theWad;
         }
-        // node = gUmt.globalCtx.createBufferSource();
-        // node.buffer = theBuffer;
-        // node.connect(gUmt.globalCtx.destination);
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         theWad.play({ exactTime: startMoment, pitch: frequency, volume: amplitude, env: {hold: duration} });
     };
 }
@@ -792,12 +762,11 @@ function InstantiateWadKickObj() {
     this.getParams = function () {
         return { percussion: true, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theWad, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theWad;
         idxname = duration; // delete me -- just to pass camelCaseJSLint
         idxname = amplitude; // delete me -- just to pass camelCaseJSLint
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
-        // idxname = "wadkick" + frequency + "x" + duration + "x" + amplitude;
         idxname = "wadkick";
         if (gUmt.cachedWads.hasOwnProperty(idxname)) {
             theWad = gUmt.cachedWads[idxname];
@@ -805,8 +774,6 @@ function InstantiateWadKickObj() {
             theWad = new Wad({ source: 'http://www.codecur.io/us/sendaudio/kick.mp3' });
             gUmt.cachedWads[idxname] = theWad;
         }
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         theWad.play({ exactTime: startMoment, pitch: frequency });
     };
 }
@@ -816,10 +783,9 @@ function InstantiateWadBassObj() {
     this.getParams = function () {
         return { percussion: false, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theWad, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theWad;
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
-        // idxname = "wadbass" + frequency + "x" + duration + "x" + amplitude;
         idxname = "wadbass";
         if (gUmt.cachedWads.hasOwnProperty(idxname)) {
             theWad = gUmt.cachedWads[idxname];
@@ -827,8 +793,6 @@ function InstantiateWadBassObj() {
             theWad = new Wad({ source: 'sine', volume: amplitude, globalReverb: true, env: { attack: 0.02, decay: 0.1, sustain: 0.9, hold: duration, release: 0.1 } });
             gUmt.cachedWads[idxname] = theWad;
         }
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         theWad.play({ exactTime: startMoment, pitch: frequency, volume: amplitude, env: {hold: duration} });
     };
 }
@@ -838,10 +802,9 @@ function InstantiateWadSnareObj() {
     this.getParams = function () {
         return { percussion: true, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theWad, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theWad;
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
-        // idxname = "wadsnare" + frequency + "x" + duration + "x" + amplitude;
         idxname = "wadsnare";
         if (gUmt.cachedWads.hasOwnProperty(idxname)) {
             theWad = gUmt.cachedWads[idxname];
@@ -850,8 +813,6 @@ function InstantiateWadSnareObj() {
             theWad.globalReverb = true;
             gUmt.cachedWads[idxname] = theWad;
         }
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         theWad.play({ exactTime: startMoment, pitch: frequency, volume: amplitude, env: {hold: duration} });
     };
 }
@@ -861,8 +822,8 @@ function InstantiateWadHihatOpenObj() {
     this.getParams = function () {
         return { percussion: false, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theWad, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theWad;
         idxname = duration; // delete me -- just to pass camelCaseJSLint
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
         // idxname = "wadhihats" + frequency + "x" + duration + "x" + amplitude;
@@ -874,8 +835,6 @@ function InstantiateWadHihatOpenObj() {
             theWad.globalReverb = true;
             gUmt.cachedWads[idxname] = theWad;
         }
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         theWad.play({ exactTime: startMoment, pitch: frequency, volume: amplitude });
     };
 }
@@ -885,8 +844,8 @@ function InstantiateWadHihatClosedObj() {
     this.getParams = function () {
         return { percussion: false, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theWad, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theWad;
         idxname = duration; // delete me -- just to pass camelCaseJSLint
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
         // idxname = "wadhihats" + frequency + "x" + duration + "x" + amplitude;
@@ -898,8 +857,6 @@ function InstantiateWadHihatClosedObj() {
             theWad.globalReverb = true;
             gUmt.cachedWads[idxname] = theWad;
         }
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         theWad.play({ exactTime: startMoment, pitch: frequency, volume: amplitude });
     };
 }
@@ -909,8 +866,8 @@ function InstantiateWadFluteObj() {
     this.getParams = function () {
         return { percussion: false, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theWad, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theWad;
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
         // idxname = "wadflute" + frequency + "x" + duration + "x" + amplitude;
         idxname = "wadflute";
@@ -921,8 +878,6 @@ function InstantiateWadFluteObj() {
             // Wad.setGlobalReverb({ impulse: 'http://www.codecur.io/us/sendaudio/longhall.wav', wet : 0.5 });
             gUmt.cachedWads[idxname] = theWad;
         }
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         theWad.play({ exactTime: startMoment, pitch: frequency, volume: amplitude, env: {hold: duration} });
     };
 }
@@ -932,8 +887,8 @@ function InstantiateWadPianoObj() {
     this.getParams = function () {
         return { percussion: false, parameters: [] };
     };
-    this.queUpANote = function (fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
-        var idxname, theWad, ourStart, startMoment;
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var idxname, theWad;
         idxname = instSpecificParams; // delete me -- just to pass camelCaseJSLint
         // idxname = "wadpiano" + frequency + "x" + duration + "x" + amplitude;
         idxname = "wadpiano";
@@ -944,8 +899,6 @@ function InstantiateWadPianoObj() {
             theWad.globalReverb = true;
             gUmt.cachedWads[idxname] = theWad;
         }
-        ourStart = Number(startTime);
-        startMoment = fromMoment + ourStart;
         theWad.play({ exactTime: startMoment, pitch: frequency, volume: amplitude, env: {hold: duration} });
     };
 }
@@ -2005,13 +1958,12 @@ var umtExecReSeed;
 
 function umtSchedulePlayOfSegment() {
     "use strict";
-    var lpnum, currentTime, ctxOffset, compositonlag, windowStart, windowStop, loopUnitLen, loopLen, fromMoment, center, tempoScalar, numVoices, voicenum, notenum, duration, amplitude, frequency, adjustedStartTime, startTime, instSpecificParams, harmonizedOctave, harmonizedNum, harmonizedDnom, anythingPlayed, masterVolScaler, instrument, regularTime, timeInMs, interval;
+    var lpnum, currentTime, compositonlag, windowStart, windowStop, loopUnitLen, loopLen, fromMoment, center, tempoScalar, numVoices, voicenum, notenum, duration, amplitude, frequency, adjustedStartTime, instSpecificParams, harmonizedOctave, harmonizedNum, harmonizedDnom, anythingPlayed, masterVolScaler, instrument, regularTime, timeInMs, interval;
     lpnum = gUmt.currentlyPlayingLoop;
     if (gUmt.loop[lpnum].score.parts === 0) {
         return;
     }
-    ctxOffset = 0; // gUmt.loop[lpnum].score.playbackTimeOffset;
-    currentTime = gUmt.globalCtx.currentTime + ctxOffset;
+    currentTime = gUmt.globalCtx.currentTime;
     windowStart = currentTime;
     compositonlag = gUmt.compositionLag;
     if (compositonlag < 0.1) {
@@ -2052,10 +2004,9 @@ function umtSchedulePlayOfSegment() {
                         instSpecificParams = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].instParams;
                         frequency = Math.exp((harmonizedOctave + center) * gUmt.LOG2);
                         frequency = frequency * (harmonizedNum / harmonizedDnom);
-                        startTime = adjustedStartTime - fromMoment; // gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].starttime * tempoScalar;
                         instrument = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].instrument;
                         amplitude = amplitude * masterVolScaler;
-                        gUmt.instrumentBank[instrument].queUpANote(fromMoment - ctxOffset, frequency, startTime, duration, amplitude, instSpecificParams);
+                        gUmt.instrumentBank[instrument].queUpANote(adjustedStartTime, frequency, duration, amplitude, instSpecificParams);
                         anythingPlayed = true;
                     }
                 }
