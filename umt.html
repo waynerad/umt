@@ -3609,7 +3609,7 @@ function umtUiCopyUiParamsToActualUi() {
 
 function umtExecAddVoice() {
     "use strict";
-    var voiceNum, songnum, prev, pvsym;
+    var voiceNum, songnum, prev, pvsym, pvinstspec, currentinstspec, instParamName;
     voiceNum = gUmt.UIParams.parts;
     songnum = voiceNum + 1;
     if (voiceNum === 0) {
@@ -3618,6 +3618,13 @@ function umtExecAddVoice() {
         prev = gUmt.UIParams.songTab[0].voice[voiceNum - 1];
         pvsym = gUmt.UIParams.songTab[0].voice[voiceNum - 1].symmetry;
         gUmt.UIParams.songTab[0].voice[voiceNum] = { playing: false, instrument: prev.instrument, volume: prev.volume, songNumber: songnum, octave: prev.octave, noteDistance: prev.noteDistance, restyness: prev.restyness, ampVariation: prev.ampVariation, minNote: prev.minNote, chunkSize: prev.chunkSize, frameSize: prev.frameSize, symmetry: { 1: {pattern: pvsym[1].pattern, transParam: pvsym[1].transParam, scaleParam: pvsym[1].scaleParam, tiltParam: pvsym[1].tiltParam, scrollrhythmParam: pvsym[1].scrollrhythmParam, scrollpitchParam: pvsym[1].scrollpitchParam, scrollbothParam: pvsym[1].scrollbothParam}, 2: {pattern: pvsym[2].pattern, transParam: pvsym[2].transParam, scaleParam: pvsym[2].scaleParam, tiltParam: pvsym[2].tiltParam, scrollrhythmParam: pvsym[2].scrollrhythmParam, scrollpitchParam: pvsym[2].scrollpitchParam, scrollbothParam: pvsym[2].scrollbothParam}, 4: {pattern: pvsym[4].pattern, transParam: pvsym[4].transParam, scaleParam: pvsym[4].scaleParam, tiltParam: pvsym[4].tiltParam, scrollrhythmParam: pvsym[4].scrollrhythmParam, scrollpitchParam: pvsym[4].scrollpitchParam, scrollbothParam: pvsym[4].scrollbothParam}, 8: {pattern: pvsym[8].pattern, transParam: pvsym[8].transParam, scaleParam: pvsym[8].scaleParam, tiltParam: pvsym[8].tiltParam, scrollrhythmParam: pvsym[8].scrollrhythmParam, scrollpitchParam: pvsym[8].scrollpitchParam, scrollbothParam: pvsym[8].scrollbothParam}, 16: {pattern: pvsym[16].pattern, transParam: pvsym[16].transParam, scaleParam: pvsym[16].scaleParam, tiltParam: pvsym[16].tiltParam, scrollrhythmParam: pvsym[16].scrollrhythmParam, scrollpitchParam: pvsym[16].scrollpitchParam, scrollbothParam: pvsym[16].scrollbothParam}, 32: {pattern: pvsym[32].pattern, transParam: pvsym[32].transParam, scaleParam: pvsym[32].scaleParam, tiltParam: pvsym[32].tiltParam, scrollrhythmParam: pvsym[32].scrollrhythmParam, scrollpitchParam: pvsym[32].scrollpitchParam, scrollbothParam: pvsym[32].scrollbothParam}, 64: {pattern: pvsym[64].pattern, transParam: pvsym[64].transParam, scaleParam: pvsym[64].scaleParam, tiltParam: pvsym[64].tiltParam, scrollrhythmParam: pvsym[64].scrollrhythmParam, scrollpitchParam: pvsym[64].scrollpitchParam, scrollbothParam: pvsym[64].scrollbothParam}, 128: {pattern: pvsym[128].pattern, transParam: pvsym[128].transParam, scaleParam: pvsym[128].scaleParam, tiltParam: pvsym[128].tiltParam, scrollrhythmParam: pvsym[128].scrollrhythmParam, scrollpitchParam: pvsym[128].scrollpitchParam, scrollbothParam: pvsym[128].scrollbothParam}, 256: {pattern: pvsym[256].pattern, transParam: pvsym[256].transParam, scaleParam: pvsym[256].scaleParam, tiltParam: pvsym[256].tiltParam, scrollrhythmParam: pvsym[256].scrollrhythmParam, scrollpitchParam: pvsym[256].scrollpitchParam, scrollbothParam: pvsym[256].scrollbothParam}, 512: {pattern: pvsym[512].pattern, transParam: pvsym[512].transParam, scaleParam: pvsym[512].scaleParam, tiltParam: pvsym[512].tiltParam, scrollrhythmParam: pvsym[512].scrollrhythmParam, scrollpitchParam: pvsym[512].scrollpitchParam, scrollbothParam: pvsym[512].scrollbothParam}, 1024: {pattern: pvsym[1024].pattern, transParam: pvsym[1024].transParam, scaleParam: pvsym[1024].scaleParam, tiltParam: pvsym[1024].tiltParam, scrollrhythmParam: pvsym[1024].scrollrhythmParam, scrollpitchParam: pvsym[1024].scrollpitchParam, scrollbothParam: pvsym[1024].scrollbothParam} }, instSpecificParams: {} };
+        pvinstspec = gUmt.UIParams.songTab[0].voice[voiceNum - 1].instSpecificParams;
+        currentinstspec = gUmt.UIParams.songTab[0].voice[voiceNum].instSpecificParams;
+        for (instParamName in pvinstspec) {
+            if (pvinstspec.hasOwnProperty(instParamName)) {
+                currentinstspec[instParamName] = pvinstspec[instParamName];
+            }
+        }
     }
     umtUISetDefaultInstSpecificParamsForNewInstrument(voiceNum, gUmt.UIParams.songTab[0].voice[voiceNum].instrument);
     gUmt.UIParams.parts = gUmt.UIParams.parts + 1;
