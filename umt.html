@@ -995,6 +995,7 @@ function umtExecPlayRawScore() {
 // 6/5    m3        Eb                0.263      0.250
 // 5/4    M3        E                 0.322      0.333
 // 4/3    P4        F                 0.415      0.417
+// 25/18  A4        F#                0.474      0.500
 // 3/2    P5        G                 0.585      0.583
 // 8/5    m6        Ab                0.678      0.667
 // 5/3    M6        A                 0.737      0.750
@@ -1003,9 +1004,21 @@ function umtExecPlayRawScore() {
 // 15/8   M7        B                 0.907      0.917
 // 2/1    P8        C                 1.000      1.000
 
+function umtGetScale15ChromaticTT() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 25, dnom: 18}, {num:36, dnom: 25}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 9, dnom: 5}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
 function umtGetScale13Chromatic() {
     "use strict";
     var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 9, dnom: 5}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umtGetScale12ChromaticRegRegTT() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 25, dnom: 18}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 9, dnom: 5}, {num: 15, dnom: 8} ];
     return scale;
 }
 
@@ -1117,6 +1130,12 @@ function umtGetScale5Pentatonic23Alt() {
     return scale;
 }
 
+function umtGetScale5Pentatonic131Reg() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 9, dnom: 5} ];
+    return scale;
+}
+
 function umtGetScale5Pentatonic32Reg() {
     "use strict";
     var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 5, dnom: 4}, {num: 3, dnom: 2}, {num: 5, dnom: 3} ];
@@ -1129,6 +1148,18 @@ function umtGetScale5Pentatonic32Alt() {
     return scale;
 }
 
+function umtGetScale5Pentatonic221Reg() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 9, dnom: 5} ];
+    return scale;
+}
+
+function umtGetScale5Pentatonic122Reg() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 8, dnom: 5}, {num: 9, dnom: 5} ];
+    return scale;
+}
+
 function umtGetScale4Quadtonic() {
     "use strict";
     var scale = [ {num: 1, dnom: 1}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3} ];
@@ -1138,6 +1169,78 @@ function umtGetScale4Quadtonic() {
 function umtGetScale3Tritonic() {
     "use strict";
     var scale = [ {num: 1, dnom: 1}, {num: 4, dnom: 3}, {num: 3, dnom: 2} ];
+    return scale;
+}
+
+function umtGetScale2TritoneTest() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 25, dnom: 18} ];
+    return scale;
+}
+
+function umtGetScale7ModeIonian() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umtGetScale7ModeDorian() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 9, dnom: 5} ];
+    return scale;
+}
+
+function umtGetScale7ModePhrygian() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 9, dnom: 5} ];
+    return scale;
+}
+
+function umtGetScale7ModeLydianTT() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 5, dnom: 4}, {num: 25, dnom: 18}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umtGetScale7ModeMixolydian() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 9, dnom: 5} ];
+    return scale;
+}
+
+function umtGetScale7ModeAeolian() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 9, dnom: 5} ];
+    return scale;
+}
+
+function umtGetScale7ModeLocrianTT() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 25, dnom: 18}, {num: 8, dnom: 5}, {num: 9, dnom: 5} ];
+    return scale;
+}
+
+function umtGetScale7HungarianRegRegTT() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 25, dnom: 18}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umtGetScale7Arabic() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 15, dnom: 8} ];
+    return scale;
+}
+
+function umtGetScale7FreygishPhrygianDominant() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 9, dnom: 5} ];
+    return scale;
+}
+
+function umtGetScale7UkranianDorian() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 25, dnom:18}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 9, dnom: 5} ];
     return scale;
 }
 
@@ -1212,6 +1315,16 @@ function umtIsConsonant(lowNum, lowDnom, highNum, highDnom, chord) {
     ratioNum = highNum * lowDnom;
     ratioDnom = highDnom * lowNum;
     red = umtReduceFraction(ratioNum, ratioDnom);
+    if (red.dnom > 3) {
+        if (chord === "perfect") {
+            return false;
+        }
+        if (red.dnom > 5) {
+            if (chord === "major") {
+                return false;
+            }
+        }
+    }
     if (red.dnom > 6) {
         if (chord === "reg") {
             if ((red.dnom !== 9) && (red.dnom !== 15) && (red.dnom !== 18) && (red.dnom !== 25)) {
@@ -1230,6 +1343,16 @@ function umtIsConsonant(lowNum, lowDnom, highNum, highDnom, chord) {
     ratioNum = 2 * lowNum * highDnom;
     ratioDnom = lowDnom * highNum;
     red = umtReduceFraction(ratioNum, ratioDnom);
+    if (red.dnom > 3) {
+        if (chord === "perfect") {
+            return false;
+        }
+        if (red.dnom > 5) {
+            if (chord === "major") {
+                return false;
+            }
+        }
+    }
     if (red.dnom > 6) {
         if (chord === "reg") {
             if ((red.dnom !== 9) && (red.dnom !== 15) && (red.dnom !== 18) && (red.dnom !== 25)) {
@@ -1530,8 +1653,14 @@ function umtGetScaleByAbbrv(scaleAbbrv) {
         return umtGetScale7ArabicishMinor();
     case 'pentatonic23reg':
         return umtGetScale5Pentatonic23Reg();
+    case 'pentatonic131reg':
+        return umtGetScale5Pentatonic131Reg();
     case 'pentatonic32reg':
         return umtGetScale5Pentatonic32Reg();
+    case 'pentatonic221reg':
+        return umtGetScale5Pentatonic221Reg();
+    case 'pentatonic122reg':
+        return umtGetScale5Pentatonic122Reg();
     case 'quad':
         return umtGetScale4Quadtonic();
     case 'tri':
@@ -1558,6 +1687,34 @@ function umtGetScaleByAbbrv(scaleAbbrv) {
         return umtGetScale5Pentatonic23Alt();
     case 'pentatonic32alt':
         return umtGetScale5Pentatonic32Alt();
+    case 'tritone2test':
+        return umtGetScale2TritoneTest();
+    case 'ionian7':
+        return umtGetScale7ModeIonian();
+    case 'dorian7':
+        return umtGetScale7ModeDorian();
+    case 'phrygian7':
+        return umtGetScale7ModePhrygian();
+    case 'lydian7tt':
+        return umtGetScale7ModeLydianTT();
+    case 'mixolydian7':
+        return umtGetScale7ModeMixolydian();
+    case 'aeolian7':
+        return umtGetScale7ModeAeolian();
+    case 'locrian7tt':
+        return umtGetScale7ModeLocrianTT();
+    case 'hungarian7tt':
+        return umtGetScale7HungarianRegRegTT();
+    case 'chroma15tt':
+        return umtGetScale15ChromaticTT();
+    case 'chroma12regregtt':
+        return umtGetScale12ChromaticRegRegTT();
+    case 'arabic7':
+        return umtGetScale7Arabic();
+    case 'freygish7':
+        return umtGetScale7FreygishPhrygianDominant();
+    case 'ukranian7':
+        return umtGetScale7UkranianDorian();
     default:
         jsabort("unrecognized scale code: " + scaleAbbrv);
         break;
@@ -2664,7 +2821,7 @@ function umtCompose(lpnum) {
     if (gUmt.idemAddingVoice) {
         jsabort("umtCompose called during add voice");
     }
-    umtClearLoop(lpnum, gUmt.UIParams.tempo, gUmt.UIParams.centernote, gUmt.UIParams.scale, gUmt.UIParams.chord);
+    umtClearLoop(lpnum, gUmt.UIParams.tempo, gUmt.UIParams.songTab[0].centernote, gUmt.UIParams.songTab[0].scale, gUmt.UIParams.songTab[0].chord);
     compositionVoice = 0;
     UIVoice = 0;
     loopDuration = gUmt.UIParams.loopDuration;
@@ -2832,7 +2989,7 @@ function umtExecScaleChange() {
     var listbox, scaleparam;
     listbox = window.document.getElementById("lb_scale");
     scaleparam = listbox.options[listbox.selectedIndex].value;
-    gUmt.UIParams.scale = scaleparam;
+    gUmt.UIParams.songTab[0].scale = scaleparam;
     if (gUmt.idemAddingVoice === false) {
         umtAutomaticallyRecomposeLoopFromUIParams();
     }
@@ -2843,7 +3000,7 @@ function umtExecChordChange() {
     var listbox, chordparam;
     listbox = window.document.getElementById("lb_chord");
     chordparam = listbox.options[listbox.selectedIndex].value;
-    gUmt.UIParams.chord = chordparam;
+    gUmt.UIParams.songTab[0].chord = chordparam;
     if (gUmt.idemAddingVoice === false) {
         umtAutomaticallyRecomposeLoopFromUIParams();
     }
@@ -2871,7 +3028,9 @@ function umtExecSongNumberChange(event) {
     listbox = window.document.getElementById("songnumber" + UIVoiceNum);
     gUmt.UIParams.songTab[0].voice[UIVoiceNum].songNumber = Number(listbox.options[listbox.selectedIndex].value);
     if (gUmt.idemAddingVoice === false) {
-        umtAutomaticallyRecomposeLoopFromUIParams();
+        if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+            umtAutomaticallyRecomposeLoopFromUIParams();
+        }
     }
 }
 
@@ -3516,7 +3675,28 @@ function umtUiCopyUiParamsToActualUi() {
     "use strict";
     var parts, i, absvalue, slidervalue, loopDuration, j, k, howeverMany, symSize, symNum, symmetryPattern;
     gUmt.idemAddingVoice = true;
-    parts = gUmt.UIParams.parts;
+    // tempo
+    absvalue = gUmt.UIParams.tempo;
+    window.document.getElementById("display_tempo_value").innerHTML = absvalue;
+    slidervalue = absvalue; // no translation for tempo!
+    jQuery("#slider_tempo").slider({ value: slidervalue });
+    // master volume
+    absvalue = gUmt.UIParams.mastervol;
+    window.document.getElementById("display_mastervol_value").innerHTML = (absvalue * 100) + "%";
+    slidervalue = absvalue * 100;
+    jQuery("#slider_mastervol").slider({ value: slidervalue });
+    // scale
+    umtUiSetListboxByValue(document.getElementById("lb_scale"), gUmt.UIParams.songTab[0].scale);
+    // chords
+    umtUiSetListboxByValue(document.getElementById("lb_chord"), gUmt.UIParams.songTab[0].chord);
+    // center note
+    absvalue = gUmt.UIParams.songTab[0].centernote;
+    window.document.getElementById("display_centernote_value").innerHTML = absvalue;
+    slidervalue = (Math.log(absvalue / 432) / Math.log(1.25)) + 5.0;
+    slidervalue = Math.floor(slidervalue + 0.1); // in case of rounding error on the logarithm
+    jQuery("#slider_centernote").slider({ value: slidervalue });
+    // now we loop through each part
+    parts = gUmt.UIParams.songTab[0].parts;
     for (i = 0; i < parts; i = i + 1) {
         if (!umtUIIsPartInUI(i)) {
             umtUiAddRow(i);
@@ -3610,7 +3790,7 @@ function umtUiCopyUiParamsToActualUi() {
 function umtExecAddVoice() {
     "use strict";
     var voiceNum, songnum, prev, pvsym, pvinstspec, currentinstspec, instParamName;
-    voiceNum = gUmt.UIParams.parts;
+    voiceNum = gUmt.UIParams.songTab[0].parts;
     songnum = voiceNum + 1;
     if (voiceNum === 0) {
         gUmt.UIParams.songTab[0].voice[voiceNum] = { playing: false, instrument: "tuningfork", volume: 1.0, songNumber: songnum, octave: 5, noteDistance: 0.3, restyness: 0.0, ampVariation: 0.5, minNote: 4, chunkSize: 4, frameSize: 32, symmetry: { 1: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 2: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 4: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 8: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 16: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 32: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 64: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 128: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 256: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 512: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 1024: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0} }, instSpecificParams: {} };
@@ -3627,8 +3807,8 @@ function umtExecAddVoice() {
         }
     }
     umtUISetDefaultInstSpecificParamsForNewInstrument(voiceNum, gUmt.UIParams.songTab[0].voice[voiceNum].instrument);
-    gUmt.UIParams.parts = gUmt.UIParams.parts + 1;
-    if (gUmt.UIParams.parts > gUmt.UIParams.maxPartsEver) {
+    gUmt.UIParams.songTab[0].parts = gUmt.UIParams.songTab[0].parts + 1;
+    if (gUmt.UIParams.songTab[0].parts > gUmt.UIParams.maxPartsEver) {
         gUmt.UIParams.maxPartsEver = gUmt.UIParams.parts;
     }
     umtUiCopyUiParamsToActualUi();
@@ -3650,7 +3830,7 @@ umtExecReSeed = function () {
     gUmt.lastReSeedTime = timeInMs;
     timeInMs = timeInMs - (Math.floor(timeInMs / 256) * 256);
     rng = umtGetRando(timeInMs);
-    for (i = 0; i < gUmt.UIParams.parts; i = i + 1) {
+    for (i = 0; i < gUmt.UIParams.songTab[0].parts; i = i + 1) {
         gUmt.UIParams.songTab[0].voice[i].songNumber = Math.floor(rng.genrandReal2() * 50 + 1);
     }
     umtUiCopyUiParamsToActualUi();
@@ -3661,7 +3841,7 @@ umtExecReSeed = function () {
 
 // main
 
-gUmt = {TAU: Math.PI * 2, LOG2: Math.log(2), globalCtx: umtGetAudioContext(), globalRng: umtGetRando(0), cachedNotes: {}, cachedWads: {}, instrumentBank: {}, cachedFittings: {}, loop: [ { score: {tempo: 700, centernoteLog: (Math.log(432) / Math.log(2)) - 5, songTab: [ { voice: [] } ] } } ], playedUpTo: 0, timerIsOn: false, currentlyPlayingLoop: 0, compositionLag: 0, idemCompose: false, idemAddingVoice: false, UIParams: { tempo: 360, scale: 'maj7reg', chord: "triad", centernote: 432, mastervol: 0.9, parts: 0, songTab: [ { voice: [] } ], loopDuration: 128 }, maxPartsEver: 4 };
+gUmt = {TAU: Math.PI * 2, LOG2: Math.log(2), globalCtx: umtGetAudioContext(), globalRng: umtGetRando(0), cachedNotes: {}, cachedWads: {}, instrumentBank: {}, cachedFittings: {}, loop: [ { score: {tempo: 700, centernoteLog: (Math.log(432) / Math.log(2)) - 5, songTab: [ { voice: [] } ] } } ], playedUpTo: 0, timerIsOn: false, currentlyPlayingLoop: 0, compositionLag: 0, idemCompose: false, idemAddingVoice: false, UIParams: { tempo: 360, mastervol: 0.9, songTab: [ { scale: 'maj7reg', chord: "triad", centernote: 432, parts: 0, voice: [] } ], loopDuration: 128 }, maxPartsEver: 4 };
 
 // console.log(gUmt);
 
@@ -3684,9 +3864,9 @@ jQuery(function () {
         if (gUmt.idemAddingVoice === false) {
             if (event.type === "slidechange") {
                 newvalue = ui.value;
-                newvalue = Math.pow(2, (newvalue - 5) / 12) * 432;
+                newvalue = Math.pow(1.125, newvalue - 5) * 432;
                 window.document.getElementById("display_centernote_value").innerHTML = newvalue;
-                gUmt.UIParams.centernote = newvalue;
+                gUmt.UIParams.songTab[0].centernote = newvalue;
                 umtAutomaticallyRecomposeLoopFromUIParams();
             }
         }
@@ -3721,9 +3901,9 @@ jQuery(function () {
 <p>
     <input type="button" id="start_automatic" value="Start Music" />
     <input type="button" id="stop_automatic" value="Stop Music" />
-    <input type="button" id="test_play_raw" value="Test Play Raw" />
-    <input type="button" id="test_dump_gumt" value="Test Dump gUmt" />
-    <input type="button" id="test_symmetry_system" value="Test Symmetry System" />
+    <!-- input type="button" id="test_play_raw" value="Test Play Raw" / -->
+    <!--input type="button" id="test_dump_gumt" value="Test Dump gUmt" / -->
+    <!-- input type="button" id="test_symmetry_system" value="Test Symmetry System" / -->
     Composition time (RA) <input type="text" id="test_composition_time" value="0" />
 </p>
 
@@ -3750,15 +3930,32 @@ jQuery(function () {
 <p> Scale:
 
 <select id="lb_scale">
+    <option value="chroma15tt">Chromatic 15 (alt)*</option>
     <option value="chroma13">Chromatic 13 (alt)</option>
+    <option value="chroma12regregtt">Chromatic 12*</option>
     <option value="chroma11regreg">Chromatic 11</option>
+    <option value="hungarian7tt">Hungarian Minor 7*</option>
+    <option value="arabic7">Arabic 7</option>
+    <option value="freygish7">Freygish Phrygian Dominant 7</option>
+    <option value="ukranian7">Ukranian Dorian 7</option>
     <option value="minharm7reg">Minor Harmonic 7</option>
     <option value="minnat7regreg">Minor Natural 7</option>
     <option value="maj7reg" selected="selected">Major 7</option>
-    <option value="pentatonic32reg">Pentatonic 5 (3+2)</option>
+    <option value="ionian7">Ionian Mode 7</option>
+    <option value="dorian7">Dorian Mode 7</option>
+    <option value="phrygian7">Phrygian Mode 7</option>
+    <option value="lydian7tt">Lydian Mode 7*</option>
+    <option value="mixolydian7">Mixolydian Mode 7</option>
+    <option value="aeolian7">Aeolian Mode 7</option>
+    <option value="locrian7tt">Locrian Mode 7*</option>
     <option value="pentatonic23reg">Pentatonic 5 (2+3 standard)</option>
+    <option value="pentatonic131reg">Pentatonic 5 (1+3+1)</option>
+    <option value="pentatonic32reg">Pentatonic 5 (3+2)</option>
+    <option value="pentatonic221reg">Pentatonic 5 (2+2+1)</option>
+    <option value="pentatonic122reg">Pentatonic 5 (1+2+2)</option>
     <option value="quad">Quadtonic 4</option>
     <option value="tri">Tritonic 3</option>
+    <option value="tritone2test">Tritone Test 2*</option>
 </select>
 
 </p>
@@ -3766,8 +3963,10 @@ jQuery(function () {
 <p> Chords allowed:
 
 <select id="lb_chord">
-    <option value="triad">Triads only (most harmonic)</option>
-    <option value="reg">Allow 7th chords (reg)</option>
+    <option value="perfect">Perfect</option>
+    <option value="major">Major</option>
+    <option value="triad" selected="selected">Triads</option>
+    <option value="reg">7th chords</option>
     <!-- option value="alt" Allow 7th chords (alt) /option -->
     <!-- option value="any" Allow all chords (allow dissonance) /option -->
 </select>
@@ -4002,14 +4201,14 @@ umtListenElement.addEventListener("click", umtExecReSeed, true);
 umtListenElement = document.getElementById("add_voice");
 umtListenElement.addEventListener("click", umtExecAddVoice, true);
 
-umtListenElement = document.getElementById("test_play_raw");
-umtListenElement.addEventListener("click", umtExecPlayRawScore, true);
+// umtListenElement = document.getElementById("test_play_raw");
+// umtListenElement.addEventListener("click", umtExecPlayRawScore, true);
 
-umtListenElement = document.getElementById("test_dump_gumt");
-umtListenElement.addEventListener("click", umtExecTestDumtGmt, true);
+// umtListenElement = document.getElementById("test_dump_gumt");
+// umtListenElement.addEventListener("click", umtExecTestDumtGmt, true);
 
-umtListenElement = document.getElementById("test_symmetry_system");
-umtListenElement.addEventListener("click", umtTestSetupCopyTransTestSection, true);
+// umtListenElement = document.getElementById("test_symmetry_system");
+// umtListenElement.addEventListener("click", umtTestSetupCopyTransTestSection, true);
 
 </script>
 
