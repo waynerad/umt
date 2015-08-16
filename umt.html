@@ -7,6 +7,14 @@
 <script src="jquery-1.10.2.js"></script>
 <script src="jquery-ui.js"></script>
 <link rel="stylesheet" href="style.css" />
+  <style>
+  #dialog label, #dialog input { display:block; }
+  #dialog label { margin-top: 0.5em; }
+  #dialog input, #dialog textarea { width: 95%; }
+  #tabs { margin-top: 1em; }
+  #tabs li .ui-icon-close { float: left; margin: 0.4em 0.2em 0 0; cursor: pointer; }
+  #add_tab { cursor: pointer; }
+  </style>
 
 <script src="mt19937class.js" ></script>
 <script>
@@ -31,7 +39,7 @@ var gUmt;
 // fpt -- "floating-point" -- floating point value of pitches for scale notes
 //        (notes are expressed as both a ratio, num/dnom, and a floating-point
 //        value where 2^fpt is proportional to the pitch
-//        pitch values in gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].pitch
+//        pitch values in gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].pitch
 //        are RAW pitches and in floating-point format.
 
 //    jsabort, cx, and ctstr are debugging functions that will be
@@ -943,38 +951,75 @@ function umtClearLoop(lpnum, xTempo, centerNote, xScale, xChord) {
 
 function umtAddVoice(lpnum, idx, songNumber, rangeMin, rangeMax, instrumentName, xPercussion) {
     "use strict";
+    var tab;
     gUmt.loop[lpnum].score.parts = idx + 1;
-    gUmt.loop[lpnum].score.songTab[0].voice[idx] = { instrument: instrumentName, selection: 0, cursor: 0, nextStart: 0, rangeTop: rangeMax, rangeBottom: rangeMin, percussion: xPercussion, notes: [], randRhythm: umtGetRando(songNumber * 40), randPitch: umtGetRando(songNumber * 40 + 1), randAmp: umtGetRando(songNumber * 40 + 5), randRests: umtGetRando(songNumber * 40 + 2), randSyms: umtGetRando(songNumber * 40 + 3), randTrans: umtGetRando(songNumber * 40 + 4), randScale: umtGetRando(songNumber * 40 + 5), randTilt: umtGetRando(songNumber * 40 + 6), randScrollrhythm: umtGetRando(songNumber * 40 + 7), randScrollpitch: umtGetRando(songNumber * 40 + 8), randScrollboth: umtGetRando(songNumber * 40 + 9), randInstPat: umtGetRando(songNumber * 40 + 10), randInstSymVars: umtGetRando(songNumber * 40 + 11) };
+    for (tab = 0; tab < gUmt.UIParams.numTabs; tab = tab + 1) {
+        gUmt.loop[lpnum].score.songTab[tab].voice[idx] = {
+            instrument: instrumentName,
+            selection: 0,
+            cursor: 0,
+            nextStart: 0,
+            rangeTop: rangeMax,
+            rangeBottom: rangeMin,
+            percussion: xPercussion,
+            notes: [],
+            randRhythm: umtGetRando(songNumber * 40),
+            randPitch: umtGetRando(songNumber * 40 + 1),
+            randAmp: umtGetRando(songNumber * 40 + 5),
+            randRests: umtGetRando(songNumber * 40 + 2),
+            randSyms: umtGetRando(songNumber * 40 + 3),
+            randTrans: umtGetRando(songNumber * 40 + 4),
+            randScale: umtGetRando(songNumber * 40 + 5),
+            randTilt: umtGetRando(songNumber * 40 + 6),
+            randScrollrhythm: umtGetRando(songNumber * 40 + 7),
+            randScrollpitch: umtGetRando(songNumber * 40 + 8),
+            randScrollboth: umtGetRando(songNumber * 40 + 9),
+            randInstPat: umtGetRando(songNumber * 40 + 10),
+            randInstSymVars: umtGetRando(songNumber * 40 + 11)
+        };
+    }
 }
 
 function umtAddNote(lpnum, voicenum, rest, pitch, duration, amplitude, instParams) {
     "use strict";
-    var idx, cursorval;
+    var idx, tab, cursorval;
     idx = voicenum;
-    cursorval = gUmt.loop[lpnum].score.songTab[0].voice[idx].cursor;
-    gUmt.loop[lpnum].score.songTab[0].voice[idx].notes[cursorval] = { starttime: gUmt.loop[lpnum].score.songTab[0].voice[idx].nextStart, rest: rest, pitch: pitch, duration: duration, amplitude: amplitude, instParams: instParams, harmOctave: -1, harmNum: -1, harmDnom: -1 };
+    tab = gUmt.UIParams.currentTab;
+    cursorval = gUmt.loop[lpnum].score.songTab[tab].voice[idx].cursor;
+    gUmt.loop[lpnum].score.songTab[tab].voice[idx].notes[cursorval] = {
+        starttime: gUmt.loop[lpnum].score.songTab[tab].voice[idx].nextStart,
+        rest: rest,
+        pitch: pitch,
+        duration: duration,
+        amplitude: amplitude,
+        instParams: instParams,
+        harmOctave: -1,
+        harmNum: -1,
+        harmDnom: -1
+    };
     cursorval = cursorval + 1;
-    gUmt.loop[lpnum].score.songTab[0].voice[idx].cursor = cursorval;
-    gUmt.loop[lpnum].score.songTab[0].voice[idx].nextStart += duration;
+    gUmt.loop[lpnum].score.songTab[tab].voice[idx].cursor = cursorval;
+    gUmt.loop[lpnum].score.songTab[tab].voice[idx].nextStart += duration;
 }
 
 function umtTestPlayRawScore(lpnum) {
     "use strict";
-    var fromMoment, center, tempoScalar, numVoices, voicenum, notenum, pitch, duration, amplitude, frequency, startTime, instSpecificParams;
+    var tab, fromMoment, center, tempoScalar, numVoices, voicenum, notenum, pitch, duration, amplitude, frequency, startTime, instSpecificParams;
+    tab = gUmt.UIParams.currentTab;
     fromMoment = gUmt.globalCtx.currentTime + 1;
     center = gUmt.loop[lpnum].score.centernoteLog;
     tempoScalar = 60 / gUmt.loop[lpnum].score.tempo;
     numVoices = gUmt.loop[lpnum].score.parts;
     for (voicenum = 0; voicenum < numVoices; voicenum = voicenum + 1) {
-        for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[0].voice[voicenum].cursor; notenum = notenum + 1) {
-            if (gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].rest === false) {
-                pitch = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].pitch;
-                duration = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].duration * tempoScalar;
-                amplitude = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].amplitude;
+        for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].cursor; notenum = notenum + 1) {
+            if (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].rest === false) {
+                pitch = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].pitch;
+                duration = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].duration * tempoScalar;
+                amplitude = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].amplitude;
                 amplitude = amplitude / numVoices;
-                instSpecificParams = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].instParams;
+                instSpecificParams = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].instParams;
                 frequency = Math.exp((pitch + center) * gUmt.LOG2);
-                startTime = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].starttime * tempoScalar;
+                startTime = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].starttime * tempoScalar;
                 umtTestQueUpANoteSineWave(fromMoment, frequency, startTime, duration, amplitude, instSpecificParams);
             }
         }
@@ -1006,7 +1051,7 @@ function umtExecPlayRawScore() {
 
 function umtGetScale15ChromaticTT() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 25, dnom: 18}, {num:36, dnom: 25}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 9, dnom: 5}, {num: 15, dnom: 8} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 25, dnom: 18}, {num: 36, dnom: 25}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 9, dnom: 5}, {num: 15, dnom: 8} ];
     return scale;
 }
 
@@ -1240,7 +1285,7 @@ function umtGetScale7FreygishPhrygianDominant() {
 
 function umtGetScale7UkranianDorian() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 25, dnom:18}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 9, dnom: 5} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 25, dnom: 18}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 9, dnom: 5} ];
     return scale;
 }
 
@@ -1564,8 +1609,9 @@ function umtFindMostHarmonicNote(pitch, scale, listOfNotesAlreadyPlaying, chord)
 
 function umtSanitTestEntireScore(lpnum, doOutput, chord) {
     "use strict";
-    var parts, currentTime, beyondAll, stillGoing, bustOutCount, playingNow, pncount, vcnum, notenum, partlen, i, x, y, result, xnum, ynum, xdnom, ydnom, xrest, yrest, descrip;
+    var parts, tab, currentTime, beyondAll, stillGoing, bustOutCount, playingNow, pncount, vcnum, notenum, partlen, i, x, y, result, xnum, ynum, xdnom, ydnom, xrest, yrest, descrip;
     parts = gUmt.loop[lpnum].score.parts;
+    tab = gUmt.UIParams.currentTab;
     currentTime = 0;
     stillGoing = true;
     bustOutCount = 0;
@@ -1578,11 +1624,11 @@ function umtSanitTestEntireScore(lpnum, doOutput, chord) {
         playingNow = [];
         pncount = 0;
         for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
-            partlen = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].cursor;
+            partlen = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].cursor;
             for (i = 0; i < partlen; i = i + 1) {
-                if (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[i].harmDnom >= 0) {
-                    if (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[i].starttime <= currentTime) {
-                        if (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[i].starttime + gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[i].duration > currentTime) {
+                if (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[i].harmDnom >= 0) {
+                    if (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[i].starttime <= currentTime) {
+                        if (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[i].starttime + gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[i].duration > currentTime) {
                             playingNow[pncount] = {voice: vcnum, note: i};
                             pncount = pncount + 1;
                             beyondAll = false;
@@ -1599,8 +1645,8 @@ function umtSanitTestEntireScore(lpnum, doOutput, chord) {
             for (i = 0; i < pncount; i = i + 1) {
                 vcnum = playingNow[i].voice;
                 notenum = playingNow[i].note;
-                xnum = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[notenum].harmNum;
-                xdnom = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[notenum].harmDnom;
+                xnum = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[notenum].harmNum;
+                xdnom = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[notenum].harmDnom;
                 descrip = descrip + ' and ' + xnum + ' / ' + xdnom;
             }
         }
@@ -1608,14 +1654,14 @@ function umtSanitTestEntireScore(lpnum, doOutput, chord) {
             for (y = x + 1; y < pncount; y = y + 1) {
                 vcnum = playingNow[x].voice;
                 notenum = playingNow[x].note;
-                xnum = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[notenum].harmNum;
-                xdnom = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[notenum].harmDnom;
-                xrest = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[notenum].rest;
+                xnum = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[notenum].harmNum;
+                xdnom = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[notenum].harmDnom;
+                xrest = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[notenum].rest;
                 vcnum = playingNow[y].voice;
                 notenum = playingNow[y].note;
-                ynum = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[notenum].harmNum;
-                ydnom = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[notenum].harmDnom;
-                yrest = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[notenum].rest;
+                ynum = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[notenum].harmNum;
+                ydnom = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[notenum].harmDnom;
+                yrest = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[notenum].rest;
                 if ((xrest === false) && (yrest === false)) {
                     result = umtIsConsOrderInd(xnum, xdnom, ynum, ydnom, chord);
                     if (result === false) {
@@ -1723,17 +1769,18 @@ function umtGetScaleByAbbrv(scaleAbbrv) {
 
 function umtHarmonizeScore(lpnum) {
     "use strict";
-    var theScale, chord, parts, vcnum, notecount, i, currentTime, currentPosition, timeRemaining, offEnd, stillGoing, maxFound, cycleCount, stillUnfoundMaxes, cycleUnfoundCount, maxIdx, poz, listOfNotesAlreadyPlaying, harmonizedInfo, minIdx, dist, lonapCursr;
+    var theScale, chord, parts, tab, vcnum, notecount, i, currentTime, currentPosition, timeRemaining, offEnd, stillGoing, maxFound, cycleCount, stillUnfoundMaxes, cycleUnfoundCount, maxIdx, poz, listOfNotesAlreadyPlaying, harmonizedInfo, minIdx, dist, lonapCursr;
     theScale = umtAddFloatsToScale(umtGetScaleByAbbrv(gUmt.loop[lpnum].score.scale));
     chord = gUmt.loop[lpnum].score.chord;
     // clear old data
     parts = gUmt.loop[lpnum].score.parts;
+    tab = gUmt.UIParams.currentTab;
     for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
-        notecount = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].cursor;
+        notecount = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].cursor;
         for (i = 0; i < notecount; i = i + 1) {
-            gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[i].harmOctave = -1;
-            gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[i].harmNum = -1;
-            gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[i].harmDnom = -1;
+            gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[i].harmOctave = -1;
+            gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[i].harmNum = -1;
+            gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[i].harmDnom = -1;
         }
     }
     // and off we go
@@ -1760,11 +1807,11 @@ function umtHarmonizeScore(lpnum) {
     }
     timeRemaining = [];
     for (i = 0; i < parts; i = i + 1) {
-        timeRemaining[i] = gUmt.loop[lpnum].score.songTab[0].voice[i].notes[currentPosition[i]].duration;
+        timeRemaining[i] = gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].duration;
     }
     offEnd = [];
     for (i = 0; i < parts; i = i + 1) {
-        if (currentPosition[i] === gUmt.loop[lpnum].score.songTab[0].voice[i].cursor) {
+        if (currentPosition[i] === gUmt.loop[lpnum].score.songTab[tab].voice[i].cursor) {
             offEnd[i] = true;
         } else {
             offEnd[i] = false;
@@ -1824,45 +1871,49 @@ function umtHarmonizeScore(lpnum) {
             maxFound[maxIdx] = true;
             // here is the actual "harmonization" code -- everything else is
             // just looping
-            if (gUmt.loop[lpnum].score.songTab[0].voice[maxIdx].notes[currentPosition[maxIdx]].harmDnom === -1) {
+            if (gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[currentPosition[maxIdx]].harmDnom === -1) {
                 poz = currentPosition[maxIdx];
                 // find all other notes that are turned on at the same time
                 listOfNotesAlreadyPlaying = [];
                 lonapCursr = 0;
                 for (i = 0; i < parts; i = i + 1) {
-                    if (currentPosition[i] < gUmt.loop[lpnum].score.songTab[0].voice[i].cursor) { // check that we're not off the end
-                        if (gUmt.loop[lpnum].score.songTab[0].voice[i].notes[currentPosition[i]].harmDnom !== -1) {
+                    if (currentPosition[i] < gUmt.loop[lpnum].score.songTab[tab].voice[i].cursor) { // check that we're not off the end
+                        if (gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].harmDnom !== -1) {
                             // sanity check 2
-                            if (currentTime < gUmt.loop[lpnum].score.songTab[0].voice[i].notes[currentPosition[i]].starttime) {
+                            if (currentTime < gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].starttime) {
                                 jsabort('START TIME IS AFTER CURRENT TIME! OH NO!');
                             }
-                            if (currentTime >= (gUmt.loop[lpnum].score.songTab[0].voice[i].notes[currentPosition[i]].starttime + gUmt.loop[lpnum].score.songTab[0].voice[i].notes[currentPosition[i]].duration)) {
+                            if (currentTime >= (gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].starttime + gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].duration)) {
                                 jsabort('START TIME + DURATION IS BEFORE CURRENT TIME!! OH NO!!');
                             }
-                            if (gUmt.loop[lpnum].score.songTab[0].voice[i].percussion === false) {
-                                if (gUmt.loop[lpnum].score.songTab[0].voice[i].notes[currentPosition[i]].rest === false) {
-                                    listOfNotesAlreadyPlaying[lonapCursr] = {octave: gUmt.loop[lpnum].score.songTab[0].voice[i].notes[currentPosition[i]].harmOctave, num: gUmt.loop[lpnum].score.songTab[0].voice[i].notes[currentPosition[i]].harmNum, dnom: gUmt.loop[lpnum].score.songTab[0].voice[i].notes[currentPosition[i]].harmDnom};
+                            if (gUmt.loop[lpnum].score.songTab[tab].voice[i].percussion === false) {
+                                if (gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].rest === false) {
+                                    listOfNotesAlreadyPlaying[lonapCursr] = {
+                                        octave: gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].harmOctave,
+                                        num: gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].harmNum,
+                                        dnom: gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].harmDnom
+                                    };
                                     lonapCursr = lonapCursr + 1;
                                 }
                             }
                         }
                     }
                 }
-                harmonizedInfo = umtFindMostHarmonicNote(gUmt.loop[lpnum].score.songTab[0].voice[maxIdx].notes[poz].pitch, theScale, listOfNotesAlreadyPlaying, chord);
+                harmonizedInfo = umtFindMostHarmonicNote(gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[poz].pitch, theScale, listOfNotesAlreadyPlaying, chord);
                 // sanity check 1
-                if (currentTime !== gUmt.loop[lpnum].score.songTab[0].voice[maxIdx].notes[currentPosition[maxIdx]].starttime) {
+                if (currentTime !== gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[currentPosition[maxIdx]].starttime) {
                     cx('START TIMES DO NOT MATCH! OH NO!');
                     cx('currentTime is ' + currentTime);
-                    cx('gUmt.loop[lpnum].score.songTab[0].voice[maxIdx].notes[currentPosition[maxIdx]].starttime is ' + gUmt.loop[lpnum].score.songTab[0].voice[maxIdx].notes[currentPosition[maxIdx]].starttime);
+                    cx('gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[currentPosition[maxIdx]].starttime is ' + gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[currentPosition[maxIdx]].starttime);
                     cx('lpnum is ' + lpnum);
                     cx('maxIdx is ' + maxIdx);
                     cx('currentPosition[maxIdx] is ' + currentPosition[maxIdx]);
                     console.log('gUmt', gUmt);
                     jsabort('START TIMES DO NOT MATCH! OH NO!');
                 }
-                gUmt.loop[lpnum].score.songTab[0].voice[maxIdx].notes[currentPosition[maxIdx]].harmOctave = harmonizedInfo.octave;
-                gUmt.loop[lpnum].score.songTab[0].voice[maxIdx].notes[currentPosition[maxIdx]].harmNum = harmonizedInfo.num;
-                gUmt.loop[lpnum].score.songTab[0].voice[maxIdx].notes[currentPosition[maxIdx]].harmDnom = harmonizedInfo.dnom;
+                gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[currentPosition[maxIdx]].harmOctave = harmonizedInfo.octave;
+                gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[currentPosition[maxIdx]].harmNum = harmonizedInfo.num;
+                gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[currentPosition[maxIdx]].harmDnom = harmonizedInfo.dnom;
                 // umtSanitTestEntireScore(lpnum, false);
             }
             // end of actual "harmonization" code"
@@ -1901,16 +1952,16 @@ function umtHarmonizeScore(lpnum) {
             if (offEnd[i] === false) {
                 if (timeRemaining[i] === 0) {
                     currentPosition[i] = currentPosition[i] + 1;
-                    if (currentPosition[i] === gUmt.loop[lpnum].score.songTab[0].voice[i].cursor) {
+                    if (currentPosition[i] === gUmt.loop[lpnum].score.songTab[tab].voice[i].cursor) {
                         offEnd[i] = true;
                     } else {
-                        timeRemaining[i] = gUmt.loop[lpnum].score.songTab[0].voice[i].notes[currentPosition[i]].duration;
+                        timeRemaining[i] = gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].duration;
                     }
                 }
             }
         }
         for (i = 0; i < parts; i = i + 1) {
-            if (currentPosition[i] === gUmt.loop[lpnum].score.songTab[0].voice[i].cursor) {
+            if (currentPosition[i] === gUmt.loop[lpnum].score.songTab[tab].voice[i].cursor) {
                 offEnd[i] = true;
             }
         }
@@ -1932,25 +1983,26 @@ function umtExecHarmonizeScore() {
 
 function umtPlayHarmonized(lpnum) {
     "use strict";
-    var fromMoment, center, tempoScalar, numVoices, voicenum, notenum, duration, amplitude, frequency, startTime, instSpecificParams, harmonizedOctave, harmonizedNum, harmonizedDnom, instrument;
+    var tab, fromMoment, center, tempoScalar, numVoices, voicenum, notenum, duration, amplitude, frequency, startTime, instSpecificParams, harmonizedOctave, harmonizedNum, harmonizedDnom, instrument;
+    tab = gUmt.UIParams.currentTab;
     fromMoment = gUmt.globalCtx.currentTime + 1;
     center = gUmt.loop[lpnum].score.centernoteLog;
     tempoScalar = 60 / gUmt.loop[lpnum].score.tempo;
     numVoices = gUmt.loop[lpnum].score.parts;
     for (voicenum = 0; voicenum < numVoices; voicenum = voicenum + 1) {
-        for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[0].voice[voicenum].cursor; notenum = notenum + 1) {
-            if (gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].rest === false) {
-                harmonizedOctave = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].harmOctave;
-                harmonizedNum = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].harmNum;
-                harmonizedDnom = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].harmDnom;
-                duration = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].duration * tempoScalar;
-                amplitude = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].amplitude;
+        for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].cursor; notenum = notenum + 1) {
+            if (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].rest === false) {
+                harmonizedOctave = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].harmOctave;
+                harmonizedNum = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].harmNum;
+                harmonizedDnom = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].harmDnom;
+                duration = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].duration * tempoScalar;
+                amplitude = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].amplitude;
                 amplitude = amplitude / numVoices;
-                instSpecificParams = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].instParams;
+                instSpecificParams = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].instParams;
                 frequency = Math.exp((harmonizedOctave + center) * gUmt.LOG2);
                 frequency = frequency * (harmonizedNum / harmonizedDnom);
-                startTime = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].starttime * tempoScalar;
-                instrument = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].instrument;
+                startTime = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].starttime * tempoScalar;
+                instrument = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].instrument;
                 cx("(1155) instrument: " + instrument);
                 if (instrument === 0) {
                     umtTestQueUpANoteSineWave(fromMoment, frequency, startTime, duration, amplitude, instSpecificParams);
@@ -1964,20 +2016,21 @@ function umtPlayHarmonized(lpnum) {
 
 function umtDumpHarmonized(lpnum) {
     "use strict";
-    var numVoices, voicenum, notenum, duration, amplitude, startTime, harmonizedOctave, harmonizedNum, harmonizedDnom;
+    var tab, numVoices, voicenum, notenum, duration, amplitude, startTime, harmonizedOctave, harmonizedNum, harmonizedDnom;
+    tab = gUmt.UIParams.currentTab;
     numVoices = gUmt.loop[lpnum].score.parts;
     cx('numVoices is ' + numVoices);
     for (voicenum = 0; voicenum < numVoices; voicenum = voicenum + 1) {
         cx('  voicenum is ' + voicenum);
-        for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[0].voice[voicenum].cursor; notenum = notenum + 1) {
-            harmonizedOctave = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].harmOctave;
-            harmonizedNum = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].harmNum;
-            harmonizedDnom = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].harmDnom;
-            duration = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].duration;
-            amplitude = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].amplitude;
+        for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].cursor; notenum = notenum + 1) {
+            harmonizedOctave = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].harmOctave;
+            harmonizedNum = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].harmNum;
+            harmonizedDnom = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].harmDnom;
+            duration = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].duration;
+            amplitude = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].amplitude;
             amplitude = amplitude / numVoices;
-            startTime = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].starttime;
-            if (gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].rest) {
+            startTime = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].starttime;
+            if (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].rest) {
                 cx('    note ' + notenum + ', start ' + startTime + ', duration ' + duration + ', rest');
             } else {
                 cx('    note ' + notenum + ', start ' + startTime + ', duration ' + duration + ', octave ' + harmonizedOctave + ', num ' + harmonizedNum + ', dnom ' + harmonizedDnom + ', amplitude ' + amplitude);
@@ -2073,19 +2126,20 @@ function umtGenerateRhythm(randomObj, minSize, chunkSize, totalLength) {
 
 function umtAddSymmetryBaseToVoice(lpnum, vcnum, minSize, chunkSize, totalLength, centerOctave, restyness, noteDistance, ampVariation, volume, instrumentName, instrumentParamNames, instSpecificParams) {
     "use strict";
-    var rhythm, lenRhy, idx, duration, pitch, amplitude, volscalar, instParamCurrent, instParCount, instParamIdx, ourParamName, paramvalue;
+    var tab, rhythm, lenRhy, idx, duration, pitch, amplitude, volscalar, instParamCurrent, instParCount, instParamIdx, ourParamName, paramvalue;
+    tab = gUmt.UIParams.currentTab;
     volscalar = 2.7;
     volume = Math.exp(volume * volscalar) / Math.exp(volscalar); // this is done to "logarithmize" the volume slider
-    rhythm = umtGenerateRhythm(gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randRhythm, minSize, chunkSize, totalLength);
+    rhythm = umtGenerateRhythm(gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].randRhythm, minSize, chunkSize, totalLength);
     lenRhy = rhythm.length;
     for (idx = 0; idx < lenRhy; idx = idx + 1) {
         duration = rhythm[idx];
-        pitch = (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randPitch.genrandReal2() * (2 * noteDistance)) - noteDistance;
-        if (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randRests.genrandReal2() < restyness) {
+        pitch = (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].randPitch.genrandReal2() * (2 * noteDistance)) - noteDistance;
+        if (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].randRests.genrandReal2() < restyness) {
             umtAddNote(lpnum, vcnum, true, centerOctave, duration, 1, null);
         } else {
-            // amplitude = (1.0 - (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randAmp.genrandReal2() * ampVariation)) * volume;
-            amplitude = (1.0 - (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randAmp.genrandReal2() * ampVariation) * 0.9) * volume;
+            // amplitude = (1.0 - (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].randAmp.genrandReal2() * ampVariation)) * volume;
+            amplitude = (1.0 - (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].randAmp.genrandReal2() * ampVariation) * 0.9) * volume;
             // if (idx === 0) {
                 // pitch = Math.floor(pitch + 0.5);
             // }
@@ -2098,7 +2152,7 @@ function umtAddSymmetryBaseToVoice(lpnum, vcnum, minSize, chunkSize, totalLength
                     ourParamName = instrumentParamNames[instParamIdx].name;
                     if (instSpecificParams.hasOwnProperty(instrumentName + "_" + ourParamName + "_patterns")) {
                         paramvalue = instSpecificParams[instrumentName + "_" + ourParamName + "_patterns"];
-                        instParamCurrent[ourParamName] = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randInstPat.genrandReal2() * paramvalue;
+                        instParamCurrent[ourParamName] = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].randInstPat.genrandReal2() * paramvalue;
                         instParCount = instParCount + 1;
                     }
                 }
@@ -2115,7 +2169,8 @@ var umtExecReSeed;
 
 function umtSchedulePlayOfSegment() {
     "use strict";
-    var lpnum, currentTime, compositonlag, windowStart, windowStop, loopUnitLen, loopLen, fromMoment, center, tempoScalar, numVoices, voicenum, notenum, duration, amplitude, frequency, adjustedStartTime, instSpecificParams, harmonizedOctave, harmonizedNum, harmonizedDnom, anythingPlayed, masterVolScaler, instrument, regularTime, timeInMs, interval;
+    var tab, lpnum, currentTime, compositonlag, windowStart, windowStop, loopUnitLen, loopLen, fromMoment, center, tempoScalar, numVoices, voicenum, notenum, duration, amplitude, frequency, adjustedStartTime, instSpecificParams, harmonizedOctave, harmonizedNum, harmonizedDnom, anythingPlayed, masterVolScaler, instrument, regularTime, timeInMs, interval;
+    tab = gUmt.UIParams.currentTab;
     lpnum = gUmt.currentlyPlayingLoop;
     if (gUmt.loop[lpnum].score.parts === 0) {
         return;
@@ -2133,35 +2188,35 @@ function umtSchedulePlayOfSegment() {
     anythingPlayed = false;
     masterVolScaler = gUmt.UIParams.mastervol; // Math.exp((gUmt.UIParams.mastervol - 1.0) * 2.0);
     if (gUmt.loop[gUmt.currentlyPlayingLoop].score.parts > 0) {
-        loopUnitLen = gUmt.loop[lpnum].score.songTab[0].voice[0].nextStart;
+        loopUnitLen = gUmt.loop[lpnum].score.songTab[tab].voice[0].nextStart;
         tempoScalar = 60 / gUmt.loop[lpnum].score.tempo;
         loopLen = loopUnitLen * tempoScalar;
         fromMoment = Math.floor(windowStart / loopLen) * loopLen;
         center = gUmt.loop[lpnum].score.centernoteLog;
         numVoices = gUmt.loop[lpnum].score.parts;
         for (voicenum = 0; voicenum < numVoices; voicenum = voicenum + 1) {
-            for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[0].voice[voicenum].cursor; notenum = notenum + 1) {
-                adjustedStartTime = (gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].starttime * tempoScalar) + fromMoment;
+            for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].cursor; notenum = notenum + 1) {
+                adjustedStartTime = (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].starttime * tempoScalar) + fromMoment;
                 if (adjustedStartTime < windowStart) {
                     adjustedStartTime = adjustedStartTime + loopLen;
                 }
                 if (adjustedStartTime < windowStop) {
-                    if (gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].rest === false) {
-                        harmonizedOctave = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].harmOctave;
-                        harmonizedNum = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].harmNum;
-                        harmonizedDnom = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].harmDnom;
-                        duration = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].duration * tempoScalar;
-                        amplitude = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].amplitude;
+                    if (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].rest === false) {
+                        harmonizedOctave = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].harmOctave;
+                        harmonizedNum = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].harmNum;
+                        harmonizedDnom = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].harmDnom;
+                        duration = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].duration * tempoScalar;
+                        amplitude = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].amplitude;
                         amplitude = amplitude * Math.exp((amplitude - 1.0) * 2.0);
                         if (numVoices === 1) {
                             amplitude = amplitude / 1.4142135623730951;
                         } else {
                             amplitude = amplitude / numVoices;
                         }
-                        instSpecificParams = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].notes[notenum].instParams;
+                        instSpecificParams = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].instParams;
                         frequency = Math.exp((harmonizedOctave + center) * gUmt.LOG2);
                         frequency = frequency * (harmonizedNum / harmonizedDnom);
-                        instrument = gUmt.loop[lpnum].score.songTab[0].voice[voicenum].instrument;
+                        instrument = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].instrument;
                         amplitude = amplitude * masterVolScaler;
                         gUmt.instrumentBank[instrument].queUpANote(adjustedStartTime, frequency, duration, amplitude, instSpecificParams);
                         anythingPlayed = true;
@@ -2244,39 +2299,40 @@ function umtTransposeInstrumentSpecificParameters(instParams, transposeParams) {
 
 function umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose) {
     "use strict";
-    var segmentStart, ix, segmentEnd, tsRhCursor, tsPiCursor, minPitch, maxPitch, thisPitch, midpointPitch, rhythmCursor, pitchCursor, terminationCursor, rest, duration, amplitude, instParams, instNewParams, percent, bevelAmount, segmentLen, rangeTestStart, rangeTestEnd, rangeTestCursor, rangePitch, rangeMin, rangeMax, rangeScalar, rangeTranspose;
+    var tab, segmentStart, ix, segmentEnd, tsRhCursor, tsPiCursor, minPitch, maxPitch, thisPitch, midpointPitch, rhythmCursor, pitchCursor, terminationCursor, rest, duration, amplitude, instParams, instNewParams, percent, bevelAmount, segmentLen, rangeTestStart, rangeTestEnd, rangeTestCursor, rangePitch, rangeMin, rangeMax, rangeScalar, rangeTranspose;
+    tab = gUmt.UIParams.currentTab;
     // first find the start and end of the segment, and the starting point for the rhythm cursor (tsRhCursor) and pitch cursor (tsPiCursor) which can be different if there is rhythm or pitch scrolling
     segmentStart = -1;
     tsRhCursor = -1; // ts == "time scroll"; rh == "rhythm", pi == "pitch"
     tsPiCursor = -1;
-    for (ix = 0; ix < gUmt.loop[lpnum].score.songTab[0].voice[vcnum].cursor; ix = ix + 1) {
+    for (ix = 0; ix < gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].cursor; ix = ix + 1) {
         // yes, we search the whole voice -- this is ok because loops are short.
         // If the sytem is ever used for long compositions, this will need to
         // be replaced with interval halving
         if (segmentStart === -1) {
-            if (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[ix].starttime >= startTime) {
+            if (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[ix].starttime >= startTime) {
                 segmentStart = ix;
-                maxPitch = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[ix].pitch;
+                maxPitch = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[ix].pitch;
                 minPitch = maxPitch;
             }
         }
-        if (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[ix].starttime < endTime) {
+        if (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[ix].starttime < endTime) {
             segmentEnd = ix;
         }
         if (tsRhCursor === -1) {
-            if (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[ix].starttime >= (startTime + timeRhythmScroll)) {
+            if (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[ix].starttime >= (startTime + timeRhythmScroll)) {
                 tsRhCursor = ix;
             }
         }
         if (tsPiCursor === -1) {
-            if (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[ix].starttime >= (startTime + timePitchScroll)) {
+            if (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[ix].starttime >= (startTime + timePitchScroll)) {
                 tsPiCursor = ix;
             }
         }
-        if ((gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[ix].starttime >= startTime) && (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[ix].starttime < endTime)) {
+        if ((gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[ix].starttime >= startTime) && (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[ix].starttime < endTime)) {
             // if notes are "playing" get min and max
             // we need min and max for scrolling effect
-            thisPitch = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[ix].pitch;
+            thisPitch = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[ix].pitch;
             if (thisPitch > maxPitch) {
                 maxPitch = thisPitch;
             }
@@ -2303,14 +2359,14 @@ function umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, 
         pitchCursor = segmentEnd - (tsPiCursor - segmentStart);
     }
     terminationCursor = segmentStart;
-    rangeTestStart = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].cursor;
+    rangeTestStart = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].cursor;
     // execute the copy+transform
     while (terminationCursor <= segmentEnd) {
-        rest = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[pitchCursor].rest;
-        thisPitch = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[pitchCursor].pitch;
-        duration = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[rhythmCursor].duration;
-        amplitude = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[rhythmCursor].amplitude;
-        instParams = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[rhythmCursor].instParams;
+        rest = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[pitchCursor].rest;
+        thisPitch = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[pitchCursor].pitch;
+        duration = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[rhythmCursor].duration;
+        amplitude = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[rhythmCursor].amplitude;
+        instParams = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[rhythmCursor].instParams;
         // actual pitch scroll handles "vertical" scrolling
         if (actualPitchScroll !== 0) {
             thisPitch = thisPitch    + actualPitchScroll;
@@ -2330,7 +2386,7 @@ function umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, 
         // bevel the front end would be redundant because it would just be
         // subtracted from transpose
         if (pitchBevel !== 0) {
-            percent = (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[terminationCursor].starttime - startTime) / (endTime - startTime);
+            percent = (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[terminationCursor].starttime - startTime) / (endTime - startTime);
             bevelAmount = pitchBevel * percent;
             thisPitch = thisPitch + bevelAmount;
         }
@@ -2357,11 +2413,11 @@ function umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, 
     }
     // see if we went out of range, and if so, transpose in direction of proper
     // range (allowing for slight overshoot)
-    rangeTestEnd = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].cursor;
-    minPitch = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[rangeTestStart].pitch;
+    rangeTestEnd = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].cursor;
+    minPitch = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[rangeTestStart].pitch;
     maxPitch = minPitch;
     for (rangeTestCursor = rangeTestStart; rangeTestCursor < rangeTestEnd; rangeTestCursor = rangeTestCursor + 1) {
-        rangePitch = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[rangeTestCursor].pitch;
+        rangePitch = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[rangeTestCursor].pitch;
         if (rangePitch < minPitch) {
             minPitch = rangePitch;
         }
@@ -2369,27 +2425,27 @@ function umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, 
             maxPitch = rangePitch;
         }
     }
-    rangeMin = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].rangeBottom;
-    rangeMax = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].rangeTop;
+    rangeMin = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].rangeBottom;
+    rangeMax = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].rangeTop;
     if ((minPitch < rangeMin) && (maxPitch > rangeMax)) {
         jsabort('exceeded both min and max for range');
         // exceeded both min and max -- need to scale and transpose
         rangeScalar = (rangeMax - rangeMin) / (maxPitch - minPitch);
         rangeTranspose = ((maxPitch - minPitch) / 2) - ((rangeMax - rangeMin) / 2);
         for (ix = rangeTestStart; ix < rangeTestEnd; ix = ix + 1) {
-            gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[ix].pitch = (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[ix].pitch * rangeScalar) - rangeTranspose;
+            gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[ix].pitch = (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[ix].pitch * rangeScalar) - rangeTranspose;
         }
     } else {
         if (minPitch < rangeMin) {
             rangeTranspose = (rangeMin - minPitch) / 2;
             for (ix = rangeTestStart; ix < rangeTestEnd; ix = ix + 1) {
-                gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[ix].pitch = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[ix].pitch + rangeTranspose;
+                gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[ix].pitch = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[ix].pitch + rangeTranspose;
             }
         } else {
             if (maxPitch > rangeMax) {
                 rangeTranspose = (maxPitch - rangeMax) / 2;
                 for (ix = rangeTestStart; ix < rangeTestEnd; ix = ix + 1) {
-                    gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[ix].pitch = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[ix].pitch - rangeTranspose;
+                    gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[ix].pitch = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[ix].pitch - rangeTranspose;
                 }
             }
         }
@@ -2410,12 +2466,13 @@ function umtTestResetCopytransTestSequence() {
 
 function umtTestCheckCopytransPitches(pitchList, startingIndex, failMessage) {
     "use strict";
-    var x, pt;
+    var tab, x, pt;
+    tab = gUmt.UIParams.currentTab;
     cx("checking pitches/" + failMessage);
     x = startingIndex;
     for (pt in pitchList) {
         if (pitchList.hasOwnProperty(pt)) {
-            if (gUmt.loop[0].score.songTab[0].voice[0].notes[x].pitch !== pitchList[pt]) {
+            if (gUmt.loop[0].score.songTab[tab].voice[0].notes[x].pitch !== pitchList[pt]) {
                 jsabort("test failed: pitches/" + failMessage);
             }
             x = x + 1;
@@ -2425,12 +2482,13 @@ function umtTestCheckCopytransPitches(pitchList, startingIndex, failMessage) {
 
 function umtTestCheckCopytransDurations(durationList, startingIndex, failMessage) {
     "use strict";
-    var x, dr;
+    var tab, x, dr;
+    tab = gUmt.UIParams.currentTab;
     cx("checking durations/" + failMessage);
     x = startingIndex;
     for (dr in durationList) {
         if (durationList.hasOwnProperty(dr)) {
-            if (gUmt.loop[0].score.songTab[0].voice[0].notes[x].duration !== durationList[dr]) {
+            if (gUmt.loop[0].score.songTab[tab].voice[0].notes[x].duration !== durationList[dr]) {
                 jsabort("test failed: durations/" + failMessage);
             }
             x = x + 1;
@@ -2751,13 +2809,14 @@ function umtTestSetupCopyTransTestSection() {
 
 function umtExecTestCopyTrans(lpnum) {
     "use strict";
-    var parts, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose, csrPos, csrStart, duration;
+    var parts, tab, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose, csrPos, csrStart, duration;
     parts = gUmt.loop[lpnum].score.parts;
+    tab = gUmt.UIParams.currentTab;
     for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
         startTime = 0;
-        csrPos = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].cursor;
-        csrStart = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[csrPos - 1].starttime;
-        duration = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[csrPos - 1].duration;
+        csrPos = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].cursor;
+        csrStart = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[csrPos - 1].starttime;
+        duration = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[csrPos - 1].duration;
         endTime = csrStart + duration;
         rhythmDirection = 1;
         pitchesDirection = 1;
@@ -2769,16 +2828,16 @@ function umtExecTestCopyTrans(lpnum) {
         pitchTranspose = 0.5;
         instrumentTranspose = 0;
         umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
-        csrPos = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].cursor;
-        csrStart = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[csrPos - 1].starttime;
-        duration = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[csrPos - 1].duration;
+        csrPos = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].cursor;
+        csrStart = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[csrPos - 1].starttime;
+        duration = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[csrPos - 1].duration;
         endTime = csrStart + duration;
         pitchTranspose = 0.7;
         instrumentTranspose = 0;
         umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
-        csrPos = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].cursor;
-        csrStart = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[csrPos - 1].starttime;
-        duration = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[csrPos - 1].duration;
+        csrPos = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].cursor;
+        csrStart = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[csrPos - 1].starttime;
+        duration = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[csrPos - 1].duration;
         endTime = csrStart + duration;
         pitchTranspose = -1.33;
         pitchScale = 2.0;
@@ -2800,14 +2859,15 @@ function umtUIIsPartInUI(ptnum) {
 
 function umtFigureOutInstrumentParamTranspositions(lpnum, vcnum, instrumentName, instParamNames, instSpecificParams) {
     "use strict";
-    var rv, idx, loopParamName, value, adjustment;
+    var rv, tab, idx, loopParamName, value, adjustment;
     // here we change instrument name + parameter name + "variants" into a single parameter name which is the adjustment for that instrument parameter for this iteration of the symmetry cycle
     rv = {};
+    tab = gUmt.UIParams.currentTab;
     for (idx in instParamNames) {
         if (instParamNames.hasOwnProperty(idx)) {
             loopParamName = instParamNames[idx].name;
             value = instSpecificParams[instrumentName + "_" + loopParamName + "_variants"];
-            adjustment = (gUmt.loop[lpnum].score.songTab[0].voice[vcnum].randInstSymVars.genrandReal2() * value) - (value / 2.0);
+            adjustment = (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].randInstSymVars.genrandReal2() * value) - (value / 2.0);
             rv[loopParamName] = adjustment;
             rv[loopParamName + "_wraparound"] = instParamNames[idx].wraparound;
         }
@@ -2817,39 +2877,40 @@ function umtFigureOutInstrumentParamTranspositions(lpnum, vcnum, instrumentName,
 
 function umtCompose(lpnum) {
     "use strict";
-    var compositionVoice, UIVoice, songNumber, octave, rangeMin, rangeMax, instrumentName, percussion, minSize, chunkSize, totalLength, centerOctave, restyness, ampVariation, volume, noteDistance, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, symmetryPattern, csrPos, csrStart, duration, loopDuration, vcnum, instParamNames, instSpecificParams, instrumentTranspose;
+    var tab, compositionVoice, UIVoice, songNumber, octave, rangeMin, rangeMax, instrumentName, percussion, minSize, chunkSize, totalLength, centerOctave, restyness, ampVariation, volume, noteDistance, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, symmetryPattern, csrPos, csrStart, duration, loopDuration, vcnum, instParamNames, instSpecificParams, instrumentTranspose;
     if (gUmt.idemAddingVoice) {
         jsabort("umtCompose called during add voice");
     }
-    umtClearLoop(lpnum, gUmt.UIParams.tempo, gUmt.UIParams.songTab[0].centernote, gUmt.UIParams.songTab[0].scale, gUmt.UIParams.songTab[0].chord);
+    tab = gUmt.UIParams.currentTab;
+    umtClearLoop(lpnum, gUmt.UIParams.tempo, gUmt.UIParams.songTab[tab].centernote, gUmt.UIParams.songTab[tab].scale, gUmt.UIParams.songTab[tab].chord);
     compositionVoice = 0;
     UIVoice = 0;
     loopDuration = gUmt.UIParams.loopDuration;
     while (umtUIIsPartInUI(UIVoice)) {
-        if (gUmt.UIParams.songTab[0].voice[UIVoice].playing) {
-            songNumber = gUmt.UIParams.songTab[0].voice[UIVoice].songNumber;
-            octave = gUmt.UIParams.songTab[0].voice[UIVoice].octave;
+        if (gUmt.UIParams.songTab[tab].voice[UIVoice].playing) {
+            songNumber = gUmt.UIParams.songTab[tab].voice[UIVoice].songNumber;
+            octave = gUmt.UIParams.songTab[tab].voice[UIVoice].octave;
             rangeMin = octave - 1.25;
             rangeMax = octave + 1.25;
-            instrumentName = gUmt.UIParams.songTab[0].voice[UIVoice].instrument;
+            instrumentName = gUmt.UIParams.songTab[tab].voice[UIVoice].instrument;
             percussion = gUmt.instrumentParams[instrumentName].percussion;
             umtAddVoice(lpnum, compositionVoice, songNumber, rangeMin, rangeMax, instrumentName, percussion);
-            minSize = gUmt.UIParams.songTab[0].voice[UIVoice].minNote;
-            chunkSize = gUmt.UIParams.songTab[0].voice[UIVoice].chunkSize;
-            totalLength = gUmt.UIParams.songTab[0].voice[UIVoice].frameSize;
+            minSize = gUmt.UIParams.songTab[tab].voice[UIVoice].minNote;
+            chunkSize = gUmt.UIParams.songTab[tab].voice[UIVoice].chunkSize;
+            totalLength = gUmt.UIParams.songTab[tab].voice[UIVoice].frameSize;
             centerOctave = octave;
-            restyness = gUmt.UIParams.songTab[0].voice[UIVoice].restyness;
-            ampVariation = gUmt.UIParams.songTab[0].voice[UIVoice].ampVariation;
-            noteDistance = gUmt.UIParams.songTab[0].voice[UIVoice].noteDistance;
-            volume = gUmt.UIParams.songTab[0].voice[UIVoice].volume;
+            restyness = gUmt.UIParams.songTab[tab].voice[UIVoice].restyness;
+            ampVariation = gUmt.UIParams.songTab[tab].voice[UIVoice].ampVariation;
+            noteDistance = gUmt.UIParams.songTab[tab].voice[UIVoice].noteDistance;
+            volume = gUmt.UIParams.songTab[tab].voice[UIVoice].volume;
             instParamNames = gUmt.instrumentParams[instrumentName].parameters;
-            instSpecificParams = gUmt.UIParams.songTab[0].voice[UIVoice].instSpecificParams;
+            instSpecificParams = gUmt.UIParams.songTab[tab].voice[UIVoice].instSpecificParams;
             umtAddSymmetryBaseToVoice(lpnum, compositionVoice, minSize, chunkSize, totalLength, centerOctave, restyness, noteDistance, ampVariation, volume, instrumentName, instParamNames, instSpecificParams);
             // we have voices and base rhythms; now need symmetry
             startTime = 0;
-            csrPos = gUmt.loop[lpnum].score.songTab[0].voice[compositionVoice].cursor;
-            csrStart = gUmt.loop[lpnum].score.songTab[0].voice[compositionVoice].notes[csrPos - 1].starttime; // can eliminate intermediaries
-            duration = gUmt.loop[lpnum].score.songTab[0].voice[compositionVoice].notes[csrPos - 1].duration;
+            csrPos = gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].cursor;
+            csrStart = gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].notes[csrPos - 1].starttime; // can eliminate intermediaries
+            duration = gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].notes[csrPos - 1].duration;
             endTime = csrStart + duration;
             while (endTime < loopDuration) {
                 // set default parameters, then modify defaults according to UI
@@ -2861,19 +2922,19 @@ function umtCompose(lpnum) {
                 pitchScale = 1.0;
                 pitchBevel = 0;
                 pitchTranspose = 0;
-                symmetryPattern = gUmt.UIParams.songTab[0].voice[UIVoice].symmetry[endTime].pattern;
+                symmetryPattern = gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[endTime].pattern;
                 switch (symmetryPattern) {
                 case 'trans':
-                    pitchTranspose = (2 * gUmt.UIParams.songTab[0].voice[UIVoice].symmetry[endTime].transParam) * (gUmt.loop[lpnum].score.songTab[0].voice[compositionVoice].randTrans.genrandReal1() - 0.5);
+                    pitchTranspose = (2 * gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[endTime].transParam) * (gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTrans.genrandReal1() - 0.5);
                     break;
                 case 'invert':
                     pitchScale = -1.0;
                     break;
                 case 'scale':
-                    pitchScale = gUmt.UIParams.songTab[0].voice[UIVoice].symmetry[endTime].scaleParam * gUmt.loop[lpnum].score.songTab[0].voice[compositionVoice].randScale.genrandReal1();
+                    pitchScale = gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[endTime].scaleParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randScale.genrandReal1();
                     break;
                 case 'tilt':
-                    pitchBevel = gUmt.UIParams.songTab[0].voice[UIVoice].symmetry[endTime].tiltParam * gUmt.loop[lpnum].score.songTab[0].voice[compositionVoice].randTilt.genrandReal1();
+                    pitchBevel = gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[endTime].tiltParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTilt.genrandReal1();
                     pitchTranspose = -(pitchBevel / 2);
                     break;
                 case 'reverserhythm':
@@ -2887,13 +2948,13 @@ function umtCompose(lpnum) {
                     pitchesDirection = -1;
                     break;
                 case 'scrollrhythm':
-                    timeRhythmScroll = (gUmt.UIParams.songTab[0].voice[UIVoice].symmetry[endTime].scrollbothParam * gUmt.loop[lpnum].score.songTab[0].voice[compositionVoice].randTilt.genrandReal1()) * (endTime - startTime);
+                    timeRhythmScroll = (gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[endTime].scrollbothParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTilt.genrandReal1()) * (endTime - startTime);
                     break;
                 case 'scrollpitch':
-                    timePitchScroll = (gUmt.UIParams.songTab[0].voice[UIVoice].symmetry[endTime].scrollbothParam * gUmt.loop[lpnum].score.songTab[0].voice[compositionVoice].randTilt.genrandReal1()) * (endTime - startTime);
+                    timePitchScroll = (gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[endTime].scrollbothParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTilt.genrandReal1()) * (endTime - startTime);
                     break;
                 case 'scrollboth':
-                    timeRhythmScroll = (gUmt.UIParams.songTab[0].voice[UIVoice].symmetry[endTime].scrollbothParam * gUmt.loop[lpnum].score.songTab[0].voice[compositionVoice].randTilt.genrandReal1()) * (endTime - startTime);
+                    timeRhythmScroll = (gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[endTime].scrollbothParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTilt.genrandReal1()) * (endTime - startTime);
                     timePitchScroll = timeRhythmScroll;
                     break;
                 default:
@@ -2904,9 +2965,9 @@ function umtCompose(lpnum) {
                 instrumentTranspose = umtFigureOutInstrumentParamTranspositions(lpnum, vcnum, instrumentName, instParamNames, instSpecificParams);
                 umtCopyAndTransform(lpnum, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, instrumentTranspose);
                 startTime = 0;
-                csrPos = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].cursor;
-                csrStart = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[csrPos - 1].starttime;
-                duration = gUmt.loop[lpnum].score.songTab[0].voice[vcnum].notes[csrPos - 1].duration;
+                csrPos = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].cursor;
+                csrStart = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[csrPos - 1].starttime;
+                duration = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[csrPos - 1].duration;
                 endTime = csrStart + duration;
             }
             compositionVoice = compositionVoice + 1;
@@ -2969,7 +3030,7 @@ function umtAutomaticallyRecomposeLoopFromUIParams() {
     // current_units = currentTime / old_tempoScalar;
     // virtual_new_time = current_units * new_tempoScalar;
     // offset_difference = currentTime - virtual_new_time;
-    // loopUnitLen = gUmt.loop[newLoop].score.songTab[0].voice[0].nextStart;
+    // loopUnitLen = gUmt.loop[newLoop].score.songTab[tab].voice[0].nextStart;
     // loopLen = loopUnitLen * new_tempoScalar;
     // offset_difference = offset_difference - (Math.floor(offset_difference / loopLen) * loopLen);  // modulo
     // gUmt.loop[newLoop].score.playbackTimeOffset = offset_difference;
@@ -2986,10 +3047,11 @@ function umtAutomaticallyRecomposeLoopFromUIParams() {
 
 function umtExecScaleChange() {
     "use strict";
-    var listbox, scaleparam;
+    var listbox, scaleparam, tab;
     listbox = window.document.getElementById("lb_scale");
     scaleparam = listbox.options[listbox.selectedIndex].value;
-    gUmt.UIParams.songTab[0].scale = scaleparam;
+    tab = gUmt.UIParams.currentTab;
+    gUmt.UIParams.songTab[tab].scale = scaleparam;
     if (gUmt.idemAddingVoice === false) {
         umtAutomaticallyRecomposeLoopFromUIParams();
     }
@@ -2997,10 +3059,11 @@ function umtExecScaleChange() {
 
 function umtExecChordChange() {
     "use strict";
-    var listbox, chordparam;
+    var listbox, chordparam, tab;
     listbox = window.document.getElementById("lb_chord");
     chordparam = listbox.options[listbox.selectedIndex].value;
-    gUmt.UIParams.songTab[0].chord = chordparam;
+    tab = gUmt.UIParams.currentTab;
+    gUmt.UIParams.songTab[tab].chord = chordparam;
     if (gUmt.idemAddingVoice === false) {
         umtAutomaticallyRecomposeLoopFromUIParams();
     }
@@ -3008,11 +3071,12 @@ function umtExecChordChange() {
 
 function umtExecPlayVoiceChange(event) {
     "use strict";
-    var elemid, UIVoiceNum, checkd;
+    var elemid, UIVoiceNum, checkd, tab;
     elemid = event.target.id;
     UIVoiceNum = Number(elemid.substring(9));
     checkd = document.getElementById(elemid).checked;
-    gUmt.UIParams.songTab[0].voice[UIVoiceNum].playing = checkd;
+    tab = gUmt.UIParams.currentTab;
+    gUmt.UIParams.songTab[tab].voice[UIVoiceNum].playing = checkd;
     if (gUmt.idemAddingVoice === false) {
         umtAutomaticallyRecomposeLoopFromUIParams();
     }
@@ -3022,13 +3086,14 @@ function umtExecPlayVoiceChange(event) {
 
 function umtExecSongNumberChange(event) {
     "use strict";
-    var elemid, UIVoiceNum, listbox;
+    var elemid, UIVoiceNum, listbox, tab;
     elemid = event.target.id;
     UIVoiceNum = Number(elemid.substring(10));
     listbox = window.document.getElementById("songnumber" + UIVoiceNum);
-    gUmt.UIParams.songTab[0].voice[UIVoiceNum].songNumber = Number(listbox.options[listbox.selectedIndex].value);
+    tab = gUmt.UIParams.currentTab;
+    gUmt.UIParams.songTab[tab].voice[UIVoiceNum].songNumber = Number(listbox.options[listbox.selectedIndex].value);
     if (gUmt.idemAddingVoice === false) {
-        if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+        if (gUmt.UIParams.songTab[tab].voice[UIVoiceNum].playing) {
             umtAutomaticallyRecomposeLoopFromUIParams();
         }
     }
@@ -3037,7 +3102,8 @@ function umtExecSongNumberChange(event) {
 function umtUICreateClosureFunctionsForSymmetrySlidersOutsideALoop(voiceNumber, patternSize) {
     "use strict";
     jQuery("#slider_symmetry_transParam" + voiceNumber + "_" + patternSize).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
-        var newvalue, patternDuration;
+        var tab, newvalue, patternDuration;
+        tab = gUmt.UIParams.currentTab;
         // patternDuration and patternSize are two names for the same thing
         // but we have to use two different names so they will refer to
         // different variables and the closure will work
@@ -3046,8 +3112,8 @@ function umtUICreateClosureFunctionsForSymmetrySlidersOutsideALoop(voiceNumber, 
             if (event.type === "slidechange") {
                 newvalue = ui.value / 10;
                 window.document.getElementById("display_symmetry_transParam" + voiceNumber + "_" + patternDuration).innerHTML = (newvalue * 100) + "%";
-                gUmt.UIParams.songTab[0].voice[voiceNumber].symmetry[patternDuration].transParam = newvalue;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].symmetry[patternDuration].transParam = newvalue;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3055,14 +3121,15 @@ function umtUICreateClosureFunctionsForSymmetrySlidersOutsideALoop(voiceNumber, 
     }
          });
     jQuery("#slider_symmetry_scaleParam" + voiceNumber + "_" + patternSize).slider({min: 0, max: 24, step: 1, value: 12, orientation: "horizontal", change: function (event, ui) {
-        var newvalue, patternDuration;
+        var tab, newvalue, patternDuration;
+        tab = gUmt.UIParams.currentTab;
         patternDuration = patternSize;
         if (gUmt.idemAddingVoice === false) {
             if (event.type === "slidechange") {
                 newvalue = (ui.value - 12) / 10;
                 window.document.getElementById("display_symmetry_scaleParam" + voiceNumber + "_" + patternDuration).innerHTML = (newvalue * 100) + "%";
-                gUmt.UIParams.songTab[0].voice[voiceNumber].symmetry[patternDuration].scaleParam = newvalue;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].symmetry[patternDuration].scaleParam = newvalue;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3070,14 +3137,15 @@ function umtUICreateClosureFunctionsForSymmetrySlidersOutsideALoop(voiceNumber, 
     }
          });
     jQuery("#slider_symmetry_tiltParam" + voiceNumber + "_" + patternSize).slider({min: 0, max: 24, step: 1, value: 12, orientation: "horizontal", change: function (event, ui) {
-        var newvalue, patternDuration;
+        var tab, newvalue, patternDuration;
+        tab = gUmt.UIParams.currentTab;
         patternDuration = patternSize;
         if (gUmt.idemAddingVoice === false) {
             if (event.type === "slidechange") {
                 newvalue = (ui.value - 12) / 10;
                 window.document.getElementById("display_symmetry_tiltParam" + voiceNumber + "_" + patternDuration).innerHTML = (newvalue * 100) + "%";
-                gUmt.UIParams.songTab[0].voice[voiceNumber].symmetry[patternDuration].tiltParam = newvalue;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].symmetry[patternDuration].tiltParam = newvalue;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3085,14 +3153,15 @@ function umtUICreateClosureFunctionsForSymmetrySlidersOutsideALoop(voiceNumber, 
     }
          });
     jQuery("#slider_symmetry_scrollrhythmParam" + voiceNumber + "_" + patternSize).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
-        var newvalue, patternDuration;
+        var tab, newvalue, patternDuration;
+        tab = gUmt.UIParams.currentTab;
         patternDuration = patternSize;
         if (gUmt.idemAddingVoice === false) {
             if (event.type === "slidechange") {
                 newvalue = ui.value / 10;
                 window.document.getElementById("display_symmetry_scrollrhythmParam" + voiceNumber + "_" + patternDuration).innerHTML = (newvalue * 100) + "%";
-                gUmt.UIParams.songTab[0].voice[voiceNumber].symmetry[patternDuration].scrollrhythmParam = newvalue;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].symmetry[patternDuration].scrollrhythmParam = newvalue;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3100,14 +3169,15 @@ function umtUICreateClosureFunctionsForSymmetrySlidersOutsideALoop(voiceNumber, 
     }
          });
     jQuery("#slider_symmetry_scrollpitchParam" + voiceNumber + "_" + patternSize).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
-        var newvalue, patternDuration;
+        var tab, newvalue, patternDuration;
+        tab = gUmt.UIParams.currentTab;
         patternDuration = patternSize;
         if (gUmt.idemAddingVoice === false) {
             if (event.type === "slidechange") {
                 newvalue = ui.value / 10;
                 window.document.getElementById("display_symmetry_scrollpitchParam" + voiceNumber + "_" + patternDuration).innerHTML = (newvalue * 100) + "%";
-                gUmt.UIParams.songTab[0].voice[voiceNumber].symmetry[patternDuration].scrollpitchParam = newvalue;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].symmetry[patternDuration].scrollpitchParam = newvalue;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3115,14 +3185,15 @@ function umtUICreateClosureFunctionsForSymmetrySlidersOutsideALoop(voiceNumber, 
     }
          });
     jQuery("#slider_symmetry_scrollbothParam" + voiceNumber + "_" + patternSize).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
-        var newvalue, patternDuration;
+        var tab, newvalue, patternDuration;
+        tab = gUmt.UIParams.currentTab;
         patternDuration = patternSize;
         if (gUmt.idemAddingVoice === false) {
             if (event.type === "slidechange") {
                 newvalue = ui.value / 10;
                 window.document.getElementById("display_symmetry_scrollbothParam" + voiceNumber + "_" + patternDuration).innerHTML = (newvalue * 100) + "%";
-                gUmt.UIParams.songTab[0].voice[voiceNumber].symmetry[patternDuration].scrollbothParam = newvalue;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].symmetry[patternDuration].scrollbothParam = newvalue;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3187,7 +3258,7 @@ function umtUIShowOrHideAppropriateSymmetrySliders(symmetrySelected, suffix) {
 
 function umtExecPervoiceSymmetryChange(event) {
     "use strict";
-    var elemid, listbox, selectedvalue, i, voiceNumber, symSize, symmetryPattern;
+    var elemid, listbox, selectedvalue, i, voiceNumber, symSize, symmetryPattern, tab;
     elemid = event.target.id;
     listbox = event.target;
     selectedvalue = listbox.options[listbox.selectedIndex].value;
@@ -3197,8 +3268,9 @@ function umtExecPervoiceSymmetryChange(event) {
     voiceNumber = elemid.substring(0, i);
     symSize = elemid.substring(i + 1);
     symmetryPattern = selectedvalue;
-    gUmt.UIParams.songTab[0].voice[voiceNumber].symmetry[symSize].pattern = symmetryPattern;
-    if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+    tab = gUmt.UIParams.currentTab;
+    gUmt.UIParams.songTab[tab].voice[voiceNumber].symmetry[symSize].pattern = symmetryPattern;
+    if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
         umtAutomaticallyRecomposeLoopFromUIParams();
     }
 }
@@ -3233,36 +3305,37 @@ function umtUiTurnOnSymmetryPatterns(row, patternLabel, isOn) {
 
 function umtUiSetSymmetryListboxAndSlider(row, patternDuration) {
     "use strict";
-    var suffix, absvalue, slidervalue;
+    var suffix, absvalue, slidervalue, tab;
     suffix = row + "_" + patternDuration;
-    window.document.getElementById("sel_symmetry" + suffix).value = gUmt.UIParams.songTab[0].voice[row].symmetry[patternDuration].pattern;
+    tab = gUmt.UIParams.currentTab;
+    window.document.getElementById("sel_symmetry" + suffix).value = gUmt.UIParams.songTab[tab].voice[row].symmetry[patternDuration].pattern;
     // trans param
-    absvalue = gUmt.UIParams.songTab[0].voice[row].symmetry[patternDuration].transParam;
+    absvalue = gUmt.UIParams.songTab[tab].voice[row].symmetry[patternDuration].transParam;
     slidervalue = absvalue * 10;
     window.document.getElementById("display_symmetry_transParam" + suffix).innerHTML = (absvalue * 100) + "%";
     jQuery("#slider_symmetry_transParam" + suffix).slider({ value: slidervalue });
     // scale param
-    absvalue = gUmt.UIParams.songTab[0].voice[row].symmetry[patternDuration].scaleParam;
+    absvalue = gUmt.UIParams.songTab[tab].voice[row].symmetry[patternDuration].scaleParam;
     slidervalue = (absvalue * 10) + 12;
     window.document.getElementById("display_symmetry_scaleParam" + suffix).innerHTML = (absvalue * 100) + "%";
     jQuery("#slider_symmetry_scaleParam" + suffix).slider({ value: slidervalue });
     // tilt param
-    absvalue = gUmt.UIParams.songTab[0].voice[row].symmetry[patternDuration].tiltParam;
+    absvalue = gUmt.UIParams.songTab[tab].voice[row].symmetry[patternDuration].tiltParam;
     slidervalue = (absvalue * 10) + 12;
     window.document.getElementById("display_symmetry_tiltParam" + suffix).innerHTML = (absvalue * 100) + "%";
     jQuery("#slider_symmetry_tiltParam" + suffix).slider({ value: slidervalue });
     // scrollrhythm param
-    absvalue = gUmt.UIParams.songTab[0].voice[row].symmetry[patternDuration].scrollrhythmParam;
+    absvalue = gUmt.UIParams.songTab[tab].voice[row].symmetry[patternDuration].scrollrhythmParam;
     slidervalue = absvalue * 10;
     window.document.getElementById("display_symmetry_scrollrhythmParam" + suffix).innerHTML = (absvalue * 100) + "%";
     jQuery("#slider_symmetry_scrollrhythmParam" + suffix).slider({ value: slidervalue });
     // scrollpitch param
-    absvalue = gUmt.UIParams.songTab[0].voice[row].symmetry[patternDuration].scrollpitchParam;
+    absvalue = gUmt.UIParams.songTab[tab].voice[row].symmetry[patternDuration].scrollpitchParam;
     slidervalue = absvalue * 10;
     window.document.getElementById("display_symmetry_scrollpitchParam" + suffix).innerHTML = (absvalue * 100) + "%";
     jQuery("#slider_symmetry_scrollpitchParam" + suffix).slider({ value: slidervalue });
     // scrollboth param
-    absvalue = gUmt.UIParams.songTab[0].voice[row].symmetry[patternDuration].scrollbothParam;
+    absvalue = gUmt.UIParams.songTab[tab].voice[row].symmetry[patternDuration].scrollbothParam;
     slidervalue = absvalue * 10;
     window.document.getElementById("display_symmetry_scrollbothParam" + suffix).innerHTML = (absvalue * 100) + "%";
     jQuery("#slider_symmetry_scrollbothParam" + suffix).slider({ value: slidervalue });
@@ -3272,14 +3345,15 @@ var umtUiCascadeFrameSizeChanges, umtUiCascadeChunkSizeChanges, umtUiCascadeMinN
 
 umtUiCascadeFrameSizeChanges = function (voiceNumber, newvalue) {
     "use strict";
-    var chunkSize, loopDuration, symSize, slidervalue, symmetryPattern;
-    chunkSize = gUmt.UIParams.songTab[0].voice[voiceNumber].chunkSize;
+    var tab, chunkSize, loopDuration, symSize, slidervalue, symmetryPattern;
+    tab = gUmt.UIParams.currentTab;
+    chunkSize = gUmt.UIParams.songTab[tab].voice[voiceNumber].chunkSize;
     if (newvalue < chunkSize) {
         chunkSize = newvalue;
         slidervalue = Math.floor((Math.log(chunkSize) / Math.log(2)) + 0.01);
         jQuery("#slider_chunksize" + voiceNumber).slider({ value: slidervalue });
         window.document.getElementById("display_chunksize" + voiceNumber).innerHTML = newvalue;
-        gUmt.UIParams.songTab[0].voice[voiceNumber].chunkSize = chunkSize;
+        gUmt.UIParams.songTab[tab].voice[voiceNumber].chunkSize = chunkSize;
         // cx("voiceNumber" + ctstr(voiceNumber) + " chunkSize" + ctstr(chunkSize));
         umtUiCascadeChunkSizeChanges(voiceNumber, chunkSize);
     }
@@ -3291,7 +3365,7 @@ umtUiCascadeFrameSizeChanges = function (voiceNumber, newvalue) {
         } else {
             umtUiSetSymmetryListboxAndSlider(voiceNumber, symSize);
             umtUiTurnOnSymmetryPatterns(voiceNumber, symSize, true);
-            symmetryPattern = gUmt.UIParams.songTab[0].voice[voiceNumber].symmetry[symSize].pattern;
+            symmetryPattern = gUmt.UIParams.songTab[tab].voice[voiceNumber].symmetry[symSize].pattern;
             umtUIShowOrHideAppropriateSymmetrySliders(symmetryPattern, voiceNumber + "_" + symSize);
         }
         symSize = symSize * 2;
@@ -3300,54 +3374,57 @@ umtUiCascadeFrameSizeChanges = function (voiceNumber, newvalue) {
 
 umtUiCascadeChunkSizeChanges = function (voiceNumber, newvalue) {
     "use strict";
-    var minNote, frameSize, slidervalue;
-    minNote = gUmt.UIParams.songTab[0].voice[voiceNumber].minNote;
+    var tab, minNote, frameSize, slidervalue;
+    tab = gUmt.UIParams.currentTab;
+    minNote = gUmt.UIParams.songTab[tab].voice[voiceNumber].minNote;
     if (newvalue < minNote) {
         minNote = newvalue;
         slidervalue = Math.floor((Math.log(minNote) / Math.log(2)) + 0.01);
         jQuery("#slider_minnote" + voiceNumber).slider({ value: slidervalue });
         window.document.getElementById("display_minnote" + voiceNumber).innerHTML = newvalue;
-        gUmt.UIParams.songTab[0].voice[voiceNumber].minNote = minNote;
+        gUmt.UIParams.songTab[tab].voice[voiceNumber].minNote = minNote;
         umtUiCascadeMinNoteChanges(voiceNumber, minNote);
     }
-    frameSize = gUmt.UIParams.songTab[0].voice[voiceNumber].frameSize;
+    frameSize = gUmt.UIParams.songTab[tab].voice[voiceNumber].frameSize;
     if (newvalue > frameSize) {
         frameSize = newvalue;
         slidervalue = Math.floor((Math.log(frameSize) / Math.log(2)) + 0.01);
         jQuery("#slider_framesize" + voiceNumber).slider({ value: slidervalue });
         window.document.getElementById("display_framesize" + voiceNumber).innerHTML = newvalue;
-        gUmt.UIParams.songTab[0].voice[voiceNumber].frameSize = frameSize;
+        gUmt.UIParams.songTab[tab].voice[voiceNumber].frameSize = frameSize;
         umtUiCascadeFrameSizeChanges(voiceNumber, frameSize);
     }
 };
 
 umtUiCascadeMinNoteChanges = function (voiceNumber, newvalue) {
     "use strict";
-    var chunkSize, slidervalue;
-    chunkSize = gUmt.UIParams.songTab[0].voice[voiceNumber].chunkSize;
+    var tab, chunkSize, slidervalue;
+    tab = gUmt.UIParams.currentTab;
+    chunkSize = gUmt.UIParams.songTab[tab].voice[voiceNumber].chunkSize;
     if (newvalue > chunkSize) {
         chunkSize = newvalue;
         slidervalue = Math.floor((Math.log(chunkSize) / Math.log(2)) + 0.01);
         jQuery("#slider_chunksize" + voiceNumber).slider({ value: slidervalue });
         window.document.getElementById("display_chunksize" + voiceNumber).innerHTML = newvalue;
-        gUmt.UIParams.songTab[0].voice[voiceNumber].chunkSize = chunkSize;
+        gUmt.UIParams.songTab[tab].voice[voiceNumber].chunkSize = chunkSize;
         umtUiCascadeChunkSizeChanges(voiceNumber, chunkSize);
     }
 };
 
 function umtUISetDefaultInstSpecificParamsForNewInstrument(voiceNumber, instrumentName) {
     "use strict";
-    var instParameters, instParamIdx, instParamSet, paramName;
+    var tab, instParameters, instParamIdx, instParamSet, paramName;
+    tab = gUmt.UIParams.currentTab;
     instParameters = gUmt.instrumentParams[instrumentName].parameters;
     for (instParamIdx in instParameters) {
         if (instParameters.hasOwnProperty(instParamIdx)) {
             instParamSet = instParameters[instParamIdx];
             paramName = instParamSet.name;
-            if (!gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams.hasOwnProperty(instrumentName + "_" + paramName + "_patterns")) {
-                gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_patterns"] = 0.0;
+            if (!gUmt.UIParams.songTab[tab].voice[voiceNumber].instSpecificParams.hasOwnProperty(instrumentName + "_" + paramName + "_patterns")) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_patterns"] = 0.0;
             }
-            if (!gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams.hasOwnProperty(instrumentName + "_" + paramName + "_variants")) {
-                gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_variants"] = 0.0;
+            if (!gUmt.UIParams.songTab[tab].voice[voiceNumber].instSpecificParams.hasOwnProperty(instrumentName + "_" + paramName + "_variants")) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_variants"] = 0.0;
             }
         }
     }
@@ -3356,15 +3433,16 @@ function umtUISetDefaultInstSpecificParamsForNewInstrument(voiceNumber, instrume
 function umtUICreateClosureFunctionsForInstrumentSpecificParametersOutsideALoop(instrumentName, paramName, voiceNumber) {
     "use strict";
     jQuery("#slider_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_patterns").slider({min: 0, max: 10, step: 1, value: 0, orientation: "vertical", change: function (event, ui) {
-        var newvalue, absvalue, aspercentage;
+        var tab, newvalue, absvalue, aspercentage;
         if (gUmt.idemAddingVoice === false) {
             if (event.type === "slidechange") {
+                tab = gUmt.UIParams.currentTab;
                 newvalue = ui.value;
                 absvalue = newvalue / 10;
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_patterns").innerHTML = aspercentage + "%";
-                gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_patterns"] = absvalue;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_patterns"] = absvalue;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3372,15 +3450,16 @@ function umtUICreateClosureFunctionsForInstrumentSpecificParametersOutsideALoop(
     }
         });
     jQuery("#slider_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_variants").slider({min: 0, max: 10, step: 1, value: 0, orientation: "vertical", change: function (event, ui) {
-        var newvalue, absvalue, aspercentage;
+        var tab, newvalue, absvalue, aspercentage;
         if (gUmt.idemAddingVoice === false) {
             if (event.type === "slidechange") {
+                tab = gUmt.UIParams.currentTab;
                 newvalue = ui.value;
                 absvalue = newvalue / 10;
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_variants").innerHTML = aspercentage + "%";
-                gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_variants"] = absvalue;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_variants"] = absvalue;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3438,18 +3517,19 @@ function umtCreateInstrumentSpecificParameterControls(voiceNumber, instrumentNam
 
 function umtUiSetInstrumentSpecificSliders(voiceNumber) {
     "use strict";
-    var instrumentName, instParameters, instParamIdx, instParamSet, paramName, absvalue, slidervalue;
-    instrumentName = gUmt.UIParams.songTab[0].voice[voiceNumber].instrument;
+    var tab, instrumentName, instParameters, instParamIdx, instParamSet, paramName, absvalue, slidervalue;
+    tab = gUmt.UIParams.currentTab;
+    instrumentName = gUmt.UIParams.songTab[tab].voice[voiceNumber].instrument;
     instParameters = gUmt.instrumentParams[instrumentName].parameters;
     for (instParamIdx in instParameters) {
         if (instParameters.hasOwnProperty(instParamIdx)) {
             instParamSet = instParameters[instParamIdx];
             paramName = instParamSet.name;
-            absvalue = gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_patterns"];
+            absvalue = gUmt.UIParams.songTab[tab].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_patterns"];
             slidervalue = absvalue * 10;
             window.document.getElementById("display_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_patterns").innerHTML = (absvalue * 100) + "%";
             jQuery("#slider_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_patterns").slider({ value: slidervalue });
-            absvalue = gUmt.UIParams.songTab[0].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_variants"];
+            absvalue = gUmt.UIParams.songTab[tab].voice[voiceNumber].instSpecificParams[instrumentName + "_" + paramName + "_variants"];
             slidervalue = absvalue * 10;
             window.document.getElementById("display_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_variants").innerHTML = (absvalue * 100) + "%";
             jQuery("#slider_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_variants").slider({ value: slidervalue });
@@ -3459,12 +3539,13 @@ function umtUiSetInstrumentSpecificSliders(voiceNumber) {
 
 function umtExecInstrumentChange() {
     "use strict";
-    var elemid, UIVoiceNum, listbox, newinstr;
+    var elemid, UIVoiceNum, listbox, newinstr, tab;
     elemid = event.target.id;
     UIVoiceNum = Number(elemid.substring(10));
     listbox = window.document.getElementById("instrument" + UIVoiceNum);
     newinstr = listbox.options[listbox.selectedIndex].value;
-    gUmt.UIParams.songTab[0].voice[UIVoiceNum].instrument = newinstr;
+    tab = gUmt.UIParams.currentTab;
+    gUmt.UIParams.songTab[tab].voice[UIVoiceNum].instrument = newinstr;
     umtUISetDefaultInstSpecificParamsForNewInstrument(UIVoiceNum, newinstr);
     umtCreateInstrumentSpecificParameterControls(UIVoiceNum, newinstr);
     umtUiSetInstrumentSpecificSliders(UIVoiceNum);
@@ -3475,7 +3556,8 @@ function umtExecInstrumentChange() {
 
 function umtUiAddRow(voiceNumber) {
     "use strict";
-    var text, i, displayNumber, columnidlist, idx, cellidname, j, rowcontent, y, yyy, currentrowhtml, listenElement;
+    var tab, text, i, displayNumber, columnidlist, idx, cellidname, j, rowcontent, y, yyy, currentrowhtml, listenElement;
+    tab = gUmt.UIParams.currentTab;
     jQuery('#voices_table > tbody:last').append('<tr id="voice_row_' + voiceNumber + '"><td id="voicedescriptcell' + voiceNumber + '" valign="top"> Voice Description Cell ' + voiceNumber + '</td><td id="voiceplaycell' + voiceNumber + '" valign="top"></td><td id="voiceinstrumentcell' + voiceNumber + '" valign="top"><td id="voicevolumecell' + voiceNumber + '" valign="top"></td><td id="voicesongnumcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceoctavecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicenotedistcell' + voiceNumber + '" valign="top" align="center"></td><td id="voicerestynesscell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceampvariationcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceminnotecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicechunksizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceframesizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicesymmetriescell' + voiceNumber + '" valign="top" align="center"></td><td id="instparameterscell' + voiceNumber + '" valign="top" align="center"></td></tr>');
     text = document.getElementById("voicedescriptcellxx").innerHTML;
     displayNumber = voiceNumber + 1;
@@ -3526,8 +3608,8 @@ function umtUiAddRow(voiceNumber) {
                 absvalue = newvalue / 10;
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_volume" + voiceNumber).innerHTML = aspercentage + "%";
-                gUmt.UIParams.songTab[0].voice[voiceNumber].volume = absvalue;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].volume = absvalue;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3540,8 +3622,8 @@ function umtUiAddRow(voiceNumber) {
             if (event.type === "slidechange") {
                 newvalue = ui.value;
                 window.document.getElementById("display_octave" + voiceNumber).innerHTML = newvalue;
-                gUmt.UIParams.songTab[0].voice[voiceNumber].octave = newvalue;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].octave = newvalue;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3556,8 +3638,8 @@ function umtUiAddRow(voiceNumber) {
                 absvalue = newvalue / 10;
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_notedistance" + voiceNumber).innerHTML = aspercentage + "%";
-                gUmt.UIParams.songTab[0].voice[voiceNumber].noteDistance = absvalue;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].noteDistance = absvalue;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3572,8 +3654,8 @@ function umtUiAddRow(voiceNumber) {
                 absvalue = newvalue / 10;
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_restyness" + voiceNumber).innerHTML = aspercentage + "%";
-                gUmt.UIParams.songTab[0].voice[voiceNumber].restyness = absvalue;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].restyness = absvalue;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3588,8 +3670,8 @@ function umtUiAddRow(voiceNumber) {
                 absvalue = newvalue / 10;
                 aspercentage = newvalue * 10;
                 window.document.getElementById("display_ampvariation" + voiceNumber).innerHTML = aspercentage + "%";
-                gUmt.UIParams.songTab[0].voice[voiceNumber].ampVariation = absvalue;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].ampVariation = absvalue;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3603,11 +3685,11 @@ function umtUiAddRow(voiceNumber) {
                 newvalue = ui.value;
                 newvalue = Math.pow(2, newvalue);
                 window.document.getElementById("display_minnote" + voiceNumber).innerHTML = newvalue;
-                gUmt.UIParams.songTab[0].voice[voiceNumber].minNote = newvalue;
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].minNote = newvalue;
                 gUmt.idemAddingVoice = true;
                 umtUiCascadeMinNoteChanges(voiceNumber, newvalue);
                 gUmt.idemAddingVoice = false;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3621,11 +3703,11 @@ function umtUiAddRow(voiceNumber) {
                 newvalue = ui.value;
                 newvalue = Math.pow(2, newvalue);
                 window.document.getElementById("display_chunksize" + voiceNumber).innerHTML = newvalue;
-                gUmt.UIParams.songTab[0].voice[voiceNumber].chunkSize = newvalue;
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].chunkSize = newvalue;
                 gUmt.idemAddingVoice = true;
                 umtUiCascadeChunkSizeChanges(voiceNumber, newvalue);
                 gUmt.idemAddingVoice = false;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3640,11 +3722,11 @@ function umtUiAddRow(voiceNumber) {
                 newvalue = ui.value;
                 newvalue = Math.pow(2, newvalue);
                 window.document.getElementById("display_framesize" + voiceNumber).innerHTML = newvalue;
-                gUmt.UIParams.songTab[0].voice[voiceNumber].frameSize = newvalue;
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].frameSize = newvalue;
                 gUmt.idemAddingVoice = true;
                 umtUiCascadeFrameSizeChanges(voiceNumber, newvalue);
                 gUmt.idemAddingVoice = false;
-                if (gUmt.UIParams.songTab[0].voice[voiceNumber].playing) {
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
                 }
             }
@@ -3673,7 +3755,7 @@ function umtUiSetListboxByValue(listbox, value) {
 
 function umtUiCopyUiParamsToActualUi() {
     "use strict";
-    var parts, i, absvalue, slidervalue, loopDuration, j, k, howeverMany, symSize, symNum, symmetryPattern;
+    var parts, tab, i, absvalue, slidervalue, loopDuration, j, k, howeverMany, symSize, symNum, symmetryPattern;
     gUmt.idemAddingVoice = true;
     // tempo
     absvalue = gUmt.UIParams.tempo;
@@ -3685,18 +3767,20 @@ function umtUiCopyUiParamsToActualUi() {
     window.document.getElementById("display_mastervol_value").innerHTML = (absvalue * 100) + "%";
     slidervalue = absvalue * 100;
     jQuery("#slider_mastervol").slider({ value: slidervalue });
+    // current tab
+    tab = gUmt.UIParams.currentTab;
     // scale
-    umtUiSetListboxByValue(document.getElementById("lb_scale"), gUmt.UIParams.songTab[0].scale);
+    umtUiSetListboxByValue(document.getElementById("lb_scale"), gUmt.UIParams.songTab[tab].scale);
     // chords
-    umtUiSetListboxByValue(document.getElementById("lb_chord"), gUmt.UIParams.songTab[0].chord);
+    umtUiSetListboxByValue(document.getElementById("lb_chord"), gUmt.UIParams.songTab[tab].chord);
     // center note
-    absvalue = gUmt.UIParams.songTab[0].centernote;
+    absvalue = gUmt.UIParams.songTab[tab].centernote;
     window.document.getElementById("display_centernote_value").innerHTML = absvalue;
     slidervalue = (Math.log(absvalue / 432) / Math.log(1.25)) + 5.0;
     slidervalue = Math.floor(slidervalue + 0.1); // in case of rounding error on the logarithm
     jQuery("#slider_centernote").slider({ value: slidervalue });
     // now we loop through each part
-    parts = gUmt.UIParams.songTab[0].parts;
+    parts = gUmt.UIParams.parts;
     for (i = 0; i < parts; i = i + 1) {
         if (!umtUIIsPartInUI(i)) {
             umtUiAddRow(i);
@@ -3713,52 +3797,52 @@ function umtUiCopyUiParamsToActualUi() {
     loopDuration = gUmt.UIParams.loopDuration;
     for (i = 0; i < parts; i = i + 1) {
         // checkbox
-        if (gUmt.UIParams.songTab[0].voice[i].playing) {
+        if (gUmt.UIParams.songTab[tab].voice[i].playing) {
             document.getElementById("playvoice" + i).checked = true;
         } else {
             document.getElementById("playvoice" + i).checked = false;
         }
         // instrument
-        umtUiSetListboxByValue(document.getElementById("instrument" + i), gUmt.UIParams.songTab[0].voice[i].instrument);
+        umtUiSetListboxByValue(document.getElementById("instrument" + i), gUmt.UIParams.songTab[tab].voice[i].instrument);
         // song number
-        umtUiSetListboxByValue(document.getElementById("songnumber" + i), gUmt.UIParams.songTab[0].voice[i].songNumber);
+        umtUiSetListboxByValue(document.getElementById("songnumber" + i), gUmt.UIParams.songTab[tab].voice[i].songNumber);
         // volume
-        absvalue = gUmt.UIParams.songTab[0].voice[i].volume;
+        absvalue = gUmt.UIParams.songTab[tab].voice[i].volume;
         window.document.getElementById("display_volume" + i).innerHTML = (absvalue * 100) + "%";
         slidervalue = absvalue * 10;
         jQuery("#slider_volume" + i).slider({ value: slidervalue });
         // octave
-        absvalue = gUmt.UIParams.songTab[0].voice[i].octave;
+        absvalue = gUmt.UIParams.songTab[tab].voice[i].octave;
         window.document.getElementById("display_octave" + i).innerHTML = absvalue;
         slidervalue = absvalue;
         jQuery("#slider_octave" + i).slider({ value: slidervalue });
         // note distance
-        absvalue = gUmt.UIParams.songTab[0].voice[i].noteDistance;
+        absvalue = gUmt.UIParams.songTab[tab].voice[i].noteDistance;
         window.document.getElementById("display_notedistance" + i).innerHTML = (absvalue * 100) + "%";
         slidervalue = absvalue * 10;
         jQuery("#slider_notedistance" + i).slider({ value: slidervalue });
         // restyness
-        absvalue = gUmt.UIParams.songTab[0].voice[i].restyness;
+        absvalue = gUmt.UIParams.songTab[tab].voice[i].restyness;
         window.document.getElementById("display_restyness" + i).innerHTML = (absvalue * 100) + "%";
         slidervalue = absvalue * 10;
         jQuery("#slider_restyness" + i).slider({ value: slidervalue });
         // amplitude variation
-        absvalue = gUmt.UIParams.songTab[0].voice[i].ampVariation;
+        absvalue = gUmt.UIParams.songTab[tab].voice[i].ampVariation;
         window.document.getElementById("display_ampvariation" + i).innerHTML = (absvalue * 100) + "%";
         slidervalue = absvalue * 10;
         jQuery("#slider_ampvariation" + i).slider({ value: slidervalue });
         // min note
-        absvalue = gUmt.UIParams.songTab[0].voice[i].minNote;
+        absvalue = gUmt.UIParams.songTab[tab].voice[i].minNote;
         window.document.getElementById("display_minnote" + i).innerHTML = absvalue;
         slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
         jQuery("#slider_minnote" + i).slider({ value: slidervalue });
         // chunk size
-        absvalue = gUmt.UIParams.songTab[0].voice[i].chunkSize;
+        absvalue = gUmt.UIParams.songTab[tab].voice[i].chunkSize;
         window.document.getElementById("display_chunksize" + i).innerHTML = absvalue;
         slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
         jQuery("#slider_chunksize" + i).slider({ value: slidervalue });
         // frame size
-        absvalue = gUmt.UIParams.songTab[0].voice[i].frameSize;
+        absvalue = gUmt.UIParams.songTab[tab].voice[i].frameSize;
         window.document.getElementById("display_framesize" + i).innerHTML = absvalue;
         slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
         jQuery("#slider_framesize" + i).slider({ value: slidervalue });
@@ -3769,14 +3853,14 @@ function umtUiCopyUiParamsToActualUi() {
             umtUiTurnOnSymmetryPatterns(i, k, false);
             k = k * 2;
         }
-        umtCreateInstrumentSpecificParameterControls(i, gUmt.UIParams.songTab[0].voice[i].instrument);
+        umtCreateInstrumentSpecificParameterControls(i, gUmt.UIParams.songTab[tab].voice[i].instrument);
         umtUiSetInstrumentSpecificSliders(i);
-        symSize = gUmt.UIParams.songTab[0].voice[i].frameSize;
+        symSize = gUmt.UIParams.songTab[tab].voice[i].frameSize;
         symNum = Math.floor((Math.log(symSize) / Math.log(2)) + 0.01);
         while (symSize < loopDuration) {
             umtUiTurnOnSymmetryPatterns(i, symSize, true);
             umtUiSetSymmetryListboxAndSlider(i, symSize);
-            symmetryPattern = gUmt.UIParams.songTab[0].voice[i].symmetry[symSize].pattern;
+            symmetryPattern = gUmt.UIParams.songTab[tab].voice[i].symmetry[symSize].pattern;
             // symmetry listbox
             umtUiSetListboxByValue(document.getElementById("sel_symmetry" + i + "_" + symSize), symmetryPattern);
             umtUIShowOrHideAppropriateSymmetrySliders(symmetryPattern, i + "_" + symSize);
@@ -3787,28 +3871,265 @@ function umtUiCopyUiParamsToActualUi() {
     gUmt.idemAddingVoice = false;
 }
 
-function umtExecAddVoice() {
+// universal voice copy function -- used by both Add Voice and Add Tab
+function umtUiCopyTabVoice(fromTab, fromVoice, toTab, toVoice) {
     "use strict";
-    var voiceNum, songnum, prev, pvsym, pvinstspec, currentinstspec, instParamName;
-    voiceNum = gUmt.UIParams.songTab[0].parts;
-    songnum = voiceNum + 1;
-    if (voiceNum === 0) {
-        gUmt.UIParams.songTab[0].voice[voiceNum] = { playing: false, instrument: "tuningfork", volume: 1.0, songNumber: songnum, octave: 5, noteDistance: 0.3, restyness: 0.0, ampVariation: 0.5, minNote: 4, chunkSize: 4, frameSize: 32, symmetry: { 1: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 2: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 4: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 8: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 16: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 32: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 64: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 128: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 256: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 512: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0}, 1024: {pattern: "trans", transParam: 0, scaleParam: 0, tiltParam: 0, scrollrhythmParam: 0, scrollpitchParam: 0, scrollbothParam: 0} }, instSpecificParams: {} };
-    } else {
-        prev = gUmt.UIParams.songTab[0].voice[voiceNum - 1];
-        pvsym = gUmt.UIParams.songTab[0].voice[voiceNum - 1].symmetry;
-        gUmt.UIParams.songTab[0].voice[voiceNum] = { playing: false, instrument: prev.instrument, volume: prev.volume, songNumber: songnum, octave: prev.octave, noteDistance: prev.noteDistance, restyness: prev.restyness, ampVariation: prev.ampVariation, minNote: prev.minNote, chunkSize: prev.chunkSize, frameSize: prev.frameSize, symmetry: { 1: {pattern: pvsym[1].pattern, transParam: pvsym[1].transParam, scaleParam: pvsym[1].scaleParam, tiltParam: pvsym[1].tiltParam, scrollrhythmParam: pvsym[1].scrollrhythmParam, scrollpitchParam: pvsym[1].scrollpitchParam, scrollbothParam: pvsym[1].scrollbothParam}, 2: {pattern: pvsym[2].pattern, transParam: pvsym[2].transParam, scaleParam: pvsym[2].scaleParam, tiltParam: pvsym[2].tiltParam, scrollrhythmParam: pvsym[2].scrollrhythmParam, scrollpitchParam: pvsym[2].scrollpitchParam, scrollbothParam: pvsym[2].scrollbothParam}, 4: {pattern: pvsym[4].pattern, transParam: pvsym[4].transParam, scaleParam: pvsym[4].scaleParam, tiltParam: pvsym[4].tiltParam, scrollrhythmParam: pvsym[4].scrollrhythmParam, scrollpitchParam: pvsym[4].scrollpitchParam, scrollbothParam: pvsym[4].scrollbothParam}, 8: {pattern: pvsym[8].pattern, transParam: pvsym[8].transParam, scaleParam: pvsym[8].scaleParam, tiltParam: pvsym[8].tiltParam, scrollrhythmParam: pvsym[8].scrollrhythmParam, scrollpitchParam: pvsym[8].scrollpitchParam, scrollbothParam: pvsym[8].scrollbothParam}, 16: {pattern: pvsym[16].pattern, transParam: pvsym[16].transParam, scaleParam: pvsym[16].scaleParam, tiltParam: pvsym[16].tiltParam, scrollrhythmParam: pvsym[16].scrollrhythmParam, scrollpitchParam: pvsym[16].scrollpitchParam, scrollbothParam: pvsym[16].scrollbothParam}, 32: {pattern: pvsym[32].pattern, transParam: pvsym[32].transParam, scaleParam: pvsym[32].scaleParam, tiltParam: pvsym[32].tiltParam, scrollrhythmParam: pvsym[32].scrollrhythmParam, scrollpitchParam: pvsym[32].scrollpitchParam, scrollbothParam: pvsym[32].scrollbothParam}, 64: {pattern: pvsym[64].pattern, transParam: pvsym[64].transParam, scaleParam: pvsym[64].scaleParam, tiltParam: pvsym[64].tiltParam, scrollrhythmParam: pvsym[64].scrollrhythmParam, scrollpitchParam: pvsym[64].scrollpitchParam, scrollbothParam: pvsym[64].scrollbothParam}, 128: {pattern: pvsym[128].pattern, transParam: pvsym[128].transParam, scaleParam: pvsym[128].scaleParam, tiltParam: pvsym[128].tiltParam, scrollrhythmParam: pvsym[128].scrollrhythmParam, scrollpitchParam: pvsym[128].scrollpitchParam, scrollbothParam: pvsym[128].scrollbothParam}, 256: {pattern: pvsym[256].pattern, transParam: pvsym[256].transParam, scaleParam: pvsym[256].scaleParam, tiltParam: pvsym[256].tiltParam, scrollrhythmParam: pvsym[256].scrollrhythmParam, scrollpitchParam: pvsym[256].scrollpitchParam, scrollbothParam: pvsym[256].scrollbothParam}, 512: {pattern: pvsym[512].pattern, transParam: pvsym[512].transParam, scaleParam: pvsym[512].scaleParam, tiltParam: pvsym[512].tiltParam, scrollrhythmParam: pvsym[512].scrollrhythmParam, scrollpitchParam: pvsym[512].scrollpitchParam, scrollbothParam: pvsym[512].scrollbothParam}, 1024: {pattern: pvsym[1024].pattern, transParam: pvsym[1024].transParam, scaleParam: pvsym[1024].scaleParam, tiltParam: pvsym[1024].tiltParam, scrollrhythmParam: pvsym[1024].scrollrhythmParam, scrollpitchParam: pvsym[1024].scrollpitchParam, scrollbothParam: pvsym[1024].scrollbothParam} }, instSpecificParams: {} };
-        pvinstspec = gUmt.UIParams.songTab[0].voice[voiceNum - 1].instSpecificParams;
-        currentinstspec = gUmt.UIParams.songTab[0].voice[voiceNum].instSpecificParams;
-        for (instParamName in pvinstspec) {
-            if (pvinstspec.hasOwnProperty(instParamName)) {
-                currentinstspec[instParamName] = pvinstspec[instParamName];
+    var prev, pvsym, pvinstspec, currentinstspec, instParamName;
+    prev = gUmt.UIParams.songTab[fromTab].voice[fromVoice];
+    pvsym = gUmt.UIParams.songTab[fromTab].voice[fromVoice].symmetry;
+    gUmt.UIParams.songTab[toTab].voice[toVoice] = {
+        playing: false,
+        instrument: prev.instrument,
+        volume: prev.volume,
+        songNumber: prev.songNumber,
+        octave: prev.octave,
+        noteDistance: prev.noteDistance,
+        restyness: prev.restyness,
+        ampVariation: prev.ampVariation,
+        minNote: prev.minNote,
+        chunkSize: prev.chunkSize,
+        frameSize: prev.frameSize,
+        symmetry: {
+            1: {
+                pattern: pvsym[1].pattern,
+                transParam: pvsym[1].transParam,
+                scaleParam: pvsym[1].scaleParam,
+                tiltParam: pvsym[1].tiltParam,
+                scrollrhythmParam: pvsym[1].scrollrhythmParam,
+                scrollpitchParam: pvsym[1].scrollpitchParam,
+                scrollbothParam: pvsym[1].scrollbothParam
+            },
+            2: {
+                pattern: pvsym[2].pattern,
+                transParam: pvsym[2].transParam,
+                scaleParam: pvsym[2].scaleParam,
+                tiltParam: pvsym[2].tiltParam,
+                scrollrhythmParam: pvsym[2].scrollrhythmParam,
+                scrollpitchParam: pvsym[2].scrollpitchParam,
+                scrollbothParam: pvsym[2].scrollbothParam
+            },
+            4: {
+                pattern: pvsym[4].pattern,
+                transParam: pvsym[4].transParam,
+                scaleParam: pvsym[4].scaleParam,
+                tiltParam: pvsym[4].tiltParam,
+                scrollrhythmParam: pvsym[4].scrollrhythmParam,
+                scrollpitchParam: pvsym[4].scrollpitchParam,
+                scrollbothParam: pvsym[4].scrollbothParam
+            },
+            8: {
+                pattern: pvsym[8].pattern,
+                transParam: pvsym[8].transParam,
+                scaleParam: pvsym[8].scaleParam,
+                tiltParam: pvsym[8].tiltParam,
+                scrollrhythmParam: pvsym[8].scrollrhythmParam,
+                scrollpitchParam: pvsym[8].scrollpitchParam,
+                scrollbothParam: pvsym[8].scrollbothParam
+            },
+            16: {
+                pattern: pvsym[16].pattern,
+                transParam: pvsym[16].transParam,
+                scaleParam: pvsym[16].scaleParam,
+                tiltParam: pvsym[16].tiltParam,
+                scrollrhythmParam: pvsym[16].scrollrhythmParam,
+                scrollpitchParam: pvsym[16].scrollpitchParam,
+                scrollbothParam: pvsym[16].scrollbothParam
+            },
+            32: {
+                pattern: pvsym[32].pattern,
+                transParam: pvsym[32].transParam,
+                scaleParam: pvsym[32].scaleParam,
+                tiltParam: pvsym[32].tiltParam,
+                scrollrhythmParam: pvsym[32].scrollrhythmParam,
+                scrollpitchParam: pvsym[32].scrollpitchParam,
+                scrollbothParam: pvsym[32].scrollbothParam
+            },
+            64: {
+                pattern: pvsym[64].pattern,
+                transParam: pvsym[64].transParam,
+                scaleParam: pvsym[64].scaleParam,
+                tiltParam: pvsym[64].tiltParam,
+                scrollrhythmParam: pvsym[64].scrollrhythmParam,
+                scrollpitchParam: pvsym[64].scrollpitchParam,
+                scrollbothParam: pvsym[64].scrollbothParam
+            },
+            128: {
+                pattern: pvsym[128].pattern,
+                transParam: pvsym[128].transParam,
+                scaleParam: pvsym[128].scaleParam,
+                tiltParam: pvsym[128].tiltParam,
+                scrollrhythmParam: pvsym[128].scrollrhythmParam,
+                scrollpitchParam: pvsym[128].scrollpitchParam,
+                scrollbothParam: pvsym[128].scrollbothParam
+            },
+            256: {
+                pattern: pvsym[256].pattern,
+                transParam: pvsym[256].transParam,
+                scaleParam: pvsym[256].scaleParam,
+                tiltParam: pvsym[256].tiltParam,
+                scrollrhythmParam: pvsym[256].scrollrhythmParam,
+                scrollpitchParam: pvsym[256].scrollpitchParam,
+                scrollbothParam: pvsym[256].scrollbothParam
+            },
+            512: {
+                pattern: pvsym[512].pattern,
+                transParam: pvsym[512].transParam,
+                scaleParam: pvsym[512].scaleParam,
+                tiltParam: pvsym[512].tiltParam,
+                scrollrhythmParam: pvsym[512].scrollrhythmParam,
+                scrollpitchParam: pvsym[512].scrollpitchParam,
+                scrollbothParam: pvsym[512].scrollbothParam
+            },
+            1024: {
+                pattern: pvsym[1024].pattern,
+                transParam: pvsym[1024].transParam,
+                scaleParam: pvsym[1024].scaleParam,
+                tiltParam: pvsym[1024].tiltParam,
+                scrollrhythmParam: pvsym[1024].scrollrhythmParam,
+                scrollpitchParam: pvsym[1024].scrollpitchParam,
+                scrollbothParam: pvsym[1024].scrollbothParam
             }
+        },
+        instSpecificParams: {}
+    };
+    pvinstspec = gUmt.UIParams.songTab[fromTab].voice[fromVoice].instSpecificParams;
+    currentinstspec = gUmt.UIParams.songTab[toTab].voice[toVoice].instSpecificParams;
+    for (instParamName in pvinstspec) {
+        if (pvinstspec.hasOwnProperty(instParamName)) {
+            currentinstspec[instParamName] = pvinstspec[instParamName];
         }
     }
-    umtUISetDefaultInstSpecificParamsForNewInstrument(voiceNum, gUmt.UIParams.songTab[0].voice[voiceNum].instrument);
-    gUmt.UIParams.songTab[0].parts = gUmt.UIParams.songTab[0].parts + 1;
-    if (gUmt.UIParams.songTab[0].parts > gUmt.UIParams.maxPartsEver) {
+}
+
+function umtExecAddVoice() {
+    "use strict";
+    var tab, voiceNum, songnum;
+    tab = gUmt.UIParams.currentTab;
+    voiceNum = gUmt.UIParams.parts;
+    songnum = voiceNum + 1;
+    if (voiceNum === 0) {
+        gUmt.UIParams.songTab[tab].voice[voiceNum] = {
+            playing: false,
+            instrument: "tuningfork",
+            volume: 1.0,
+            songNumber: songnum,
+            octave: 5,
+            noteDistance: 0.3,
+            restyness: 0.0,
+            ampVariation: 0.5,
+            minNote: 4,
+            chunkSize: 4,
+            frameSize: 32,
+            symmetry: {
+                1: {
+                    pattern: "trans",
+                    transParam: 0,
+                    scaleParam: 0,
+                    tiltParam: 0,
+                    scrollrhythmParam: 0,
+                    scrollpitchParam: 0,
+                    scrollbothParam: 0
+                },
+                2: {
+                    pattern: "trans",
+                    transParam: 0,
+                    scaleParam: 0,
+                    tiltParam: 0,
+                    scrollrhythmParam: 0,
+                    scrollpitchParam: 0,
+                    scrollbothParam: 0
+                },
+                4: {
+                    pattern: "trans",
+                    transParam: 0,
+                    scaleParam: 0,
+                    tiltParam: 0,
+                    scrollrhythmParam: 0,
+                    scrollpitchParam: 0,
+                    scrollbothParam: 0
+                },
+                8: {
+                    pattern: "trans",
+                    transParam: 0,
+                    scaleParam: 0,
+                    tiltParam: 0,
+                    scrollrhythmParam: 0,
+                    scrollpitchParam: 0,
+                    scrollbothParam: 0
+                },
+                16: {
+                    pattern: "trans",
+                    transParam: 0,
+                    scaleParam: 0,
+                    tiltParam: 0,
+                    scrollrhythmParam: 0,
+                    scrollpitchParam: 0,
+                    scrollbothParam: 0
+                },
+                32: {
+                    pattern: "trans",
+                    transParam: 0,
+                    scaleParam: 0,
+                    tiltParam: 0,
+                    scrollrhythmParam: 0,
+                    scrollpitchParam: 0,
+                    scrollbothParam: 0
+                },
+                64: {
+                    pattern: "trans",
+                    transParam: 0,
+                    scaleParam: 0,
+                    tiltParam: 0,
+                    scrollrhythmParam: 0,
+                    scrollpitchParam: 0,
+                    scrollbothParam: 0
+                },
+                128: {
+                    pattern: "trans",
+                    transParam: 0,
+                    scaleParam: 0,
+                    tiltParam: 0,
+                    scrollrhythmParam: 0,
+                    scrollpitchParam: 0,
+                    scrollbothParam: 0
+                },
+                256: {
+                    pattern: "trans",
+                    transParam: 0,
+                    scaleParam: 0,
+                    tiltParam: 0,
+                    scrollrhythmParam: 0,
+                    scrollpitchParam: 0,
+                    scrollbothParam: 0
+                },
+                512: {
+                    pattern: "trans",
+                    transParam: 0,
+                    scaleParam: 0,
+                    tiltParam: 0,
+                    scrollrhythmParam: 0,
+                    scrollpitchParam: 0,
+                    scrollbothParam: 0
+                },
+                1024: {
+                    pattern: "trans",
+                    transParam: 0,
+                    scaleParam: 0,
+                    tiltParam: 0,
+                    scrollrhythmParam: 0,
+                    scrollpitchParam: 0,
+                    scrollbothParam: 0
+                }
+            },
+            instSpecificParams: {}
+        };
+    } else {
+        umtUiCopyTabVoice(0, voiceNum - 1, 0, voiceNum);
+        gUmt.UIParams.songTab[tab].voice[voiceNum].songNumber = songnum;
+    }
+    umtUISetDefaultInstSpecificParamsForNewInstrument(voiceNum, gUmt.UIParams.songTab[tab].voice[voiceNum].instrument);
+    gUmt.UIParams.parts = gUmt.UIParams.parts + 1;
+    if (gUmt.UIParams.parts > gUmt.UIParams.maxPartsEver) {
         gUmt.UIParams.maxPartsEver = gUmt.UIParams.parts;
     }
     umtUiCopyUiParamsToActualUi();
@@ -3824,14 +4145,15 @@ function umtExecTestDumtGmt() {
 
 umtExecReSeed = function () {
     "use strict";
-    var currentTime, timeInMs, rng, i;
+    var tab, currentTime, timeInMs, rng, i;
+    tab = gUmt.UIParams.currentTab;
     currentTime = new Date(); // year, month [, day, hour, minute, second, millisecond]);
     timeInMs = currentTime.getTime();
     gUmt.lastReSeedTime = timeInMs;
     timeInMs = timeInMs - (Math.floor(timeInMs / 256) * 256);
     rng = umtGetRando(timeInMs);
-    for (i = 0; i < gUmt.UIParams.songTab[0].parts; i = i + 1) {
-        gUmt.UIParams.songTab[0].voice[i].songNumber = Math.floor(rng.genrandReal2() * 50 + 1);
+    for (i = 0; i < gUmt.UIParams.parts; i = i + 1) {
+        gUmt.UIParams.songTab[tab].voice[i].songNumber = Math.floor(rng.genrandReal2() * 50 + 1);
     }
     umtUiCopyUiParamsToActualUi();
     if (gUmt.idemAddingVoice === false) {
@@ -3839,14 +4161,81 @@ umtExecReSeed = function () {
     }
 };
 
+function umtUiCopyTab(fromTab, toTab) {
+    "use strict";
+    var vcnum;
+    gUmt.UIParams.songTab[toTab] = {
+        centernote: gUmt.UIParams.songTab[fromTab].centernote,
+        chord: gUmt.UIParams.songTab[fromTab].chord,
+        parts: gUmt.UIParams.songTab[fromTab].parts,
+        scale: gUmt.UIParams.songTab[fromTab].scale,
+        voice: [ ]
+    };
+    for (vcnum = 0; vcnum < gUmt.UIParams.songTab[fromTab].parts; vcnum = vcnum + 1) {
+        umtUiCopyTabVoice(fromTab, vcnum, toTab, vcnum);
+    }
+}
+
+function umtUiAddTab() {
+    "use strict";
+    umtUiCopyTab(gUmt.UIParams.currentTab, gUmt.UIParams.numTabs);
+    gUmt.UIParams.numTabs = gUmt.UIParams.numTabs + 1;
+}
+
 // main
 
-gUmt = {TAU: Math.PI * 2, LOG2: Math.log(2), globalCtx: umtGetAudioContext(), globalRng: umtGetRando(0), cachedNotes: {}, cachedWads: {}, instrumentBank: {}, cachedFittings: {}, loop: [ { score: {tempo: 700, centernoteLog: (Math.log(432) / Math.log(2)) - 5, songTab: [ { voice: [] } ] } } ], playedUpTo: 0, timerIsOn: false, currentlyPlayingLoop: 0, compositionLag: 0, idemCompose: false, idemAddingVoice: false, UIParams: { tempo: 360, mastervol: 0.9, songTab: [ { scale: 'maj7reg', chord: "triad", centernote: 432, parts: 0, voice: [] } ], loopDuration: 128 }, maxPartsEver: 4 };
+gUmt = {
+    TAU: Math.PI * 2,
+    LOG2: Math.log(2),
+    globalCtx: umtGetAudioContext(),
+    globalRng: umtGetRando(0),
+    cachedNotes: {},
+    cachedWads: {},
+    instrumentBank: {},
+    cachedFittings: {},
+    loop: [
+        {
+            score: {
+                tempo: 700,
+                centernoteLog: (Math.log(432) / Math.log(2)) - 5,
+                songTab: [
+                    {
+                        voice: []
+                    }
+                ]
+            }
+        }
+    ],
+    playedUpTo: 0,
+    timerIsOn: false,
+    currentlyPlayingLoop: 0,
+    compositionLag: 0,
+    idemCompose: false,
+    idemAddingVoice: false,
+    UIParams: {
+        tempo: 360,
+        mastervol: 0.9,
+        songTab: [
+            {
+                scale: 'maj7reg',
+                chord: "triad",
+                centernote: 432,
+                voice: []
+            }
+        ],
+        loopDuration: 128,
+        parts: 0,
+        maxPartsEver: 4,
+        currentTab: 0,
+        numTabs: 1
+    }
+};
 
 // console.log(gUmt);
 
 jQuery(function () {
     "use strict";
+    var tabContent, tabTemplate, tabCounter, tabs, dialog, form;
     jQuery("#slider_tempo").slider({min: 60, max: 960, step: 30, value: 360, orientation: "horizontal", change: function (event, ui) {
         var newvalue;
         if (gUmt.idemAddingVoice === false) {
@@ -3860,13 +4249,14 @@ jQuery(function () {
     }
          });
     jQuery("#slider_centernote").slider({min: 1, max: 9, step: 1, value: 5, orientation: "horizontal", change: function (event, ui) {
-        var newvalue;
+        var tab, newvalue;
+        tab = gUmt.UIParams.currentTab;
         if (gUmt.idemAddingVoice === false) {
             if (event.type === "slidechange") {
                 newvalue = ui.value;
                 newvalue = Math.pow(1.125, newvalue - 5) * 432;
                 window.document.getElementById("display_centernote_value").innerHTML = newvalue;
-                gUmt.UIParams.songTab[0].centernote = newvalue;
+                gUmt.UIParams.songTab[tab].centernote = newvalue;
                 umtAutomaticallyRecomposeLoopFromUIParams();
             }
         }
@@ -3884,6 +4274,112 @@ jQuery(function () {
         }
     }
          });
+
+    // tabs
+    // actual addTab function: adds new tab using the input from the form above
+    function addTab() {
+        // var label, id, li, tabContentHtml;
+        // label = tabTitle.val() || "Tab " + tabCounter;
+        var label, id, li, tabContentHtml, nextTabNum, nextTabStr, i;
+        nextTabNum = gUmt.UIParams.numTabs;
+        nextTabStr = nextTabNum.toString(26);
+        label = "";
+        for (i = 0; i < nextTabStr.length; i = i + 1) {
+            label = label + String.fromCharCode(nextTabStr.charCodeAt(i) + 17);
+        }
+        id = "tabs-" + tabCounter;
+        li = jQuery(tabTemplate.replace(/#\{href\}/g, "#" + id).replace(/#\{label\}/g, label));
+        tabContentHtml = tabContent.val() || "Tab " + tabCounter + " content.";
+
+        tabs.find(".ui-tabs-nav").append(li);
+        tabs.append("<div id='" + id + "'><p>" + tabContentHtml + "</p></div>");
+        tabs.tabs("refresh");
+        tabCounter = tabCounter + 1;
+        umtUiAddTab();
+    }
+
+    // tabTitle = jQuery("#tab_title");
+    tabContent = jQuery("#tab_content");
+    tabTemplate = "<li><a href='#{href}'>#{label}</a> <span class='ui-icon ui-icon-close' role='presentation'>Remove Tab</span></li>";
+    tabCounter = 2;
+
+    tabs = jQuery("#tabs").tabs({
+        activate: function (event, ui) {
+            var active;
+            console.log(event);
+            console.log(ui);
+            active = jQuery("#tabs").tabs("option", "active");
+            // window.alert(active);
+            gUmt.UIParams.currentTab = active;
+            umtUiCopyUiParamsToActualUi();
+        }
+    });
+
+    // modal dialog init: custom buttons and a "close" callback resetting the form inside
+    dialog = jQuery("#dialog").dialog({
+        autoOpen: false,
+        modal: true,
+        buttons: {
+            Add: function () {
+                addTab();
+                jQuery(this).dialog("close");
+            },
+            Cancel: function () {
+                jQuery(this).dialog("close");
+            }
+        },
+        close: function () {
+            form[0].reset();
+        }
+    });
+
+    // addTab form: calls addTab function on submit and closes the dialog
+    form = dialog.find("form").submit(function (event) {
+        addTab();
+        dialog.dialog("close");
+        event.preventDefault();
+    });
+
+    // addTab button: just opens the dialog
+    jQuery("#add_tab")
+        .button()
+        .click(function () {
+            // dialog.dialog("open");
+            addTab();
+        });
+
+    // close icon: removing the tab on click
+    tabs.delegate("span.ui-icon-close", "click", function () {
+        var panelId, kids, count, tabNumber;
+        panelId = jQuery(this).closest("li").remove().attr("aria-controls");
+        count = 0;
+        tabNumber = -1;
+        kids = tabs.children();
+        kids.each(function (index) {
+            // console.log(index + ": " + jQuery(this).id);
+            console.log(index + ": " + this.id);
+            if (this.id === panelId) {
+                // window.alert("found!!");
+                tabNumber = count;
+            }
+            if (this.id.substring(0, 5) === "tabs-") {
+                count = count + 1;
+            }
+        });
+        window.alert("Tab removed: " + ctstr(tabNumber));
+        jQuery("#" + panelId).remove();
+        tabs.tabs("refresh");
+    });
+
+    tabs.bind("keyup", function (event) {
+        if (event.altKey && event.keyCode === jQuery.ui.keyCode.BACKSPACE) {
+            var panelId = tabs.find(".ui-tabs-active").remove().attr("aria-controls");
+            jQuery("#" + panelId).remove();
+            tabs.tabs("refresh");
+        }
+    });
+
+    // start song
     umtCreateInstrumentBank();
     umtExecAddVoice();
     document.getElementById("playvoice0").checked = true;
@@ -3895,6 +4391,17 @@ jQuery(function () {
 
 </head>
 <body>
+<div id="dialog" title="Tab data">
+	<form>
+		<fieldset class="ui-helper-reset">
+			<label for="tab_title">Title</label>
+			<input type="text" name="tab_title" id="tab_title" value="Tab Title" class="ui-widget-content ui-corner-all">
+			<label for="tab_content">Content</label>
+			<textarea name="tab_content" id="tab_content" class="ui-widget-content ui-corner-all">Tab content</textarea>
+		</fieldset>
+	</form>
+</div>
+
   <section>
     <h1>UMT: The Ultimate Music Toy</h1>
 
@@ -3926,6 +4433,16 @@ jQuery(function () {
 <div id="display_mastervol_value">90</div>
 
 </p>
+
+<button id="add_tab">Add Tab</button>
+ 
+<div id="tabs">
+	<ul>
+		<li><a href="#tabs-1">A</a> <span class="ui-icon ui-icon-close" role="presentation">Remove Tab</span></li>
+	</ul>
+	<div id="tabs-1">
+	</div>
+
 
 <p> Scale:
 
@@ -4178,7 +4695,7 @@ jQuery(function () {
 
 <input id="add_voice" type="button" value="Add a voice" />
 
-<div id="darkLayer" class="darkClass" style="display:none"></div>
+</div>
 
   </section>
 <script>
