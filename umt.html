@@ -375,7 +375,8 @@ function umtGenerateANoteSteamPop(frequency, duration, amplitude) {
     rng = umtGetRando(0);
     for (i = 0; i < numSamples; i = i + 1) {
         fadeLin = 1.0 - (i / numSamples);
-        fadeRecip = 1.0 / (100.0 * (i / numSamples) + 1.0);
+        // fadeRecip = 1.0 / (100.0 * (i / numSamples) + 1.0);
+        fadeRecip = 1.0 / ((i / 20.0) + 1.0);
         if (fadeLin < fadeRecip) {
             fadeActual = fadeLin;
         } else {
@@ -2206,8 +2207,8 @@ function umtSchedulePlayOfSegment() {
     // figure out our playback window for the segment we are going to play in this timer callback
     windowStart = currentTime;
     compositonlag = gUmt.compositionLag;
-    if (compositonlag < 1.0) {
-        compositonlag = 1.0;
+    if (compositonlag < 0.1) {
+        compositonlag = 0.1;
     }
     windowStop = currentTime + (compositonlag * 2.5);
     if (windowStart < gUmt.playedUpTo) {
@@ -3041,12 +3042,29 @@ function umtComposeTab(lpnum, tab) {
     umtHarmonizeScore(lpnum, tab);
 }
 
+function umtMakeSureTabRecomposeFlagsExist(lpnum, numTabs) {
+    "use strict";
+    var tab;
+    if (!gUmt.tabRecomposeFlags.hasOwnProperty(lpnum)) {
+        gUmt.tabRecomposeFlags[lpnum] = [];
+    }
+    for (tab = 0; tab < numTabs; tab = tab + 1) {
+        if (!gUmt.tabRecomposeFlags[lpnum].hasOwnProperty(tab)) {
+            gUmt.tabRecomposeFlags[lpnum][tab] = true; // default to true; tab is dirty, needs to be recomposed
+        }
+    }
+}
+
 function umtComposeAllTabs(lpnum) {
     "use strict";
     var tab, numTabs;
     numTabs = gUmt.UIParams.numTabs;
+    umtMakeSureTabRecomposeFlagsExist(lpnum, numTabs);
     for (tab = 0; tab < numTabs; tab = tab + 1) {
-        umtComposeTab(lpnum, tab);
+        if (gUmt.tabRecomposeFlags[lpnum][tab]) {
+            umtComposeTab(lpnum, tab);
+        }
+        gUmt.tabRecomposeFlags[lpnum][tab] = false;
     }
     // these must be done afterward because "score" object might not exist until after call to umtComposeTab()
     gUmt.loop[lpnum].score.numTabs = numTabs;
@@ -3066,6 +3084,7 @@ function umtExecAutomaticStart() {
     if (gUmt.noReenterCompose === false) {
         gUmt.noReenterCompose = true;
         if (gUmt.UIParams.playAllTabs) {
+            gUmt.tabRecomposeFlags = [];
             umtComposeAllTabs(1);
             gUmt.loop[1].score.playAllTabs = true;
         } else {
@@ -3110,12 +3129,16 @@ function umtAutomaticallyRecomposeLoopFromUIParams() {
     }
     startTime = gUmt.globalCtx.currentTime;
     umtDisableUI();
+    tab = gUmt.UIParams.currentTab;
     if (gUmt.UIParams.playAllTabs) {
+        umtMakeSureTabRecomposeFlagsExist(0, gUmt.UIParams.numTabs);
+        umtMakeSureTabRecomposeFlagsExist(1, gUmt.UIParams.numTabs);
+        gUmt.tabRecomposeFlags[0][tab] = true;
+        gUmt.tabRecomposeFlags[1][tab] = true;
         umtComposeAllTabs(newLoop);
         gUmt.loop[newLoop].score.playAllTabs = true;
         gUmt.loop[newLoop].score.numTabs = gUmt.UIParams.numTabs;
     } else {
-        tab = gUmt.UIParams.currentTab;
         umtComposeTab(newLoop, tab);
         gUmt.loop[newLoop].score.playAllTabs = false;
     }
@@ -4418,7 +4441,8 @@ gUmt = {
         currentTab: 0,
         numTabs: 1,
         playAllTabs: false
-    }
+    },
+    tabRecomposeFlags: [],
 };
 
 // console.log(gUmt);
@@ -4509,7 +4533,9 @@ jQuery(function () {
             gUmt.UIParams.currentTab = active;
             umtUiHiddenCopyBetweenTabs();
             umtUiCopyUiParamsToActualUi();
-            umtAutomaticallyRecomposeLoopFromUIParams();
+            if (!gUmt.UIParams.playAllTabs) {
+                umtAutomaticallyRecomposeLoopFromUIParams();
+            }
         }
     });
 
@@ -4734,7 +4760,7 @@ jQuery(function () {
 					<option value="sawtoothvar">Sawtooth wave</option>
 					<!-- option value="forwardsnoise" Noise /option -->
 					<!-- option value="backwardsnoise" Backwards noise /option -->
-					<option value="steampop">Steam Pop</option>
+					<option value="steampop">Slapping pencil</option>
 					<!-- option value="fmsynthoriginal" FM Synthesis /option -->
 					<option value="fmsynthvar">FM Synthesis</option>
 					<!-- option value="wadsin" WAD Sine /option -->
@@ -4747,7 +4773,7 @@ jQuery(function () {
 					<option value="wadpiano">WAD Piano</option>
 				</select>
 			</td><td id="voicesongnumcellxx" valign="top" align="center">
-				Song Number: <br />
+				Seed: <br />
 				<select name="songnumberxx" id="songnumberxx">
 					<option value="1">1</option>
 					<option value="2">2</option>
