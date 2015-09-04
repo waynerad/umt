@@ -1046,22 +1046,23 @@ function umtExecPlayRawScore() {
 }
 
 // cheat sheet for scales
-// ratio  interval  example key of C  logarithm  nearest equal temperment (logarithm)
-// 1/1    P1        C                 0.000      0.000
-// 16/15  m2        C#                0.093      0.083
-// 10/9   M2-alt    D-alt             0.152      0.166
-// 9/8    M2-reg    D-reg             0.170      0.166
-// 6/5    m3        Eb                0.263      0.250
-// 5/4    M3        E                 0.322      0.333
-// 4/3    P4        F                 0.415      0.417
-// 25/18  A4        F#                0.474      0.500
-// 3/2    P5        G                 0.585      0.583
-// 8/5    m6        Ab                0.678      0.667
-// 5/3    M6        A                 0.737      0.750
-// 16/9   m7-alt    Bb-alt            0.830      0.833
-// 9/5    m7-reg    Bb-reg            0.848      0.833
-// 15/8   M7        B                 0.907      0.917
-// 2/1    P8        C                 1.000      1.000
+// ratio  interval  example key of C  logarithm  nearest equal temperment (logarithm)  difference
+// 1/1    P1        C                 0.000      0.000      0.000
+// 16/15  m2        C#                0.093      0.083      0.010
+// 10/9   M2-alt    D-alt             0.152      0.166      0.015
+// 9/8    M2-reg    D-reg             0.170      0.166      0.003
+// 6/5    m3        Eb                0.263      0.250      0.013
+// 5/4    M3        E                 0.322      0.333      0.011
+// 4/3    P4        F                 0.415      0.417      0.002
+// 25/18  A4-reg    F#                0.474      0.500      0.026
+// 36/25  A4-alt    F#                0.526      0.500      0.026
+// 3/2    P5        G                 0.585      0.583      0.002
+// 8/5    m6        Ab                0.678      0.667      0.011
+// 5/3    M6        A                 0.737      0.750      0.013
+// 16/9   m7-reg    Bb-reg            0.830      0.833      0.003
+// 9/5    m7-alt    Bb-alt            0.848      0.833      0.015
+// 15/8   M7        B                 0.907      0.917      0.010
+// 2/1    P8        C                 1.000      1.000      0.000
 
 function umtGetScale15ChromaticTT() {
     "use strict";
@@ -1077,13 +1078,13 @@ function umtGetScale13Chromatic() {
 
 function umtGetScale12ChromaticRegRegTT() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 25, dnom: 18}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 9, dnom: 5}, {num: 15, dnom: 8} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 25, dnom: 18}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 15, dnom: 8} ];
     return scale;
 }
 
 function umtGetScale11ChromaticRegReg() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 9, dnom: 5}, {num: 15, dnom: 8} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 15, dnom: 8} ];
     return scale;
 }
 
@@ -1119,13 +1120,13 @@ function umtGetScale7MajorAlt() {
 
 function umtGetScale7MinorNaturalRegReg() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 9, dnom: 5} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 16, dnom: 9} ];
     return scale;
 }
 
 function umtGetScale7MinorNaturalAltReg() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 10, dnom: 9}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 9, dnom: 5} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 10, dnom: 9}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 16, dnom: 9} ];
     return scale;
 }
 
@@ -1191,7 +1192,7 @@ function umtGetScale5Pentatonic23Alt() {
 
 function umtGetScale5Pentatonic131Reg() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 9, dnom: 5} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 16, dnom: 9} ];
     return scale;
 }
 
@@ -1209,13 +1210,13 @@ function umtGetScale5Pentatonic32Alt() {
 
 function umtGetScale5Pentatonic221Reg() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 9, dnom: 5} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 16, dnom: 9} ];
     return scale;
 }
 
 function umtGetScale5Pentatonic122Reg() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 8, dnom: 5}, {num: 9, dnom: 5} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 8, dnom: 5}, {num: 16, dnom: 9} ];
     return scale;
 }
 
@@ -1245,13 +1246,13 @@ function umtGetScale7ModeIonian() {
 
 function umtGetScale7ModeDorian() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 9, dnom: 5} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 16, dnom: 9} ];
     return scale;
 }
 
 function umtGetScale7ModePhrygian() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 9, dnom: 5} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 16, dnom: 9} ];
     return scale;
 }
 
@@ -1263,19 +1264,19 @@ function umtGetScale7ModeLydianTT() {
 
 function umtGetScale7ModeMixolydian() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 9, dnom: 5} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 16, dnom: 9} ];
     return scale;
 }
 
 function umtGetScale7ModeAeolian() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 9, dnom: 5} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 16, dnom: 9} ];
     return scale;
 }
 
 function umtGetScale7ModeLocrianTT() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 25, dnom: 18}, {num: 8, dnom: 5}, {num: 9, dnom: 5} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 25, dnom: 18}, {num: 8, dnom: 5}, {num: 16, dnom: 9} ];
     return scale;
 }
 
@@ -1293,13 +1294,13 @@ function umtGetScale7Arabic() {
 
 function umtGetScale7FreygishPhrygianDominant() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 9, dnom: 5} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 16, dnom: 9} ];
     return scale;
 }
 
 function umtGetScale7UkranianDorian() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 25, dnom: 18}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 9, dnom: 5} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 25, dnom: 18}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 16, dnom: 9} ];
     return scale;
 }
 
@@ -2198,11 +2199,11 @@ function umtSchedulePlayOfSegment() {
     var tab, lpnum, currentTime, compositonlag, windowStart, windowStop, loopUnitLen, loopLen, numLoopTabCycles, fromMoment, center, tempoScalar, numVoices, voicenum, notenum, adjustedStartTime, masterVolScaler, ampScalar, regularTime, timeInMs, interval, numTabs, numLoopTotalCycles;
     tab = gUmt.UIParams.currentTab;
     lpnum = gUmt.currentlyPlayingLoop;
-    if (gUmt.loop[lpnum].score.playAllTabs) {
-        cx("Scheduling playback of segment from tab ALL, loop " + ctstr(lpnum));
-    } else {
-        cx("Scheduling playback of segment from tab " + ctstr(tab) + ", loop " + ctstr(lpnum));
-    }
+    // if (gUmt.loop[lpnum].score.playAllTabs) {
+    //     cx("Scheduling playback of segment from tab ALL, loop " + ctstr(lpnum));
+    // } else {
+    //     cx("Scheduling playback of segment from tab " + ctstr(tab) + ", loop " + ctstr(lpnum));
+    // }
     currentTime = gUmt.globalCtx.currentTime;
     // figure out our playback window for the segment we are going to play in this timer callback
     windowStart = currentTime;
@@ -2235,7 +2236,7 @@ function umtSchedulePlayOfSegment() {
             numLoopTotalCycles = Math.floor(numLoopTabCycles / numTabs);
             tab = numLoopTabCycles - (numLoopTotalCycles * numTabs);
             // currrent tab
-            cx("    playback current tab " + ctstr(tab));
+            // cx("    playback current tab " + ctstr(tab));
             // because we switched tabs, numVoices and other things may have changed, so we have to recalculate them
             center = gUmt.loop[lpnum].score.songTab[tab].centernoteLog;
             numVoices = gUmt.loop[lpnum].score.songTab[tab].parts;
@@ -2259,7 +2260,7 @@ function umtSchedulePlayOfSegment() {
             if (tab === numTabs) {
                 tab = 0;
             }
-            cx("        playback next tab " + ctstr(tab));
+            // cx("        playback next tab " + ctstr(tab));
             if (gUmt.loop[gUmt.currentlyPlayingLoop].score.songTab[tab].parts > 0) {
                 // because we switched tabs, numVoices and other things may have changed, so we have to recalculate them
                 center = gUmt.loop[lpnum].score.songTab[tab].centernoteLog;
@@ -4442,7 +4443,7 @@ gUmt = {
         numTabs: 1,
         playAllTabs: false
     },
-    tabRecomposeFlags: [],
+    tabRecomposeFlags: []
 };
 
 // console.log(gUmt);
