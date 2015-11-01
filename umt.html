@@ -271,32 +271,34 @@ function umtGenerateANoteSquareVar(frequency, duration, amplitude, threshold) {
 function umtGenerateANoteSquareRisingPitch(frequency, duration, amplitude, threshold, riseRate) {
     "use strict";
     // consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
-    var numSamples, theBuffer, bufData, i, fade;
+    var numSamples, theBuffer, bufData, i, fade, pctThere, expAdjustedFreq;
     threshold = (threshold / 2.0) + 0.5;
     numSamples = duration * gUmt.globalCtx.sampleRate;
     theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.globalCtx.sampleRate); // numberOfChannels, length, sampleRate
     bufData = theBuffer.getChannelData(0);
     for (i = 0; i < numSamples; i = i + 1) {
-        fade = 1.0 - (i / numSamples);
-        bufData[i] = umtFMVarSquare(i * ((frequency + ((i / gUmt.globalCtx.sampleRate) * riseRate)) / gUmt.globalCtx.sampleRate), threshold) * (amplitude * fade);
+        pctThere = i / numSamples;
+        fade = 1.0 - pctThere;
+        expAdjustedFreq = frequency * (((i / gUmt.globalCtx.sampleRate)  * riseRate) + 1);
+        bufData[i] = umtFMVarSquare(i * (expAdjustedFreq / gUmt.globalCtx.sampleRate), threshold) * (amplitude * fade);
     }
     return theBuffer;
 }
 
-function umtGenerateANoteSquareStartStopVar(frequency, duration, amplitude, startthreshold, stopthreshold) {
+function umtGenerateANoteSquareStartStopVar(frequency, duration, amplitude, startThreshold, stopThreshold) {
     "use strict";
     // consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
     var numSamples, theBuffer, bufData, i, fade, thresGap, pctThere, currentThreshold;
-    startthreshold = (startthreshold / 2.0) + 0.5;
-    stopthreshold = (stopthreshold / 2.0) + 0.5;
+    startThreshold = (startThreshold / 2.0) + 0.5;
+    stopThreshold = (stopThreshold / 2.0) + 0.5;
     numSamples = duration * gUmt.globalCtx.sampleRate;
     theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.globalCtx.sampleRate); // numberOfChannels, length, sampleRate
     bufData = theBuffer.getChannelData(0);
-    thresGap = stopthreshold - startthreshold;
+    thresGap = stopThreshold - startThreshold;
     for (i = 0; i < numSamples; i = i + 1) {
         pctThere = i / numSamples;
         fade = 1.0 - pctThere;
-        currentThreshold = (thresGap * pctThere) + startthreshold;
+        currentThreshold = (thresGap * pctThere) + startThreshold;
         bufData[i] = umtFMVarSquare(i * (frequency / gUmt.globalCtx.sampleRate), currentThreshold) * (amplitude * fade);
     }
     return theBuffer;
@@ -482,7 +484,7 @@ function umtGenerateANoteFMSynthVar(frequency, duration, amplitude, modulator, b
     modNum = modList[modulator].num;
     modDnom = modList[modulator].dnom;
     modulatorFreq = frequency * (modNum / modDnom);
-    beta = (beta * 20.0);
+    beta = (beta * 5.0);
     for (i = 0; i < numSamples; i = i + 1) {
         fade = 1.0 - (i / numSamples);
         subFrequency = frequency + beta * ((Math.sin((gUmt.TAU * i * (modulatorFreq / gUmt.globalCtx.sampleRate)))));
@@ -516,20 +518,16 @@ function umtGenerateANoteFMSynthStartStop(frequency, duration, amplitude, startM
     // modList = [ {num: 1, dnom: 1}, {num: 2, dnom: 1}, {num: 3, dnom: 2}, {num: 4, dnom: 3}, {num: 5, dnom: 3}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 8, dnom: 5}, {num: 9, dnom: 5}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 16, dnom: 9}, {num: 16, dnom: 15}, {num: 15, dnom: 8} ];
     // without the octives:
     modList = [ {num: 3, dnom: 2}, {num: 4, dnom: 3}, {num: 5, dnom: 3}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 8, dnom: 5}, {num: 9, dnom: 5}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 16, dnom: 9}, {num: 16, dnom: 15}, {num: 15, dnom: 8} ];
-
     startModulator = Math.floor(startModulator * (modList.length - 1));
     startModNum = modList[startModulator].num;
     startModDnom = modList[startModulator].dnom;
     startModulatorFreq = frequency * (startModNum / startModDnom);
-
     stopModulator = Math.floor(stopModulator * (modList.length - 1));
     stopModNum = modList[stopModulator].num;
     stopModDnom = modList[stopModulator].dnom;
     stopModulatorFreq = frequency * (stopModNum / stopModDnom);
-
-    startBeta = (startBeta * 20.0);
-    stopBeta = (stopBeta * 20.0);
-
+    startBeta = (startBeta * 5.0);
+    stopBeta = (stopBeta * 5.0);
     modulatorDiff = stopModulatorFreq - startModulatorFreq;
     betaDiff = stopBeta - startBeta;
     for (i = 0; i < numSamples; i = i + 1) {
@@ -544,6 +542,59 @@ function umtGenerateANoteFMSynthStartStop(frequency, duration, amplitude, startM
     return theBuffer;
 }
 
+function umtGenerateANoteFMSynthSquare(frequency, duration, amplitude, startThreshold, stopThreshold, startModulator, startBeta, stopModulator, stopBeta) {
+    "use strict";
+    // consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
+    var numSamples, theBuffer, bufData, i, fade, squarePart, subFrequency, modList, startModNum, startModDnom, startModulatorFreq, stopModNum, stopModDnom, stopModulatorFreq, pctThere, thresDiff, modulatorDiff, betaDiff, currentThreshold, currentModulatorFreq, currentBeta;
+    numSamples = duration * gUmt.globalCtx.sampleRate;
+    theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.globalCtx.sampleRate); // numberOfChannels, length, sampleRate
+    bufData = theBuffer.getChannelData(0);
+    startThreshold = (startThreshold / 2.0) + 0.5;
+    stopThreshold = (stopThreshold / 2.0) + 0.5;
+    // 1      1/1    2/1    P1        C                 0.000      0.000
+    // 1      2/1    1/1    P8        C                 1.000      1.000
+    // 3      3/2    4/3    P5        G                 0.585      0.583
+    // 3      4/3    3/2    P4        F                 0.415      0.417
+    // 5      5/3    6/5    M6        A                 0.737      0.750
+    // 5      6/5    5/3    m3        Eb                0.263      0.250
+    // 5      5/4    8/5    M3        E                 0.322      0.333
+    // 5      8/5    5/4    m6        Ab                0.678      0.667
+    // 9      9/5    10/9   m7-reg    Bb-reg            0.848      0.833
+    // 9      10/9   9/5    M2-alt    D-alt             0.152      0.166
+    // 9      9/8    16/9   M2-reg    D-reg             0.170      0.166
+    // 9      16/9   9/8    m7-alt    Bb-alt            0.830      0.833
+    // 15     16/15  15/8   m2        C#                0.093      0.083
+    // 15     15/8   16/15  M7        B                 0.907      0.917
+    // modList = [ {num: 1, dnom: 1}, {num: 2, dnom: 1}, {num: 3, dnom: 2}, {num: 4, dnom: 3}, {num: 5, dnom: 3}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 8, dnom: 5}, {num: 9, dnom: 5}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 16, dnom: 9}, {num: 16, dnom: 15}, {num: 15, dnom: 8} ];
+    // without the octives:
+    modList = [ {num: 3, dnom: 2}, {num: 4, dnom: 3}, {num: 5, dnom: 3}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 8, dnom: 5}, {num: 9, dnom: 5}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 16, dnom: 9}, {num: 16, dnom: 15}, {num: 15, dnom: 8} ];
+    startModulator = Math.floor(startModulator * (modList.length - 1));
+    startModNum = modList[startModulator].num;
+    startModDnom = modList[startModulator].dnom;
+    startModulatorFreq = frequency * (startModNum / startModDnom);
+    stopModulator = Math.floor(stopModulator * (modList.length - 1));
+    stopModNum = modList[stopModulator].num;
+    stopModDnom = modList[stopModulator].dnom;
+    stopModulatorFreq = frequency * (stopModNum / stopModDnom);
+    startBeta = (startBeta * 5.0);
+    stopBeta = (stopBeta * 5.0);
+    thresDiff = stopThreshold - startThreshold;
+    modulatorDiff = stopModulatorFreq - startModulatorFreq;
+    betaDiff = stopBeta - startBeta;
+    for (i = 0; i < numSamples; i = i + 1) {
+        pctThere = (i / numSamples);
+        fade = 1.0 - pctThere;
+        currentModulatorFreq = (modulatorDiff * pctThere) + startModulatorFreq;
+        currentBeta = (betaDiff * pctThere) + startBeta;
+        subFrequency = frequency + currentBeta * ((Math.sin((gUmt.TAU * i * (currentModulatorFreq / gUmt.globalCtx.sampleRate)))));
+        // sinePart = Math.sin((gUmt.TAU * i * (subFrequency / gUmt.globalCtx.sampleRate)));
+        // squarePart = umtFMSquare(i * (subFrequency / gUmt.globalCtx.sampleRate));
+        currentThreshold = (thresDiff * pctThere) + startThreshold;
+        squarePart = umtFMVarSquare(i * (subFrequency / gUmt.globalCtx.sampleRate), currentThreshold);
+        bufData[i] = squarePart * (amplitude * fade);
+    }
+    return theBuffer;
+}
 
 // Converted this to a test function rather than removing it -- want to keep a built in function (not part of any instrument) for making sounds but it should only be used for testing
 function umtTestQueUpANoteSineWave(fromMoment, frequency, startTime, duration, amplitude, instSpecificParams) {
@@ -643,15 +694,15 @@ function InstantiateSquareRisingPitchObj() {
         };
     };
     this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
-        var idxname, theBuffer, node, threshold, riserate, riseexp;
+        var idxname, theBuffer, node, threshold, riserate;
         threshold = instSpecificParams.unsquareness;
         riserate = instSpecificParams.riserate;
-        riseexp = (Math.exp(riserate) - 1.0) * 400.0;
+        riserate = riserate * 4;
         idxname = "squarerise" + frequency + "x" + duration + "x" + amplitude + "x" + threshold + "x" + riserate;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
             theBuffer = gUmt.cachedNotes[idxname];
         } else {
-            theBuffer = umtGenerateANoteSquareRisingPitch(frequency, duration, amplitude, threshold * 0.96, riseexp);
+            theBuffer = umtGenerateANoteSquareRisingPitch(frequency, duration, amplitude, threshold * 0.96, riserate);
             gUmt.cachedNotes[idxname] = theBuffer;
         }
         node = gUmt.globalCtx.createBufferSource();
@@ -673,14 +724,14 @@ function InstantiateSquareStartStopObj() {
         };
     };
     this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
-        var idxname, theBuffer, node, startthreshold, stopthreshold;
-        startthreshold = instSpecificParams.startunsquareness;
-        stopthreshold = instSpecificParams.stopunsquareness;
-        idxname = "squaredblvar" + frequency + "x" + duration + "x" + amplitude + "x" + startthreshold + "x" + stopthreshold;
+        var idxname, theBuffer, node, startThreshold, stopThreshold;
+        startThreshold = instSpecificParams.startunsquareness;
+        stopThreshold = instSpecificParams.stopunsquareness;
+        idxname = "squaredblvar" + frequency + "x" + duration + "x" + amplitude + "x" + startThreshold + "x" + stopThreshold;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
             theBuffer = gUmt.cachedNotes[idxname];
         } else {
-            theBuffer = umtGenerateANoteSquareStartStopVar(frequency, duration, amplitude, startthreshold * 0.96, stopthreshold * 0.96);
+            theBuffer = umtGenerateANoteSquareStartStopVar(frequency, duration, amplitude, startThreshold * 0.96, stopThreshold * 0.96);
             gUmt.cachedNotes[idxname] = theBuffer;
         }
         node = gUmt.globalCtx.createBufferSource();
@@ -922,6 +973,42 @@ function InstantiateFMSynthStartStopObj() {
     };
 }
 
+function InstantiateFMSynthSquareObj() {
+    "use strict";
+    this.getParams = function () {
+        return {
+            percussion: false,
+            parameters: [
+                { name: "startunsquareness", display: "Start un-square-ness", wraparound: false },
+                { name: "startmodulator", display: "Start modulator", wraparound: false },
+                { name: "startbeta", display: "Start beta", wraparound: false },
+                { name: "stopunsquareness", display: "Stop un-square-ness", wraparound: false },
+                { name: "stopmodulator", display: "Stop modulator", wraparound: false },
+                { name: "stopbeta", display: "Stop beta", wraparound: false }
+        ] };
+    };
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var startThreshold, stopThreshold, startModulator, startBeta, stopModulator, stopBeta, idxname, theBuffer, node;
+        startThreshold = instSpecificParams.startunsquareness;
+        stopThreshold = instSpecificParams.stopunsquareness;
+        startModulator = instSpecificParams.startmodulator;
+        startBeta = instSpecificParams.startbeta;
+        stopModulator = instSpecificParams.stopmodulator;
+        stopBeta = instSpecificParams.stopbeta;
+        idxname = "square" + frequency + "x" + duration + "x" + amplitude + "x" + startThreshold + "X" + stopThreshold + "x" + startModulator + "x" + startBeta + "x" + stopModulator + "x" + stopBeta;
+        if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
+            theBuffer = gUmt.cachedNotes[idxname];
+        } else {
+            theBuffer = umtGenerateANoteFMSynthSquare(frequency, duration, amplitude, startThreshold * 0.96, stopThreshold * 0.96, startModulator, startBeta, stopModulator, stopBeta);
+            gUmt.cachedNotes[idxname] = theBuffer;
+        }
+        node = gUmt.globalCtx.createBufferSource();
+        node.buffer = theBuffer;
+        node.connect(gUmt.globalCtx.destination);
+        node.start(startMoment);
+    };
+}
+
 function InstantiateWadSinObj() {
     "use strict";
     this.getParams = function () {
@@ -1106,6 +1193,7 @@ function umtCreateInstrumentBank() {
         sawtoothvar: new InstantiateSawtoothVarObj(),
         fmsynthvar: new InstantiateFMSynthVarObj(),
         fmsynthstartstop: new InstantiateFMSynthStartStopObj(),
+        fmsynthsquare: new InstantiateFMSynthSquareObj(),
         wadsin: new InstantiateWadSinObj(),
         wadkick: new InstantiateWadKickObj(),
         wadbass: new InstantiateWadBassObj(),
@@ -4308,7 +4396,7 @@ function umtExecAddVoice() {
             ampVariation: 0.5,
             minNote: 4,
             chunkSize: 4,
-            frameSize: 32,
+            frameSize: 16,
             symmetry: {
                 1: {
                     pattern: "trans",
@@ -4889,6 +4977,7 @@ jQuery(function () {
 					<!-- option value="fmsynthoriginal" FM Synthesis /option -->
 					<option value="fmsynthvar">FM Synthesis</option>
 					<option value="fmsynthstartstop">FM Synthesis/Start/Stop</option>
+					<option value="fmsynthsquare">FM Synthesis Square</option>
 					<!-- option value="wadsin" WAD Sine /option -->
 					<!-- option value="wadkick" WAD Kick /option -->
 					<option value="wadbass">WAD Bass</option>
