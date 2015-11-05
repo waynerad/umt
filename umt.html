@@ -3284,6 +3284,20 @@ function umtMakeSureTabRecomposeFlagsExist(lpnum, numTabs) {
     }
 }
 
+function umtSetAllTabsAllLoopsToRecompose() {
+    "use strict";
+    var lpnum, tab, numTabs;
+    numTabs = gUmt.UIParams.numTabs;
+    for (lpnum = 0; lpnum < 2; lpnum = lpnum + 1) {
+        if (!gUmt.tabRecomposeFlags.hasOwnProperty(lpnum)) {
+            gUmt.tabRecomposeFlags[lpnum] = [];
+        }
+        for (tab = 0; tab < numTabs; tab = tab + 1) {
+            gUmt.tabRecomposeFlags[lpnum][tab] = true; // default to true; tab is dirty, needs to be recomposed
+        }
+    }
+}
+
 function umtComposeAllTabs(lpnum) {
     "use strict";
     var tab, numTabs;
@@ -3691,7 +3705,7 @@ var umtUiCascadeFrameSizeChanges, umtUiCascadeChunkSizeChanges, umtUiCascadeMinN
 
 umtUiCascadeFrameSizeChanges = function (voiceNumber, newvalue) {
     "use strict";
-    var tab, chunkSize, loopDuration, symSize, slidervalue, symmetryPattern;
+    var tab, chunkSize, loopDuration, maxLoopDuration, symSize, slidervalue, symmetryPattern;
     tab = gUmt.UIParams.currentTab;
     chunkSize = gUmt.UIParams.songTab[tab].voice[voiceNumber].chunkSize;
     if (newvalue < chunkSize) {
@@ -3704,15 +3718,20 @@ umtUiCascadeFrameSizeChanges = function (voiceNumber, newvalue) {
         umtUiCascadeChunkSizeChanges(voiceNumber, chunkSize);
     }
     loopDuration = gUmt.UIParams.loopDuration;
+    maxLoopDuration = gUmt.UIParams.maxLoopDuration;
     symSize = 1;
-    while (symSize < loopDuration) {
-        if (symSize < newvalue) {
-            umtUiTurnOnSymmetryPatterns(voiceNumber, symSize, false);
+    while (symSize < maxLoopDuration) {
+        if (symSize < loopDuration) {
+            if (symSize < newvalue) {
+                umtUiTurnOnSymmetryPatterns(voiceNumber, symSize, false);
+            } else {
+                umtUiSetSymmetryListboxAndSlider(voiceNumber, symSize);
+                umtUiTurnOnSymmetryPatterns(voiceNumber, symSize, true);
+                symmetryPattern = gUmt.UIParams.songTab[tab].voice[voiceNumber].symmetry[symSize].pattern;
+                umtUIShowOrHideAppropriateSymmetrySliders(symmetryPattern, voiceNumber + "_" + symSize);
+            }
         } else {
-            umtUiSetSymmetryListboxAndSlider(voiceNumber, symSize);
-            umtUiTurnOnSymmetryPatterns(voiceNumber, symSize, true);
-            symmetryPattern = gUmt.UIParams.songTab[tab].voice[voiceNumber].symmetry[symSize].pattern;
-            umtUIShowOrHideAppropriateSymmetrySliders(symmetryPattern, voiceNumber + "_" + symSize);
+            umtUiTurnOnSymmetryPatterns(voiceNumber, symSize, false);
         }
         symSize = symSize * 2;
     }
@@ -4047,7 +4066,7 @@ function umtUiAddRow(voiceNumber) {
                 j = text.indexOf("</tr>");
                 rowcontent = text.substring(i, j + 6);
                 text = text.substring(0, i) + text.substring(j + 5); // cut
-                for (y = 0; y < 10; y = y + 1) {
+                for (y = 0; y <= 10; y = y + 1) { // BUGBUG 10 is hard-coded
                     currentrowhtml = rowcontent;
                     i = currentrowhtml.indexOf("yyy");
                     while (i >= 0) {
@@ -4235,7 +4254,7 @@ function umtUiAddRow(voiceNumber) {
 
 function umtUiCopyUiParamsToActualUi() {
     "use strict";
-    var parts, tab, i, absvalue, slidervalue, loopDuration, j, k, howeverMany, symSize, symNum, symmetryPattern;
+    var parts, tab, i, absvalue, slidervalue, loopDuration, maxLoopDuration, frameSize, symSize, symmetryPattern;
     // Important note: This function does not copy the tabs! It copies all the values outside the tabs, and all the values inside the tab *for the current tab* but does not change or configure the tabs themselves!!
     gUmt.noReenterAddingVoice = true;
     // tempo
@@ -4254,6 +4273,8 @@ function umtUiCopyUiParamsToActualUi() {
     } else {
         document.getElementById("loop_tabs_one").checked = true;
     }
+    // Loop length
+    umtUiSetListboxByValue(document.getElementById("lb_loop_length"), gUmt.UIParams.loopDuration);
     // current tab
     tab = gUmt.UIParams.currentTab;
     // scale
@@ -4274,6 +4295,7 @@ function umtUiCopyUiParamsToActualUi() {
         }
     }
     loopDuration = gUmt.UIParams.loopDuration;
+    maxLoopDuration = gUmt.UIParams.maxLoopDuration;
     for (i = 0; i < parts; i = i + 1) {
         // checkbox
         if (gUmt.UIParams.songTab[tab].voice[i].playing) {
@@ -4326,25 +4348,26 @@ function umtUiCopyUiParamsToActualUi() {
         slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
         jQuery("#slider_framesize" + i).slider({ value: slidervalue });
         // symmetry patterns and parameters
-        howeverMany = Math.floor((Math.log(loopDuration) / Math.log(2)) + 0.01);
-        k = 1;
-        for (j = 0; j < howeverMany; j = j + 1) {
-            umtUiTurnOnSymmetryPatterns(i, k, false);
-            k = k * 2;
-        }
         umtCreateInstrumentSpecificParameterControls(i, gUmt.UIParams.songTab[tab].voice[i].instrument);
         umtUiSetInstrumentSpecificSliders(i);
-        symSize = gUmt.UIParams.songTab[tab].voice[i].frameSize;
-        symNum = Math.floor((Math.log(symSize) / Math.log(2)) + 0.01);
-        while (symSize < loopDuration) {
-            umtUiTurnOnSymmetryPatterns(i, symSize, true);
-            umtUiSetSymmetryListboxAndSlider(i, symSize);
-            symmetryPattern = gUmt.UIParams.songTab[tab].voice[i].symmetry[symSize].pattern;
-            // symmetry listbox
-            umtUiSetListboxByValue(document.getElementById("sel_symmetry" + i + "_" + symSize), symmetryPattern);
-            umtUIShowOrHideAppropriateSymmetrySliders(symmetryPattern, i + "_" + symSize);
+        symSize = 1;
+        frameSize = gUmt.UIParams.songTab[tab].voice[i].frameSize;
+        while (symSize <= maxLoopDuration) {
+            if (symSize < frameSize) {
+                umtUiTurnOnSymmetryPatterns(i, symSize, false);
+            } else {
+                if (symSize >= loopDuration) {
+                    umtUiTurnOnSymmetryPatterns(i, symSize, false);
+                } else {
+                    umtUiTurnOnSymmetryPatterns(i, symSize, true);
+                    umtUiSetSymmetryListboxAndSlider(i, symSize);
+                    symmetryPattern = gUmt.UIParams.songTab[tab].voice[i].symmetry[symSize].pattern;
+                    // symmetry listbox
+                    umtUiSetListboxByValue(document.getElementById("sel_symmetry" + i + "_" + symSize), symmetryPattern);
+                    umtUIShowOrHideAppropriateSymmetrySliders(symmetryPattern, i + "_" + symSize);
+                }
+            }
             symSize = symSize * 2;
-            symNum = symNum + 1;
         }
     }
     i = parts;
@@ -4616,6 +4639,19 @@ function umtExecLoopTabsAll() {
     umtAutomaticallyRecomposeLoopFromUIParams();
 }
 
+function umtExecLoopLengthChange() {
+    "use strict";
+    var listbox, looplenparam;
+    listbox = window.document.getElementById("lb_loop_length");
+    looplenparam = listbox.options[listbox.selectedIndex].value;
+    gUmt.UIParams.loopDuration = looplenparam; 
+    if (gUmt.noReenterAddingVoice === false) {
+        umtUiCopyUiParamsToActualUi();
+        umtSetAllTabsAllLoopsToRecompose();
+        umtAutomaticallyRecomposeLoopFromUIParams();
+    }
+}
+
 // main
 
 gUmt = {
@@ -4646,6 +4682,7 @@ gUmt = {
             }
         ],
         loopDuration: 128,
+        maxLoopDuration: 1024,
         parts: 0,
         currentTab: 0,
         numTabs: 1,
@@ -4666,6 +4703,7 @@ jQuery(function () {
                 newvalue = ui.value;
                 window.document.getElementById("display_tempo_value").innerHTML = newvalue;
                 gUmt.UIParams.tempo = newvalue;
+                umtSetAllTabsAllLoopsToRecompose();
                 umtAutomaticallyRecomposeLoopFromUIParams();
             }
         }
@@ -4692,6 +4730,7 @@ jQuery(function () {
                 newvalue = ui.value;
                 window.document.getElementById("display_mastervol_value").innerHTML = newvalue;
                 gUmt.UIParams.mastervol = newvalue / 100.0;
+                umtSetAllTabsAllLoopsToRecompose();
                 umtAutomaticallyRecomposeLoopFromUIParams();
             }
         }
@@ -4872,6 +4911,20 @@ jQuery(function () {
 <p> <input type="radio" name="loop_tabs" value="one" id="loop_tabs_one" checked="checked" /> Play selected tab <input type="radio" name="loop_tabs" value="all" id="loop_tabs_all" /> Play all tabs </p>
 
 <button id="add_tab">Add Tab</button>
+
+Loop length: <select id="lb_loop_length">
+    <option value="1">1</option>
+    <option value="2">2</option>
+    <option value="4">4</option>
+    <option value="8">8</option>
+    <option value="16">16</option>
+    <option value="32">32</option>
+    <option value="64">64</option>
+    <option value="128">128</option>
+    <option value="256">256</option>
+    <option value="512">512</option>
+    <option value="1024">1024</option>
+</select>
  
 <div id="tabs">
 	<ul>
@@ -5162,6 +5215,9 @@ umtListenElement.addEventListener("click", umtExecLoopTabsOne, true);
 
 umtListenElement = document.getElementById("loop_tabs_all");
 umtListenElement.addEventListener("click", umtExecLoopTabsAll, true);
+
+umtListenElement = document.getElementById("lb_loop_length");
+umtListenElement.addEventListener("change", umtExecLoopLengthChange, true);
 
 // umtListenElement = document.getElementById("test_play_raw");
 // umtListenElement.addEventListener("click", umtExecPlayRawScore, true);
