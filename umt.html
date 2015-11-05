@@ -663,7 +663,7 @@ function InstantiateSquareWaveObj() {
 function InstantiateSquareVarObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: false, parameters: [ { name: "unsquareness", display: "Un-square-ness", wraparound: false } ] };
+        return { percussion: false, parameters: [ { name: "unsquareness", display: "Un-square-ness" } ] };
     };
     this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
         var idxname, theBuffer, node, threshold;
@@ -688,8 +688,8 @@ function InstantiateSquareRisingPitchObj() {
         return {
             percussion: false,
             parameters: [
-                { name: "unsquareness", display: "Un-square-ness", wraparound: false },
-                { name: "riserate", display: "Pitch rise rate", wraparound: false }
+                { name: "unsquareness", display: "Un-square-ness" },
+                { name: "riserate", display: "Pitch rise rate" }
             ]
         };
     };
@@ -718,8 +718,8 @@ function InstantiateSquareStartStopObj() {
         return {
             percussion: false,
             parameters: [
-                { name: "startunsquareness", display: "Start un-square-ness", wraparound: false },
-                { name: "stopunsquareness", display: "Stop un-square-ness", wraparound: false }
+                { name: "startunsquareness", display: "Start un-square-ness" },
+                { name: "stopunsquareness", display: "Stop un-square-ness" }
             ]
         };
     };
@@ -766,7 +766,7 @@ function InstantiateTriangleWaveObj() {
 function InstantiateTriangleVarObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: false, parameters: [ { name: "untriangleness", display: "Un-Triangleness", wraparound: true } ] };
+        return { percussion: false, parameters: [ { name: "untriangleness", display: "Un-Triangleness" } ] };
     };
     this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
         var variance, idxname, theBuffer, node;
@@ -810,7 +810,7 @@ function InstantiateSawtoothWaveObj() {
 function InstantiateSawtoothVarObj() {
     "use strict";
     this.getParams = function () {
-        return { percussion: false, parameters: [ { name: "unsawtoothness", display: "Un-Sawtoothness", wraparound: true } ] };
+        return { percussion: false, parameters: [ { name: "unsawtoothness", display: "Un-Sawtoothness" } ] };
     };
     this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
         var variance, idxname, theBuffer, node;
@@ -921,8 +921,8 @@ function InstantiateFMSynthVarObj() {
     "use strict";
     this.getParams = function () {
         return { percussion: false, parameters: [
-            { name: "modulator", display: "Modulator", wraparound: false },
-            { name: "beta", display: "Beta", wraparound: false }
+            { name: "modulator", display: "Modulator" },
+            { name: "beta", display: "Beta" }
         ] };
     };
     this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
@@ -947,10 +947,10 @@ function InstantiateFMSynthStartStopObj() {
     "use strict";
     this.getParams = function () {
         return { percussion: false, parameters: [
-            { name: "startmodulator", display: "Start modulator", wraparound: false },
-            { name: "startbeta", display: "Start beta", wraparound: false },
-            { name: "stopmodulator", display: "Stop modulator", wraparound: false },
-            { name: "stopbeta", display: "Stop beta", wraparound: false }
+            { name: "startmodulator", display: "Start modulator" },
+            { name: "startbeta", display: "Start beta" },
+            { name: "stopmodulator", display: "Stop modulator" },
+            { name: "stopbeta", display: "Stop beta" }
         ] };
     };
     this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
@@ -979,12 +979,12 @@ function InstantiateFMSynthSquareObj() {
         return {
             percussion: false,
             parameters: [
-                { name: "startunsquareness", display: "Start un-square-ness", wraparound: false },
-                { name: "startmodulator", display: "Start modulator", wraparound: false },
-                { name: "startbeta", display: "Start beta", wraparound: false },
-                { name: "stopunsquareness", display: "Stop un-square-ness", wraparound: false },
-                { name: "stopmodulator", display: "Stop modulator", wraparound: false },
-                { name: "stopbeta", display: "Stop beta", wraparound: false }
+                { name: "startunsquareness", display: "Start un-square-ness" },
+                { name: "startmodulator", display: "Start modulator" },
+                { name: "startbeta", display: "Start beta" },
+                { name: "stopunsquareness", display: "Stop un-square-ness" },
+                { name: "stopmodulator", display: "Stop modulator" },
+                { name: "stopbeta", display: "Stop beta" }
             ]
         };
     };
@@ -2594,41 +2594,6 @@ function umtAutomaticStart(lpnum) {
 function umtAutomaticStop() {
     "use strict";
     gUmt.timerIsOn = false;
-}
-
-function umtTransposeInstrumentSpecificParameters(instParams, transposeParams) {
-    "use strict";
-    var rv, par, replacement;
-    if (instParams === null) {
-        return null;
-    }
-    rv = {};
-    for (par in instParams) {
-        if (instParams.hasOwnProperty(par)) {
-            if (transposeParams.hasOwnProperty(par)) {
-                replacement = instParams[par] + transposeParams[par];
-                if (transposeParams[par + "_wraparound"]) {
-                    if (replacement < 0.0) {
-                        replacement = replacement + 1.0;
-                    }
-                    if (replacement > 1.0) {
-                        replacement = replacement - 1.0;
-                    }
-                } else {
-                    if (replacement < 0.0) {
-                        replacement = 0.0;
-                    }
-                    if (replacement > 1.0) {
-                        replacement = 1.0;
-                    }
-                }
-                rv[par] = replacement;
-            } else {
-                rv[par] = instParams[par];
-            }
-        }
-    }
-    return rv;
 }
 
 function umtCopyAndTransform(lpnum, tab, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose) {
