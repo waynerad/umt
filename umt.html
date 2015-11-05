@@ -45,10 +45,10 @@ var gUmt;
 //    jsabort, cx, and ctstr are debugging functions that will be
 //    REMOVED from the final product (assuming there is ever any such thing as a
 //    final product :P )
-// 
+//
 //    Anything that starts with umt_test is test code and will be removed
 //    (or at least shoved aside into some other file).
-// 
+//
 //    Actual music code starts with the function umtGetAudioContext
 
 
@@ -985,7 +985,8 @@ function InstantiateFMSynthSquareObj() {
                 { name: "stopunsquareness", display: "Stop un-square-ness", wraparound: false },
                 { name: "stopmodulator", display: "Stop modulator", wraparound: false },
                 { name: "stopbeta", display: "Stop beta", wraparound: false }
-        ] };
+            ]
+        };
     };
     this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
         var startThreshold, stopThreshold, startModulator, startBeta, stopModulator, stopBeta, idxname, theBuffer, node;
@@ -1860,7 +1861,7 @@ function umtFindMostHarmonicNote(pitch, scale, listOfNotesAlreadyPlaying, chord)
     while (true) {
         cycCount = cycCount + 1;
         if (cycCount === 100) {
-            jsabort('crash because stuck in endless loop');
+            jsabort('crash because stuck in endless loop (1864)');
         }
         topDist = Math.abs((topOctave + scale[topPos].fpt) - originalFullPitch);
         bottomDist = Math.abs((bottomOctave + scale[bottomPos].fpt) - originalFullPitch);
@@ -2107,8 +2108,8 @@ function umtHarmonizeScore(lpnum, tab) {
     cycleCount = 0;
     while (stillGoing) {
         cycleCount = cycleCount + 1;
-        if (cycleCount > 1000) {
-            jsabort('caught in endless loop?  cycle count blew up.');
+        if (cycleCount > 3072) {
+            jsabort('caught in endless loop?  cycle count blew up. (2112)');
             return;
         }
         for (i = 0; i < parts; i = i + 1) {
@@ -4639,13 +4640,35 @@ function umtExecLoopTabsAll() {
     umtAutomaticallyRecomposeLoopFromUIParams();
 }
 
+function umtUiClipChunkSizeAndFrameSizeAtLoopLength() {
+    "use strict";
+    var tab, numTabs, vcnum, numVoices, loopDuration;
+    numTabs = gUmt.UIParams.numTabs;
+    numVoices = gUmt.UIParams.parts;
+    loopDuration = gUmt.UIParams.loopDuration;
+    for (tab = 0; tab < numTabs; tab = tab + 1) {
+        for (vcnum = 0; vcnum < numVoices; vcnum = vcnum + 1) {
+            if (gUmt.UIParams.songTab[tab].voice[vcnum].minNote > loopDuration) {
+                gUmt.UIParams.songTab[tab].voice[vcnum].minNote = loopDuration;
+            }
+            if (gUmt.UIParams.songTab[tab].voice[vcnum].chunkSize > loopDuration) {
+                gUmt.UIParams.songTab[tab].voice[vcnum].chunkSize = loopDuration;
+            }
+            if (gUmt.UIParams.songTab[tab].voice[vcnum].frameSize > loopDuration) {
+                gUmt.UIParams.songTab[tab].voice[vcnum].frameSize = loopDuration;
+            }
+        }
+    }
+}
+
 function umtExecLoopLengthChange() {
     "use strict";
     var listbox, looplenparam;
     listbox = window.document.getElementById("lb_loop_length");
-    looplenparam = listbox.options[listbox.selectedIndex].value;
-    gUmt.UIParams.loopDuration = looplenparam; 
+    looplenparam = Number(listbox.options[listbox.selectedIndex].value);
+    gUmt.UIParams.loopDuration = looplenparam;
     if (gUmt.noReenterAddingVoice === false) {
+        umtUiClipChunkSizeAndFrameSizeAtLoopLength();
         umtUiCopyUiParamsToActualUi();
         umtSetAllTabsAllLoopsToRecompose();
         umtAutomaticallyRecomposeLoopFromUIParams();
@@ -4892,7 +4915,7 @@ jQuery(function () {
 
 <p> Stuff that applies to whole score </p>
 
-<p> Tempo: 
+<p> Tempo:
 
 <div id="slider_tempo" class="ddrg" style="width:200px;"></div>
 
@@ -4925,7 +4948,7 @@ Loop length: <select id="lb_loop_length">
     <option value="512">512</option>
     <option value="1024">1024</option>
 </select>
- 
+
 <div id="tabs">
 	<ul>
 		<li><a href="#tabs-1">A</a> <span class="ui-icon ui-icon-close" role="presentation">Remove Tab</span></li>
