@@ -4240,7 +4240,7 @@ function umtUiCopyUiParamsToActualUi() {
         document.getElementById("loop_tabs_one").checked = true;
     }
     // Loop length
-    umtUiSetListboxByValue(document.getElementById("lb_loop_length"), gUmt.UIParams.loopDuration);
+    umtUiSetListboxByValue(document.getElementById("lb_tab_length"), gUmt.UIParams.loopDuration);
     // current tab
     tab = gUmt.UIParams.currentTab;
     // scale
@@ -4629,7 +4629,7 @@ function umtUiClipChunkSizeAndFrameSizeAtLoopLength() {
 function umtExecLoopLengthChange() {
     "use strict";
     var listbox, looplenparam;
-    listbox = window.document.getElementById("lb_loop_length");
+    listbox = window.document.getElementById("lb_tab_length");
     looplenparam = Number(listbox.options[listbox.selectedIndex].value);
     gUmt.UIParams.loopDuration = looplenparam;
     if (gUmt.noReenterAddingVoice === false) {
@@ -4900,7 +4900,7 @@ jQuery(function () {
 
 <button id="add_tab">Add Tab</button>
 
-Loop length: <select id="lb_loop_length">
+Tab length: <select id="lb_tab_length">
     <option value="1">1</option>
     <option value="2">2</option>
     <option value="4">4</option>
@@ -5204,7 +5204,7 @@ umtListenElement.addEventListener("click", umtExecLoopTabsOne, true);
 umtListenElement = document.getElementById("loop_tabs_all");
 umtListenElement.addEventListener("click", umtExecLoopTabsAll, true);
 
-umtListenElement = document.getElementById("lb_loop_length");
+umtListenElement = document.getElementById("lb_tab_length");
 umtListenElement.addEventListener("change", umtExecLoopLengthChange, true);
 
 // umtListenElement = document.getElementById("test_play_raw");
