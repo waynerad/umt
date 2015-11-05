@@ -2573,6 +2573,9 @@ function umtSchedulePlayOfSegment() {
         }
     }
     if (gUmt.timerIsOn) {
+        if (compositonlag > 1.0) {
+            compositonlag = 1.0;
+        }
         window.setTimeout(umtSchedulePlayOfSegment, compositonlag * 1000);
     }
 }
