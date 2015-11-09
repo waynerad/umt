@@ -10,9 +10,6 @@ Demo
 
 There is a live demo at http://ultimatemusictoy.org/ .
 
-The demo video has been filmed but not edited yet or uploaded to Youtube yet. Without the video you might have trouble understanding the live demo site but hey, it's a music toy, so go ahead and play around with it and see -- I mean hear -- what happens.
-
-
 Install
 
 To install the source code from here, just download or clone and load umt.html into a web browser. Relavant libraries (such as jQuery) are all included, even though that's not really necessary.
