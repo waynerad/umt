@@ -2366,10 +2366,11 @@ function umtExecDisonanceTest() {
     }
 }
 
-function umtGenRhythmSubset(randomObj, minSize, chunkSize) {
+function umtGenRhythmSubset(randomObj, minSize, maxSize, chunkSize) {
     "use strict";
-    var setSize, rv, currentTime, position, amountLeft, dur;
+    var setSize, setAndMax, rv, currentTime, position, amountLeft, dur;
     setSize = chunkSize / minSize;
+    setAndMax = maxSize / minSize;
     rv = [];
     currentTime = 0;
     position = 0;
@@ -2378,7 +2379,11 @@ function umtGenRhythmSubset(randomObj, minSize, chunkSize) {
         if (amountLeft === 1) {
             dur = 1;
         } else {
-            dur = Math.floor(randomObj.genrandReal2() * amountLeft + 1);
+            if (amountLeft > setAndMax) {
+                dur = Math.floor(randomObj.genrandReal2() * setAndMax + 1);
+            } else {
+                dur = Math.floor(randomObj.genrandReal2() * amountLeft + 1);
+            }
         }
         rv[position] = dur * minSize;
         position = position + 1;
@@ -2387,15 +2392,15 @@ function umtGenRhythmSubset(randomObj, minSize, chunkSize) {
     return rv;
 }
 
-function umtGenerateRhythm(randomObj, minSize, chunkSize, totalLength) {
+function umtGenerateRhythm(randomObj, minSize, maxSize, chunkSize, totalLength) {
     "use strict";
     var rv, currentStart, chunkData, endPt, chunkLen, idx;
     if (chunkSize === totalLength) {
-        return umtGenRhythmSubset(randomObj, minSize, chunkSize);
+        return umtGenRhythmSubset(randomObj, minSize, maxSize, chunkSize);
     }
     rv = [];
     for (currentStart = 0; currentStart < totalLength; currentStart = currentStart + chunkSize) {
-        chunkData = umtGenRhythmSubset(randomObj, minSize, chunkSize);
+        chunkData = umtGenRhythmSubset(randomObj, minSize, maxSize, chunkSize);
         endPt = rv.length;
         chunkLen = chunkData.length;
         for (idx = 0; idx < chunkLen; idx = idx + 1) {
@@ -2405,12 +2410,12 @@ function umtGenerateRhythm(randomObj, minSize, chunkSize, totalLength) {
     return rv;
 }
 
-function umtAddSymmetryBaseToVoice(lpnum, tab, vcnum, minSize, chunkSize, totalLength, centerOctave, restyness, noteDistance, ampVariation, volume, instrumentName, instrumentParamNames, instSpecificParams) {
+function umtAddSymmetryBaseToVoice(lpnum, tab, vcnum, minSize, maxSize, chunkSize, totalLength, centerOctave, restyness, noteDistance, ampVariation, volume, instrumentName, instrumentParamNames, instSpecificParams) {
     "use strict";
     var rhythm, lenRhy, idx, duration, pitch, amplitude, volscalar, instParamCurrent, instParCount, instParamIdx, ourParamName, paramvalue;
     volscalar = 2.7;
     volume = Math.exp(volume * volscalar) / Math.exp(volscalar); // this is done to "logarithmize" the volume slider
-    rhythm = umtGenerateRhythm(gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].randRhythm, minSize, chunkSize, totalLength);
+    rhythm = umtGenerateRhythm(gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].randRhythm, minSize, maxSize, chunkSize, totalLength);
     lenRhy = rhythm.length;
     for (idx = 0; idx < lenRhy; idx = idx + 1) {
         duration = rhythm[idx];
@@ -3142,7 +3147,7 @@ function umtUIIsPartInUI(ptnum) {
 
 function umtComposeTab(lpnum, tab) {
     "use strict";
-    var compositionVoice, UIVoice, songNumber, octave, rangeMin, rangeMax, instrumentName, percussion, minSize, chunkSize, totalLength, centerOctave, restyness, ampVariation, volume, noteDistance, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, symmetryPattern, csrPos, csrStart, duration, loopDuration, vcnum, instParamNames, instSpecificParams;
+    var compositionVoice, UIVoice, songNumber, octave, rangeMin, rangeMax, instrumentName, percussion, minSize, maxSize, chunkSize, totalLength, centerOctave, restyness, ampVariation, volume, noteDistance, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, symmetryPattern, csrPos, csrStart, duration, loopDuration, vcnum, instParamNames, instSpecificParams;
     if (gUmt.noReenterAddingVoice) {
         jsabort("umtComposeTab called during add voice");
     }
@@ -3161,6 +3166,7 @@ function umtComposeTab(lpnum, tab) {
             percussion = gUmt.instrumentParams[instrumentName].percussion;
             umtAddVoice(lpnum, tab, compositionVoice, songNumber, rangeMin, rangeMax, instrumentName, percussion);
             minSize = gUmt.UIParams.songTab[tab].voice[UIVoice].minNote;
+            maxSize = gUmt.UIParams.songTab[tab].voice[UIVoice].maxNote;
             chunkSize = gUmt.UIParams.songTab[tab].voice[UIVoice].chunkSize;
             totalLength = gUmt.UIParams.songTab[tab].voice[UIVoice].frameSize;
             centerOctave = octave;
@@ -3170,7 +3176,7 @@ function umtComposeTab(lpnum, tab) {
             volume = gUmt.UIParams.songTab[tab].voice[UIVoice].volume;
             instParamNames = gUmt.instrumentParams[instrumentName].parameters;
             instSpecificParams = gUmt.UIParams.songTab[tab].voice[UIVoice].instSpecificParams;
-            umtAddSymmetryBaseToVoice(lpnum, tab, compositionVoice, minSize, chunkSize, totalLength, centerOctave, restyness, noteDistance, ampVariation, volume, instrumentName, instParamNames, instSpecificParams);
+            umtAddSymmetryBaseToVoice(lpnum, tab, compositionVoice, minSize, maxSize, chunkSize, totalLength, centerOctave, restyness, noteDistance, ampVariation, volume, instrumentName, instParamNames, instSpecificParams);
             // we have voices and base rhythms; now need symmetry
             startTime = 0;
             csrPos = gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].cursor;
@@ -3708,16 +3714,16 @@ umtUiCascadeFrameSizeChanges = function (voiceNumber, newvalue) {
 
 umtUiCascadeChunkSizeChanges = function (voiceNumber, newvalue) {
     "use strict";
-    var tab, minNote, frameSize, slidervalue;
+    var tab, maxNote, frameSize, slidervalue;
     tab = gUmt.UIParams.currentTab;
-    minNote = gUmt.UIParams.songTab[tab].voice[voiceNumber].minNote;
-    if (newvalue < minNote) {
-        minNote = newvalue;
-        slidervalue = Math.floor((Math.log(minNote) / Math.log(2)) + 0.01);
-        jQuery("#slider_minnote" + voiceNumber).slider({ value: slidervalue });
-        window.document.getElementById("display_minnote" + voiceNumber).innerHTML = newvalue;
-        gUmt.UIParams.songTab[tab].voice[voiceNumber].minNote = minNote;
-        umtUiCascadeMinNoteChanges(voiceNumber, minNote);
+    maxNote = gUmt.UIParams.songTab[tab].voice[voiceNumber].maxNote;
+    if (newvalue < maxNote) {
+        maxNote = newvalue;
+        slidervalue = Math.floor((Math.log(maxNote) / Math.log(2)) + 0.01);
+        jQuery("#slider_maxnote" + voiceNumber).slider({ value: slidervalue });
+        window.document.getElementById("display_maxnote" + voiceNumber).innerHTML = newvalue;
+        gUmt.UIParams.songTab[tab].voice[voiceNumber].maxNote = maxNote;
+        umtUiCascadeMaxNoteChanges(voiceNumber, maxNote);
     }
     frameSize = gUmt.UIParams.songTab[tab].voice[voiceNumber].frameSize;
     if (newvalue > frameSize) {
@@ -3730,10 +3736,19 @@ umtUiCascadeChunkSizeChanges = function (voiceNumber, newvalue) {
     }
 };
 
-umtUiCascadeMinNoteChanges = function (voiceNumber, newvalue) {
+umtUiCascadeMaxNoteChanges = function (voiceNumber, newvalue) {
     "use strict";
-    var tab, chunkSize, slidervalue;
+    var tab, minNote, chunkSize, slidervalue;
     tab = gUmt.UIParams.currentTab;
+    minNote = gUmt.UIParams.songTab[tab].voice[voiceNumber].minNote;
+    if (newvalue < minNote) {
+        minNote = newvalue;
+        slidervalue = Math.floor((Math.log(minNote) / Math.log(2)) + 0.01);
+        jQuery("#slider_minnote" + voiceNumber).slider({ value: slidervalue });
+        window.document.getElementById("display_minnote" + voiceNumber).innerHTML = newvalue;
+        gUmt.UIParams.songTab[tab].voice[voiceNumber].minNote = minNote;
+        umtUiCascadeMinNoteChanges(voiceNumber, minNote);
+    }
     chunkSize = gUmt.UIParams.songTab[tab].voice[voiceNumber].chunkSize;
     if (newvalue > chunkSize) {
         chunkSize = newvalue;
@@ -3742,6 +3757,21 @@ umtUiCascadeMinNoteChanges = function (voiceNumber, newvalue) {
         window.document.getElementById("display_chunksize" + voiceNumber).innerHTML = newvalue;
         gUmt.UIParams.songTab[tab].voice[voiceNumber].chunkSize = chunkSize;
         umtUiCascadeChunkSizeChanges(voiceNumber, chunkSize);
+    }
+};
+
+umtUiCascadeMinNoteChanges = function (voiceNumber, newvalue) {
+    "use strict";
+    var tab, maxNote, slidervalue;
+    tab = gUmt.UIParams.currentTab;
+    maxNote = gUmt.UIParams.songTab[tab].voice[voiceNumber].maxNote;
+    if (newvalue > maxNote) {
+        maxNote = newvalue;
+        slidervalue = Math.floor((Math.log(maxNote) / Math.log(2)) + 0.01);
+        jQuery("#slider_maxnote" + voiceNumber).slider({ value: slidervalue });
+        window.document.getElementById("display_maxnote" + voiceNumber).innerHTML = newvalue;
+        gUmt.UIParams.songTab[tab].voice[voiceNumber].maxNote = maxNote;
+        umtUiCascadeMaxNoteChanges(voiceNumber, maxNote);
     }
 };
 
@@ -3880,6 +3910,7 @@ function umtUiCopyTabVoice(fromTab, fromVoice, toTab, toVoice) {
         restyness: prev.restyness,
         ampVariation: prev.ampVariation,
         minNote: prev.minNote,
+        maxNote: prev.maxNote,
         chunkSize: prev.chunkSize,
         frameSize: prev.frameSize,
         symmetry: {
@@ -4013,14 +4044,14 @@ function umtUiAddRow(voiceNumber) {
     "use strict";
     var text, i, displayNumber, columnidlist, idx, cellidname, j, rowcontent, y, yyy, currentrowhtml, listenElement;
     // First, add the HTML
-    jQuery('#voices_table > tbody:last').append('<tr id="voice_row_' + voiceNumber + '"><td id="voicedescriptcell' + voiceNumber + '" valign="top"> Voice Description Cell ' + voiceNumber + '</td><td id="voiceplaycell' + voiceNumber + '" valign="top"></td><td id="voiceinstrumentcell' + voiceNumber + '" valign="top"><td id="voicevolumecell' + voiceNumber + '" valign="top"></td><td id="voicesongnumcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceoctavecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicenotedistcell' + voiceNumber + '" valign="top" align="center"></td><td id="voicerestynesscell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceampvariationcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceminnotecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicechunksizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceframesizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicesymmetriescell' + voiceNumber + '" valign="top" align="center"></td><td id="instparameterscell' + voiceNumber + '" valign="top" align="center"></td><td id="voicedeletecell' + voiceNumber + '" valign="top" align="center"></td></tr>');
+    jQuery('#voices_table > tbody:last').append('<tr id="voice_row_' + voiceNumber + '"><td id="voicedescriptcell' + voiceNumber + '" valign="top"> Voice Description Cell ' + voiceNumber + '</td><td id="voiceplaycell' + voiceNumber + '" valign="top"></td><td id="voiceinstrumentcell' + voiceNumber + '" valign="top"><td id="voicevolumecell' + voiceNumber + '" valign="top"></td><td id="voicesongnumcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceoctavecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicenotedistcell' + voiceNumber + '" valign="top" align="center"></td><td id="voicerestynesscell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceampvariationcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceminnotecell' + voiceNumber + '" valign="top" align="center"><td id="voicemaxnotecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicechunksizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceframesizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicesymmetriescell' + voiceNumber + '" valign="top" align="center"></td><td id="instparameterscell' + voiceNumber + '" valign="top" align="center"></td><td id="voicedeletecell' + voiceNumber + '" valign="top" align="center"></td></tr>');
     // Then, paste in standard templates for each of the cells
     text = document.getElementById("voicedescriptcellxx").innerHTML;
     displayNumber = voiceNumber + 1;
     i = text.indexOf("XX");
     text = text.substring(0, i) + displayNumber + text.substring(i + 2);
     document.getElementById("voicedescriptcell" + voiceNumber).innerHTML = text;
-    columnidlist = ["voiceplaycell", "voiceinstrumentcell", "voicevolumecell", "voicesongnumcell", "voiceoctavecell", "voicenotedistcell", "voicerestynesscell", "voiceampvariationcell", "voiceminnotecell", "voicechunksizecell", "voiceframesizecell", "voicesymmetriescell", "instparameterscell", "voicedeletecell"];
+    columnidlist = ["voiceplaycell", "voiceinstrumentcell", "voicevolumecell", "voicesongnumcell", "voiceoctavecell", "voicenotedistcell", "voicerestynesscell", "voiceampvariationcell", "voiceminnotecell", "voicemaxnotecell", "voicechunksizecell", "voiceframesizecell", "voicesymmetriescell", "instparameterscell", "voicedeletecell"];
     for (idx in columnidlist) {
         if (columnidlist.hasOwnProperty(idx)) {
             cellidname = columnidlist[idx];
@@ -4148,6 +4179,7 @@ function umtUiAddRow(voiceNumber) {
         }
     }
          });
+
     // Min note
     jQuery("#slider_minnote" + voiceNumber).slider({min: 0, max: 7, step: 1, value: 3, orientation: "vertical", change: function (event, ui) {
         var tab, newvalue;
@@ -4160,6 +4192,26 @@ function umtUiAddRow(voiceNumber) {
                 gUmt.UIParams.songTab[tab].voice[voiceNumber].minNote = newvalue;
                 gUmt.noReenterAddingVoice = true;
                 umtUiCascadeMinNoteChanges(voiceNumber, newvalue);
+                gUmt.noReenterAddingVoice = false;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
+                    umtAutomaticallyRecomposeLoopFromUIParams();
+                }
+            }
+        }
+    }
+         });
+    // Max note
+    jQuery("#slider_maxnote" + voiceNumber).slider({min: 0, max: 7, step: 1, value: 3, orientation: "vertical", change: function (event, ui) {
+        var tab, newvalue;
+        tab = gUmt.UIParams.currentTab;
+        if (gUmt.noReenterAddingVoice === false) {
+            if (event.type === "slidechange") {
+                newvalue = ui.value;
+                newvalue = Math.pow(2, newvalue);
+                window.document.getElementById("display_maxnote" + voiceNumber).innerHTML = newvalue;
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].maxNote = newvalue;
+                gUmt.noReenterAddingVoice = true;
+                umtUiCascadeMaxNoteChanges(voiceNumber, newvalue);
                 gUmt.noReenterAddingVoice = false;
                 if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
                     umtAutomaticallyRecomposeLoopFromUIParams();
@@ -4306,6 +4358,11 @@ function umtUiCopyUiParamsToActualUi() {
         window.document.getElementById("display_minnote" + i).innerHTML = absvalue;
         slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
         jQuery("#slider_minnote" + i).slider({ value: slidervalue });
+        // max note
+        absvalue = gUmt.UIParams.songTab[tab].voice[i].maxNote;
+        window.document.getElementById("display_maxnote" + i).innerHTML = absvalue;
+        slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
+        jQuery("#slider_maxnote" + i).slider({ value: slidervalue });
         // chunk size
         absvalue = gUmt.UIParams.songTab[tab].voice[i].chunkSize;
         window.document.getElementById("display_chunksize" + i).innerHTML = absvalue;
@@ -4387,6 +4444,7 @@ function umtExecAddVoice() {
             restyness: 0.0,
             ampVariation: 0.5,
             minNote: 4,
+            maxNote: 4,
             chunkSize: 4,
             frameSize: 16,
             symmetry: {
@@ -4618,6 +4676,9 @@ function umtUiClipChunkSizeAndFrameSizeAtLoopLength() {
         for (vcnum = 0; vcnum < numVoices; vcnum = vcnum + 1) {
             if (gUmt.UIParams.songTab[tab].voice[vcnum].minNote > loopDuration) {
                 gUmt.UIParams.songTab[tab].voice[vcnum].minNote = loopDuration;
+            }
+            if (gUmt.UIParams.songTab[tab].voice[vcnum].maxNote > loopDuration) {
+                gUmt.UIParams.songTab[tab].voice[vcnum].maxNote = loopDuration;
             }
             if (gUmt.UIParams.songTab[tab].voice[vcnum].chunkSize > loopDuration) {
                 gUmt.UIParams.songTab[tab].voice[vcnum].chunkSize = loopDuration;
@@ -4868,7 +4929,7 @@ jQuery(function () {
 </div>
 
   <section>
-    <h1>UMT: The Ultimate Music Toy</h1>
+    <h1>Musicy Music Maker</h1>
 
 <p>
     <input type="button" id="start_automatic" value="Start Music" />
@@ -5105,16 +5166,20 @@ Tab length: <select id="lb_tab_length">
 				Min Note:<br />
 				<div id="slider_minnotexx" class="ddrg" style="height:100px;"></div> <br />
 				<div id="display_minnotexx"></div>
-			</td><td id="voicechunksizecellxx" valign="top" align="center">
+			</td><td id="voicemaxnotecellxx" valign="top" align="center">
 				Max Note:<br />
+				<div id="slider_maxnotexx" class="ddrg" style="height:100px;"></div> <br />
+				<div id="display_maxnotexx"></div>
+			</td><td id="voicechunksizecellxx" valign="top" align="center">
+				Chunk Size:<br />
 				<div id="slider_chunksizexx" class="ddrg" style="height:100px;"></div> <br />
 				<div id="display_chunksizexx"></div>
 			</td><td id="voiceframesizecellxx" valign="top" align="center">
-				Frame Size:<br />
+				Pattern Size:<br />
 				<div id="slider_framesizexx" class="ddrg" style="height:100px;"></div> <br />
 				<div id="display_framesizexx"></div>
 			</td><td id="voicesymmetriescellxx" valign="top" align="center">
-				Symmetry Patterns: <br />
+				Variations: <br />
 				<table border="0">
 					<tr>
 						<td valign="center" align="right">
