@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset=utf-8 />
-<title>Ultimate Music Toy</title>
+<title>Musicy Music Maker</title>
 <link rel="stylesheet" href="jquery-ui.css" />
 <script src="jquery-1.10.2.js"></script>
 <script src="jquery-ui.js"></script>
@@ -1321,8 +1321,8 @@ function umtExecPlayRawScore() {
 // 6/5    m3        Eb                0.263      0.250      0.013
 // 5/4    M3        E                 0.322      0.333      0.011
 // 4/3    P4        F                 0.415      0.417      0.002
-// 25/18  A4-reg    F#                0.474      0.500      0.026
-// 36/25  A4-alt    F#                0.526      0.500      0.026
+// 45/32  A4-alt    F#                0.492      0.500      0.008
+// 64/45  A4-reg    F#                0.508      0.500      0.008
 // 3/2    P5        G                 0.585      0.583      0.002
 // 8/5    m6        Ab                0.678      0.667      0.011
 // 5/3    M6        A                 0.737      0.750      0.013
@@ -1331,9 +1331,42 @@ function umtExecPlayRawScore() {
 // 15/8   M7        B                 0.907      0.917      0.010
 // 2/1    P8        C                 1.000      1.000      0.000
 
+// Removed 25/18 (inverse 36/25) and 17/12 (inverse 24/17) as tritone and put in 64/45 (inverse 45/32)
+// on the advice of David Genova.
+
+function umtGetScale7Steps1() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3} ];
+    return scale;
+}
+
+function umtGetScale19Steps2() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 25, dnom: 24}, {num: 16, dnom: 15}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 32, dnom: 25}, {num: 4, dnom: 3}, {num: 25, dnom: 18}, {num: 36, dnom: 25}, {num: 3, dnom: 2}, {num: 25, dnom: 16}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 9, dnom: 5}, {num: 15, dnom: 8}, {num: 48, dnom: 25} ];
+    return scale;
+}
+
+function umtGetScale37Steps3() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 128, dnom: 125}, {num: 25, dnom: 24}, {num: 16, dnom: 15}, {num: 27, dnom: 25}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 144, dnom: 125}, {num: 125, dnom: 108}, {num: 75, dnom: 64}, {num: 32, dnom: 27}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 32, dnom: 25}, {num: 125, dnom: 96}, {num: 4, dnom: 3}, {num: 27, dnom: 20}, {num: 25, dnom: 18}, {num: 45, dnom: 32}, {num: 64, dnom: 45}, {num: 36, dnom: 25}, {num: 40, dnom: 27}, {num: 3, dnom: 2}, {num: 192, dnom: 125}, {num: 25, dnom: 16}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 27, dnom: 16}, {num: 128, dnom: 75}, {num: 216, dnom: 125}, {num: 125, dnom: 72}, {num: 16, dnom: 9}, {num: 9, dnom: 5}, {num: 50, dnom: 27}, {num: 15, dnom: 8}, {num: 48, dnom: 25}, {num: 125, dnom: 64} ];
+    return scale;
+}
+
+function umtGetScale61Steps4() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 81, dnom: 80}, {num: 128, dnom: 125}, {num: 648, dnom: 625}, {num: 25, dnom: 24}, {num: 135, dnom: 128}, {num: 16, dnom: 15}, {num: 27, dnom: 25}, {num: 625, dnom: 576}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 256, dnom: 225}, {num: 144, dnom: 125}, {num: 125, dnom: 108}, {num: 75, dnom: 64}, {num: 32, dnom: 27}, {num: 6, dnom: 5}, {num: 625, dnom: 512}, {num: 768, dnom: 625}, {num: 100, dnom: 81}, {num: 5, dnom: 4}, {num: 81, dnom: 64}, {num: 32, dnom: 25}, {num: 162, dnom: 125}, {num: 125, dnom: 96}, {num: 4, dnom: 3}, {num: 27, dnom: 20}, {num: 512, dnom: 375}, {num: 864, dnom: 625}, {num: 25, dnom: 18}, {num: 45, dnom: 32}, {num: 64, dnom: 45}, {num: 36, dnom: 25}, {num: 625, dnom: 432}, {num: 375, dnom: 256}, {num: 40, dnom: 27}, {num: 3, dnom: 2}, {num: 192, dnom: 125}, {num: 125, dnom: 81}, {num: 25, dnom: 16}, {num: 128, dnom: 81}, {num: 8, dnom: 5}, {num: 81, dnom: 50}, {num: 625, dnom: 384}, {num: 1024, dnom: 625}, {num: 5, dnom: 3}, {num: 27, dnom: 16}, {num: 128, dnom: 75}, {num: 216, dnom: 125}, {num: 125, dnom: 72}, {num: 225, dnom: 128}, {num: 16, dnom: 9}, {num: 9, dnom: 5}, {num: 1152, dnom: 625}, {num: 50, dnom: 27}, {num: 15, dnom: 8}, {num: 256, dnom: 135}, {num: 48, dnom: 25}, {num: 625, dnom: 324}, {num: 125, dnom: 64}, {num: 160, dnom: 81} ];
+    return scale;
+}
+
+function umtGetScale91Steps5() {
+    "use strict";
+    var scale = [ {num: 1, dnom: 1}, {num: 81, dnom: 80}, {num: 3125, dnom: 3072}, {num: 128, dnom: 125}, {num: 250, dnom: 243}, {num: 648, dnom: 625}, {num: 25, dnom: 24}, {num: 256, dnom: 243}, {num: 135, dnom: 128}, {num: 16, dnom: 15}, {num: 27, dnom: 25}, {num: 625, dnom: 576}, {num: 2048, dnom: 1875}, {num: 1125, dnom: 1024}, {num: 3456, dnom: 3125}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 256, dnom: 225}, {num: 144, dnom: 125}, {num: 125, dnom: 108}, {num: 75, dnom: 64}, {num: 32, dnom: 27}, {num: 6, dnom: 5}, {num: 3125, dnom: 2592}, {num: 243, dnom: 200}, {num: 625, dnom: 512}, {num: 768, dnom: 625}, {num: 100, dnom: 81}, {num: 3888, dnom: 3125}, {num: 5, dnom: 4}, {num: 512, dnom: 405}, {num: 81, dnom: 64}, {num: 32, dnom: 25}, {num: 625, dnom: 486}, {num: 162, dnom: 125}, {num: 125, dnom: 96}, {num: 4096, dnom: 3125}, {num: 320, dnom: 243}, {num: 675, dnom: 512}, {num: 4, dnom: 3}, {num: 27, dnom: 20}, {num: 3125, dnom: 2304}, {num: 512, dnom: 375}, {num: 864, dnom: 625}, {num: 25, dnom: 18}, {num: 45, dnom: 32}, {num: 64, dnom: 45}, {num: 36, dnom: 25}, {num: 625, dnom: 432}, {num: 375, dnom: 256}, {num: 4608, dnom: 3125}, {num: 40, dnom: 27}, {num: 3, dnom: 2}, {num: 1024, dnom: 675}, {num: 243, dnom: 160}, {num: 3125, dnom: 2048}, {num: 192, dnom: 125}, {num: 125, dnom: 81}, {num: 972, dnom: 625}, {num: 25, dnom: 16}, {num: 128, dnom: 81}, {num: 405, dnom: 256}, {num: 8, dnom: 5}, {num: 3125, dnom: 1944}, {num: 81, dnom: 50}, {num: 625, dnom: 384}, {num: 1024, dnom: 625}, {num: 400, dnom: 243}, {num: 5184, dnom: 3125}, {num: 5, dnom: 3}, {num: 27, dnom: 16}, {num: 128, dnom: 75}, {num: 216, dnom: 125}, {num: 125, dnom: 72}, {num: 225, dnom: 128}, {num: 16, dnom: 9}, {num: 9, dnom: 5}, {num: 3125, dnom: 1728}, {num: 2048, dnom: 1125}, {num: 1875, dnom: 1024}, {num: 1152, dnom: 625}, {num: 50, dnom: 27}, {num: 15, dnom: 8}, {num: 256, dnom: 135}, {num: 243, dnom: 128}, {num: 48, dnom: 25}, {num: 625, dnom: 324}, {num: 243, dnom: 125}, {num: 125, dnom: 64}, {num: 6144, dnom: 3125}, {num: 160, dnom: 81} ];
+    return scale;
+}
+
 function umtGetScale15ChromaticTT() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 25, dnom: 18}, {num: 36, dnom: 25}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 9, dnom: 5}, {num: 15, dnom: 8} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 45, dnom: 32}, {num: 64, dnom: 45}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 9, dnom: 5}, {num: 15, dnom: 8} ];
     return scale;
 }
 
@@ -1345,7 +1378,7 @@ function umtGetScale13Chromatic() {
 
 function umtGetScale12ChromaticRegRegTT() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 25, dnom: 18}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 15, dnom: 8} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 4, dnom: 3}, {num: 64, dnom: 45}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 5, dnom: 3}, {num: 16, dnom: 9}, {num: 15, dnom: 8} ];
     return scale;
 }
 
@@ -1501,7 +1534,7 @@ function umtGetScale3Tritonic() {
 
 function umtGetScale2TritoneTest() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 25, dnom: 18} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 64, dnom: 45} ];
     return scale;
 }
 
@@ -1525,7 +1558,7 @@ function umtGetScale7ModePhrygian() {
 
 function umtGetScale7ModeLydianTT() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 5, dnom: 4}, {num: 25, dnom: 18}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 15, dnom: 8} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 5, dnom: 4}, {num: 64, dnom: 45}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 15, dnom: 8} ];
     return scale;
 }
 
@@ -1543,13 +1576,13 @@ function umtGetScale7ModeAeolian() {
 
 function umtGetScale7ModeLocrianTT() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 25, dnom: 18}, {num: 8, dnom: 5}, {num: 16, dnom: 9} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 16, dnom: 15}, {num: 6, dnom: 5}, {num: 4, dnom: 3}, {num: 64, dnom: 45}, {num: 8, dnom: 5}, {num: 16, dnom: 9} ];
     return scale;
 }
 
 function umtGetScale7HungarianRegRegTT() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 25, dnom: 18}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 15, dnom: 8} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 64, dnom: 45}, {num: 3, dnom: 2}, {num: 8, dnom: 5}, {num: 15, dnom: 8} ];
     return scale;
 }
 
@@ -1567,7 +1600,7 @@ function umtGetScale7FreygishPhrygianDominant() {
 
 function umtGetScale7UkranianDorian() {
     "use strict";
-    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 25, dnom: 18}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 16, dnom: 9} ];
+    var scale = [ {num: 1, dnom: 1}, {num: 9, dnom: 8}, {num: 6, dnom: 5}, {num: 64, dnom: 45}, {num: 3, dnom: 2}, {num: 5, dnom: 3}, {num: 16, dnom: 9} ];
     return scale;
 }
 
@@ -2043,6 +2076,16 @@ function umtGetScaleByAbbrv(scaleAbbrv) {
         return umtGetScale7FreygishPhrygianDominant();
     case 'ukranian7':
         return umtGetScale7UkranianDorian();
+    case 'steps17':
+        return umtGetScale7Steps1();
+    case 'steps219':
+        return umtGetScale19Steps2();
+    case 'steps337':
+        return umtGetScale37Steps3();
+    case 'steps461':
+        return umtGetScale61Steps4();
+    case 'steps591':
+        return umtGetScale91Steps5();
     default:
         jsabort("unrecognized scale code: " + scaleAbbrv);
         break;
@@ -3392,10 +3435,10 @@ function umtExecScaleChange() {
     }
 }
 
-function umtExecChordChange() {
+function umtExecHarmonizationChange() {
     "use strict";
     var listbox, chordparam, tab;
-    listbox = window.document.getElementById("lb_chord");
+    listbox = window.document.getElementById("lb_harmonization");
     chordparam = listbox.options[listbox.selectedIndex].value;
     tab = gUmt.UIParams.currentTab;
     gUmt.UIParams.songTab[tab].chord = chordparam;
@@ -4301,7 +4344,7 @@ function umtUiCopyUiParamsToActualUi() {
     // scale
     umtUiSetListboxByValue(document.getElementById("lb_scale"), gUmt.UIParams.songTab[tab].scale);
     // chords
-    umtUiSetListboxByValue(document.getElementById("lb_chord"), gUmt.UIParams.songTab[tab].chord);
+    umtUiSetListboxByValue(document.getElementById("lb_harmonization"), gUmt.UIParams.songTab[tab].chord);
     // center note
     absvalue = gUmt.UIParams.songTab[tab].centernote;
     window.document.getElementById("display_centernote_value").innerHTML = absvalue;
@@ -4987,6 +5030,10 @@ Tab length: <select id="lb_tab_length">
 <p> Scale:
 
 <select id="lb_scale">
+    <option value="steps591">5 steps from tonic 91*</option>
+    <option value="steps461">4 steps from tonic 61*</option>
+    <option value="steps337">3 steps from tonic 37*</option>
+    <option value="steps219">2 steps from tonic 19*</option>
     <option value="chroma15tt">Chromatic 15 (alt)*</option>
     <option value="chroma13">Chromatic 13 (alt)</option>
     <option value="chroma12regregtt">Chromatic 12*</option>
@@ -4998,6 +5045,7 @@ Tab length: <select id="lb_tab_length">
     <option value="minharm7reg">Minor Harmonic 7</option>
     <option value="minnat7regreg">Minor Natural 7</option>
     <option value="maj7reg" selected="selected">Major 7</option>
+    <option value="steps17">1 step from tonic 7</option>
     <option value="ionian7">Ionian Mode 7</option>
     <option value="dorian7">Dorian Mode 7</option>
     <option value="phrygian7">Phrygian Mode 7</option>
@@ -5019,15 +5067,15 @@ Tab length: <select id="lb_tab_length">
 
 </p>
 
-<p> Chords allowed:
+<p> Harmonization:
 
-<select id="lb_chord">
+<select id="lb_harmonization">
     <option value="perfect">Perfect</option>
     <option value="major">Major</option>
     <option value="triad" selected="selected">Triads</option>
     <option value="reg">7th chords</option>
-    <!-- option value="alt" Allow 7th chords (alt) /option -->
-    <!-- option value="any" Allow all chords (allow dissonance) /option -->
+    <option value="alt">More 7th chords</option>
+    <option value="any">Allow dissonance</option>
 </select>
 
 </p>
@@ -5257,8 +5305,8 @@ umtListenElement.addEventListener("click", umtExecAutomaticStop, true);
 umtListenElement = document.getElementById("lb_scale");
 umtListenElement.addEventListener("change", umtExecScaleChange, true);
 
-umtListenElement = document.getElementById("lb_chord");
-umtListenElement.addEventListener("change", umtExecChordChange, true);
+umtListenElement = document.getElementById("lb_harmonization");
+umtListenElement.addEventListener("change", umtExecHarmonizationChange, true);
 
 var umtListenElement = document.getElementById("reseed");
 umtListenElement.addEventListener("click", umtExecReSeed, true);
