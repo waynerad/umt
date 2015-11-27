@@ -2511,8 +2511,7 @@ var umtExecReSeed;
 
 function umtSchedulePlayOfSegment() {
     "use strict";
-    var tab, lpnum, currentTime, compositonlag, windowStart, windowStop, loopUnitLen, loopLen, numLoopTabCycles, fromMoment, center, tempoScalar, numVoices, voicenum, notenum, adjustedStartTime, masterVolScaler, ampScalar, regularTime, timeInMs, interval, numTabs, numLoopTotalCycles;
-    tab = gUmt.UIParams.currentTab;
+    var tab, lpnum, currentTime, compositonlag, windowStart, windowStop, loopUnitLen, loopLen, numLoopTabCycles, center, tempoScalar, numVoices, voicenum, notenum, adjustedStartTime, masterVolScaler, ampScalar, regularTime, timeInMs, interval, numTabs, floatLoopTabCycles, tabUnitLen, tabLen;
     lpnum = gUmt.currentlyPlayingLoop;
     // if (gUmt.loop[lpnum].score.playAllTabs) {
     //     cx("Scheduling playback of segment from tab ALL, loop " + ctstr(lpnum));
@@ -2526,58 +2525,21 @@ function umtSchedulePlayOfSegment() {
     if (compositonlag < 0.1) {
         compositonlag = 0.1;
     }
-    windowStop = currentTime + (compositonlag * 2.5);
     if (windowStart < gUmt.playedUpTo) {
         windowStart = gUmt.playedUpTo;
     }
+    windowStop = currentTime + (compositonlag * 2.5);
+    // stuff that applies to all notes
     masterVolScaler = gUmt.UIParams.mastervol; // Math.exp((gUmt.UIParams.mastervol - 1.0) * 2.0);
-    if (gUmt.loop[gUmt.currentlyPlayingLoop].score.songTab[tab].parts > 0) {
-        // stuff that applies to all notes
-        loopUnitLen = gUmt.loop[lpnum].score.songTab[tab].voice[0].nextStart;
-        tempoScalar = 60 / gUmt.loop[lpnum].score.tempo;
-        loopLen = loopUnitLen * tempoScalar;
-        numLoopTabCycles = Math.floor(windowStart / loopLen);
-        fromMoment = numLoopTabCycles * loopLen;
-        center = gUmt.loop[lpnum].score.songTab[tab].centernoteLog;
-        numVoices = gUmt.loop[lpnum].score.songTab[tab].parts;
-        if (numVoices === 1) {
-            ampScalar = masterVolScaler / 1.4142135623730951;
-        } else {
-            ampScalar = masterVolScaler / numVoices;
-        }
-        if (gUmt.loop[lpnum].score.playAllTabs) {
-            // figure out which tab
-            numTabs = gUmt.loop[lpnum].score.numTabs;
-            numLoopTotalCycles = Math.floor(numLoopTabCycles / numTabs);
-            tab = numLoopTabCycles - (numLoopTotalCycles * numTabs);
-            // currrent tab
-            // cx("    playback current tab " + ctstr(tab));
-            // because we switched tabs, numVoices and other things may have changed, so we have to recalculate them
-            center = gUmt.loop[lpnum].score.songTab[tab].centernoteLog;
-            numVoices = gUmt.loop[lpnum].score.songTab[tab].parts;
-            if (numVoices === 1) {
-                ampScalar = masterVolScaler / 1.4142135623730951;
-            } else {
-                ampScalar = masterVolScaler / numVoices;
-            }
-            for (voicenum = 0; voicenum < numVoices; voicenum = voicenum + 1) {
-                for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].cursor; notenum = notenum + 1) {
-                    adjustedStartTime = (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].starttime * tempoScalar) + fromMoment;
-                    if (adjustedStartTime >= windowStart) {
-                        if (adjustedStartTime < windowStop) {
-                            umtSchedulePlayOfNote(lpnum, tab, voicenum, notenum, ampScalar, tempoScalar, center, adjustedStartTime);
-                        }
-                    }
-                }
-            }
-            // next tab
-            tab = tab + 1;
-            if (tab === numTabs) {
-                tab = 0;
-            }
-            // cx("        playback next tab " + ctstr(tab));
+    tempoScalar = 60 / gUmt.loop[lpnum].score.tempo;
+    // now we fork off "all tabs" vs "current tab"
+    if (gUmt.loop[lpnum].score.playAllTabs) {
+        numTabs = gUmt.loop[lpnum].score.numTabs;
+        for (tab = 0; tab < numTabs; tab = tab + 1) {
             if (gUmt.loop[gUmt.currentlyPlayingLoop].score.songTab[tab].parts > 0) {
-                // because we switched tabs, numVoices and other things may have changed, so we have to recalculate them
+                tabUnitLen = gUmt.loop[lpnum].score.songTab[tab].voice[0].nextStart; // a bit of a hack, grabbing the start position of the next note, were we to compose one
+                tabLen = tabUnitLen * tempoScalar;
+                loopLen = tabLen * numTabs;
                 center = gUmt.loop[lpnum].score.songTab[tab].centernoteLog;
                 numVoices = gUmt.loop[lpnum].score.songTab[tab].parts;
                 if (numVoices === 1) {
@@ -2587,21 +2549,43 @@ function umtSchedulePlayOfSegment() {
                 }
                 for (voicenum = 0; voicenum < numVoices; voicenum = voicenum + 1) {
                     for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].cursor; notenum = notenum + 1) {
-                        adjustedStartTime = (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].starttime * tempoScalar) + fromMoment;
-                        adjustedStartTime = adjustedStartTime + loopLen;
-                        if (adjustedStartTime < windowStop) {
+                        adjustedStartTime = (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].starttime * tempoScalar);
+                        adjustedStartTime = adjustedStartTime + (tabLen * tab);
+                        floatLoopTabCycles = (windowStart - adjustedStartTime) / loopLen;
+                        numLoopTabCycles = Math.floor(floatLoopTabCycles);
+                        if (floatLoopTabCycles !== numLoopTabCycles) {
+                            numLoopTabCycles = numLoopTabCycles + 1;
+                        }
+                        adjustedStartTime = adjustedStartTime + (loopLen * numLoopTabCycles);
+                        while (adjustedStartTime < windowStop) {
                             umtSchedulePlayOfNote(lpnum, tab, voicenum, notenum, ampScalar, tempoScalar, center, adjustedStartTime);
+                            adjustedStartTime = adjustedStartTime + loopLen;
                         }
                     }
                 }
             }
-        } else {
+        }
+    } else {
+        tab = gUmt.UIParams.currentTab;
+        if (gUmt.loop[gUmt.currentlyPlayingLoop].score.songTab[tab].parts > 0) {
+            numVoices = gUmt.loop[lpnum].score.songTab[tab].parts;
+            loopUnitLen = gUmt.loop[lpnum].score.songTab[tab].voice[0].nextStart; // a bit of a hack, grabbing the start position of the next note, were we to compose one
+            loopLen = loopUnitLen * tempoScalar;
+            center = gUmt.loop[lpnum].score.songTab[tab].centernoteLog;
+            if (numVoices === 1) {
+                ampScalar = masterVolScaler / 1.4142135623730951;
+            } else {
+                ampScalar = masterVolScaler / numVoices;
+            }
             for (voicenum = 0; voicenum < numVoices; voicenum = voicenum + 1) {
                 for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].cursor; notenum = notenum + 1) {
-                    adjustedStartTime = (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].starttime * tempoScalar) + fromMoment;
-                    if (adjustedStartTime < windowStart) {
-                        adjustedStartTime = adjustedStartTime + loopLen;
+                    adjustedStartTime = (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].starttime * tempoScalar);
+                    floatLoopTabCycles = (windowStart - adjustedStartTime) / loopLen;
+                    numLoopTabCycles = Math.floor(floatLoopTabCycles);
+                    if (floatLoopTabCycles !== numLoopTabCycles) {
+                        numLoopTabCycles = numLoopTabCycles + 1;
                     }
+                    adjustedStartTime = adjustedStartTime + (loopLen * numLoopTabCycles);
                     if (adjustedStartTime < windowStop) {
                         umtSchedulePlayOfNote(lpnum, tab, voicenum, notenum, ampScalar, tempoScalar, center, adjustedStartTime);
                     }
@@ -2609,6 +2593,7 @@ function umtSchedulePlayOfSegment() {
             }
         }
     }
+    // remember where we played up to, so we don't repeat notes
     gUmt.playedUpTo = windowStop;
     // hack -- UI logic in the playback system?
     if (document.getElementById("continuous").checked) {
@@ -2622,7 +2607,7 @@ function umtSchedulePlayOfSegment() {
     }
     if (gUmt.timerIsOn) {
         if (compositonlag > 1.0) {
-            compositonlag = 1.0;
+            compositonlag = 1.0; // force this timer function to be called within a certain frequency in attempt to plug gaps in the playback
         }
         window.setTimeout(umtSchedulePlayOfSegment, compositonlag * 1000);
     }
