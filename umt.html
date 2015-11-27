@@ -432,20 +432,6 @@ function umtGenerateANoteFMSynthOriginal(frequency, duration, amplitude) {
     theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.globalCtx.sampleRate); // numberOfChannels, length, sampleRate
     bufData = theBuffer.getChannelData(0);
     modulatorFreq = frequency * (3.0 / 2.0);
-    // 1/1    P1        C                 0.000      0.000
-    // 16/15  m2        C#                0.093      0.083
-    // 10/9   M2-alt    D-alt             0.152      0.166
-    // 9/8    M2-reg    D-reg             0.170      0.166
-    // 6/5    m3        Eb                0.263      0.250
-    // 5/4    M3        E                 0.322      0.333
-    // 4/3    P4        F                 0.415      0.417
-    // 3/2    P5        G                 0.585      0.583
-    // 8/5    m6        Ab                0.678      0.667
-    // 5/3    M6        A                 0.737      0.750
-    // 16/9   m7-alt    Bb-alt            0.830      0.833
-    // 9/5    m7-reg    Bb-reg            0.848      0.833
-    // 15/8   M7        B                 0.907      0.917
-    // 2/1    P8        C                 1.000      1.000
     beta = 10.0;
     for (i = 0; i < numSamples; i = i + 1) {
         fade = 1.0 - (i / numSamples);
@@ -463,28 +449,12 @@ function umtGenerateANoteFMSynthVar(frequency, duration, amplitude, modulator, b
     numSamples = duration * gUmt.globalCtx.sampleRate;
     theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.globalCtx.sampleRate); // numberOfChannels, length, sampleRate
     bufData = theBuffer.getChannelData(0);
-    // 1      1/1    2/1    P1        C                 0.000      0.000
-    // 1      2/1    1/1    P8        C                 1.000      1.000
-    // 3      3/2    4/3    P5        G                 0.585      0.583
-    // 3      4/3    3/2    P4        F                 0.415      0.417
-    // 5      5/3    6/5    M6        A                 0.737      0.750
-    // 5      6/5    5/3    m3        Eb                0.263      0.250
-    // 5      5/4    8/5    M3        E                 0.322      0.333
-    // 5      8/5    5/4    m6        Ab                0.678      0.667
-    // 9      9/5    10/9   m7-reg    Bb-reg            0.848      0.833
-    // 9      10/9   9/5    M2-alt    D-alt             0.152      0.166
-    // 9      9/8    16/9   M2-reg    D-reg             0.170      0.166
-    // 9      16/9   9/8    m7-alt    Bb-alt            0.830      0.833
-    // 15     16/15  15/8   m2        C#                0.093      0.083
-    // 15     15/8   16/15  M7        B                 0.907      0.917
-    // modList = [ {num: 1, dnom: 1}, {num: 2, dnom: 1}, {num: 3, dnom: 2}, {num: 4, dnom: 3}, {num: 5, dnom: 3}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 8, dnom: 5}, {num: 9, dnom: 5}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 16, dnom: 9}, {num: 16, dnom: 15}, {num: 15, dnom: 8} ];
-    // without the octives:
     modList = [ {num: 3, dnom: 2}, {num: 4, dnom: 3}, {num: 5, dnom: 3}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 8, dnom: 5}, {num: 9, dnom: 5}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 16, dnom: 9}, {num: 16, dnom: 15}, {num: 15, dnom: 8} ];
     modulator = Math.floor(modulator * (modList.length - 1));
     modNum = modList[modulator].num;
     modDnom = modList[modulator].dnom;
     modulatorFreq = frequency * (modNum / modDnom);
-    beta = (beta * 5.0);
+    beta = beta * Math.exp((beta - 0.7) * 10); // multiplying by beta is kinda hokey but casts 0 to 0 which is what we want.
     for (i = 0; i < numSamples; i = i + 1) {
         fade = 1.0 - (i / numSamples);
         subFrequency = frequency + beta * ((Math.sin((gUmt.TAU * i * (modulatorFreq / gUmt.globalCtx.sampleRate)))));
@@ -501,22 +471,6 @@ function umtGenerateANoteFMSynthStartStop(frequency, duration, amplitude, startM
     numSamples = duration * gUmt.globalCtx.sampleRate;
     theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.globalCtx.sampleRate); // numberOfChannels, length, sampleRate
     bufData = theBuffer.getChannelData(0);
-    // 1      1/1    2/1    P1        C                 0.000      0.000
-    // 1      2/1    1/1    P8        C                 1.000      1.000
-    // 3      3/2    4/3    P5        G                 0.585      0.583
-    // 3      4/3    3/2    P4        F                 0.415      0.417
-    // 5      5/3    6/5    M6        A                 0.737      0.750
-    // 5      6/5    5/3    m3        Eb                0.263      0.250
-    // 5      5/4    8/5    M3        E                 0.322      0.333
-    // 5      8/5    5/4    m6        Ab                0.678      0.667
-    // 9      9/5    10/9   m7-reg    Bb-reg            0.848      0.833
-    // 9      10/9   9/5    M2-alt    D-alt             0.152      0.166
-    // 9      9/8    16/9   M2-reg    D-reg             0.170      0.166
-    // 9      16/9   9/8    m7-alt    Bb-alt            0.830      0.833
-    // 15     16/15  15/8   m2        C#                0.093      0.083
-    // 15     15/8   16/15  M7        B                 0.907      0.917
-    // modList = [ {num: 1, dnom: 1}, {num: 2, dnom: 1}, {num: 3, dnom: 2}, {num: 4, dnom: 3}, {num: 5, dnom: 3}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 8, dnom: 5}, {num: 9, dnom: 5}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 16, dnom: 9}, {num: 16, dnom: 15}, {num: 15, dnom: 8} ];
-    // without the octives:
     modList = [ {num: 3, dnom: 2}, {num: 4, dnom: 3}, {num: 5, dnom: 3}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 8, dnom: 5}, {num: 9, dnom: 5}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 16, dnom: 9}, {num: 16, dnom: 15}, {num: 15, dnom: 8} ];
     startModulator = Math.floor(startModulator * (modList.length - 1));
     startModNum = modList[startModulator].num;
@@ -535,6 +489,7 @@ function umtGenerateANoteFMSynthStartStop(frequency, duration, amplitude, startM
         fade = 1.0 - pctThere;
         currentModulatorFreq = (modulatorDiff * pctThere) + startModulatorFreq;
         currentBeta = (betaDiff * pctThere) + startBeta;
+        currentBeta = currentBeta * Math.exp((currentBeta - 0.7) * 10); // multiplying by beta is kinda hokey but casts 0 to 0 which is what we want.
         subFrequency = frequency + currentBeta * ((Math.sin((gUmt.TAU * i * (currentModulatorFreq / gUmt.globalCtx.sampleRate)))));
         sinePart = Math.sin((gUmt.TAU * i * (subFrequency / gUmt.globalCtx.sampleRate)));
         bufData[i] = sinePart * (amplitude * fade);
@@ -551,22 +506,6 @@ function umtGenerateANoteFMSynthSquare(frequency, duration, amplitude, startThre
     bufData = theBuffer.getChannelData(0);
     startThreshold = (startThreshold / 2.0) + 0.5;
     stopThreshold = (stopThreshold / 2.0) + 0.5;
-    // 1      1/1    2/1    P1        C                 0.000      0.000
-    // 1      2/1    1/1    P8        C                 1.000      1.000
-    // 3      3/2    4/3    P5        G                 0.585      0.583
-    // 3      4/3    3/2    P4        F                 0.415      0.417
-    // 5      5/3    6/5    M6        A                 0.737      0.750
-    // 5      6/5    5/3    m3        Eb                0.263      0.250
-    // 5      5/4    8/5    M3        E                 0.322      0.333
-    // 5      8/5    5/4    m6        Ab                0.678      0.667
-    // 9      9/5    10/9   m7-reg    Bb-reg            0.848      0.833
-    // 9      10/9   9/5    M2-alt    D-alt             0.152      0.166
-    // 9      9/8    16/9   M2-reg    D-reg             0.170      0.166
-    // 9      16/9   9/8    m7-alt    Bb-alt            0.830      0.833
-    // 15     16/15  15/8   m2        C#                0.093      0.083
-    // 15     15/8   16/15  M7        B                 0.907      0.917
-    // modList = [ {num: 1, dnom: 1}, {num: 2, dnom: 1}, {num: 3, dnom: 2}, {num: 4, dnom: 3}, {num: 5, dnom: 3}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 8, dnom: 5}, {num: 9, dnom: 5}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 16, dnom: 9}, {num: 16, dnom: 15}, {num: 15, dnom: 8} ];
-    // without the octives:
     modList = [ {num: 3, dnom: 2}, {num: 4, dnom: 3}, {num: 5, dnom: 3}, {num: 6, dnom: 5}, {num: 5, dnom: 4}, {num: 8, dnom: 5}, {num: 9, dnom: 5}, {num: 10, dnom: 9}, {num: 9, dnom: 8}, {num: 16, dnom: 9}, {num: 16, dnom: 15}, {num: 15, dnom: 8} ];
     startModulator = Math.floor(startModulator * (modList.length - 1));
     startModNum = modList[startModulator].num;
@@ -585,13 +524,35 @@ function umtGenerateANoteFMSynthSquare(frequency, duration, amplitude, startThre
         pctThere = (i / numSamples);
         fade = 1.0 - pctThere;
         currentModulatorFreq = (modulatorDiff * pctThere) + startModulatorFreq;
-        currentBeta = (betaDiff * pctThere) + startBeta;
+        currentBeta = currentBeta * Math.exp((currentBeta - 0.7) * 10); // multiplying by beta is kinda hokey but casts 0 to 0 which is what we want.
+        beta = currentBeta * Math.exp((currentBeta - 0.7) * 10); // multiplying by beta is kinda hokey but casts 0 to 0 which is what we want.
         subFrequency = frequency + currentBeta * ((Math.sin((gUmt.TAU * i * (currentModulatorFreq / gUmt.globalCtx.sampleRate)))));
         // sinePart = Math.sin((gUmt.TAU * i * (subFrequency / gUmt.globalCtx.sampleRate)));
         // squarePart = umtFMSquare(i * (subFrequency / gUmt.globalCtx.sampleRate));
         currentThreshold = (thresDiff * pctThere) + startThreshold;
         squarePart = umtFMVarSquare(i * (subFrequency / gUmt.globalCtx.sampleRate), currentThreshold);
         bufData[i] = squarePart * (amplitude * fade);
+    }
+    return theBuffer;
+}
+
+function umtGenerateANoteFMSynthCrossNote(startMoment, frequency, duration, amplitude, modulator, beta) {
+    "use strict";
+    // consult https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html
+    var numSamples, theBuffer, bufData, i, fade, sinePart, subFrequency, modulatorFreq, offset;
+    numSamples = duration * gUmt.globalCtx.sampleRate;
+    theBuffer = gUmt.globalCtx.createBuffer(1, numSamples, gUmt.globalCtx.sampleRate); // numberOfChannels, length, sampleRate
+    bufData = theBuffer.getChannelData(0);
+    modulatorFreq = modulator;
+    modulatorFreq = frequency * (2.0 / 3.0);
+    offset = (startMoment - (Math.floor(startMoment / modulatorFreq) * modulatorFreq)) * gUmt.globalCtx.sampleRate;
+    beta = beta * Math.exp((beta - 0.7) * 10); // multiplying by beta is kinda hokey but casts 0 to 0 which is what we want.
+    cx(ctstr(beta));
+    for (i = 0; i < numSamples; i = i + 1) {
+        fade = 1.0; //  - (i / numSamples);
+        subFrequency = frequency + beta * ((Math.sin((gUmt.TAU * (i + offset) * (modulatorFreq / gUmt.globalCtx.sampleRate)))));
+        sinePart = Math.sin((gUmt.TAU * (i + offset) * (subFrequency / gUmt.globalCtx.sampleRate)));
+        bufData[i] = sinePart * (amplitude * fade);
     }
     return theBuffer;
 }
@@ -996,13 +957,36 @@ function InstantiateFMSynthSquareObj() {
         startBeta = instSpecificParams.startbeta;
         stopModulator = instSpecificParams.stopmodulator;
         stopBeta = instSpecificParams.stopbeta;
-        idxname = "square" + frequency + "x" + duration + "x" + amplitude + "x" + startThreshold + "X" + stopThreshold + "x" + startModulator + "x" + startBeta + "x" + stopModulator + "x" + stopBeta;
+        idxname = "fmstartstpsquare" + frequency + "x" + duration + "x" + amplitude + "x" + startThreshold + "X" + stopThreshold + "x" + startModulator + "x" + startBeta + "x" + stopModulator + "x" + stopBeta;
         if (gUmt.cachedNotes.hasOwnProperty(idxname)) {
             theBuffer = gUmt.cachedNotes[idxname];
         } else {
             theBuffer = umtGenerateANoteFMSynthSquare(frequency, duration, amplitude, startThreshold * 0.96, stopThreshold * 0.96, startModulator, startBeta, stopModulator, stopBeta);
             gUmt.cachedNotes[idxname] = theBuffer;
         }
+        node = gUmt.globalCtx.createBufferSource();
+        node.buffer = theBuffer;
+        node.connect(gUmt.globalCtx.destination);
+        node.start(startMoment);
+    };
+}
+
+function InstantiateFMSynthCrossNoteObj() {
+    "use strict";
+    this.getParams = function () {
+        return {
+            percussion: false,
+            parameters: [
+                { name: "modulator", display: "Modulator" },
+                { name: "beta", display: "Beta" }
+            ]
+        };
+    };
+    this.queUpANote = function (startMoment, frequency, duration, amplitude, instSpecificParams) {
+        var modulator, beta, theBuffer, node;
+        modulator = instSpecificParams.modulator;
+        beta = instSpecificParams.beta;
+        theBuffer = umtGenerateANoteFMSynthCrossNote(startMoment, frequency, duration, amplitude, modulator, beta);
         node = gUmt.globalCtx.createBufferSource();
         node.buffer = theBuffer;
         node.connect(gUmt.globalCtx.destination);
@@ -1195,6 +1179,7 @@ function umtCreateInstrumentBank() {
         fmsynthvar: new InstantiateFMSynthVarObj(),
         fmsynthstartstop: new InstantiateFMSynthStartStopObj(),
         fmsynthsquare: new InstantiateFMSynthSquareObj(),
+        fmsynthcrossnote: new InstantiateFMSynthCrossNoteObj(),
         wadsin: new InstantiateWadSinObj(),
         wadkick: new InstantiateWadKickObj(),
         wadbass: new InstantiateWadBassObj(),
@@ -5116,6 +5101,7 @@ Tab length: <select id="lb_tab_length">
 					<option value="fmsynthvar">FM Synthesis</option>
 					<option value="fmsynthstartstop">FM Synthesis/Start/Stop</option>
 					<option value="fmsynthsquare">FM Synthesis Square</option>
+					<option value="fmsynthcrossnote">FM Synthesis/Cross note</option>
 					<!-- option value="wadsin" WAD Sine /option -->
 					<!-- option value="wadkick" WAD Kick /option -->
 					<option value="wadbass">WAD Bass</option>
