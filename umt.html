@@ -547,7 +547,6 @@ function umtGenerateANoteFMSynthCrossNote(startMoment, frequency, duration, ampl
     modulatorFreq = frequency * (2.0 / 3.0);
     offset = (startMoment - (Math.floor(startMoment / modulatorFreq) * modulatorFreq)) * gUmt.globalCtx.sampleRate;
     beta = beta * Math.exp((beta - 0.7) * 10); // multiplying by beta is kinda hokey but casts 0 to 0 which is what we want.
-    cx(ctstr(beta));
     for (i = 0; i < numSamples; i = i + 1) {
         fade = 1.0; //  - (i / numSamples);
         subFrequency = frequency + beta * ((Math.sin((gUmt.TAU * (i + offset) * (modulatorFreq / gUmt.globalCtx.sampleRate)))));
@@ -1234,10 +1233,11 @@ function umtAddVoice(lpnum, tab, idx, songNumber, rangeMin, rangeMax, instrument
         randRhythm: umtGetRando(songNumber * 40),
         randPitch: umtGetRando(songNumber * 40 + 1),
         randAmp: umtGetRando(songNumber * 40 + 5),
+        randSkew: umtGetRando(songNumber * 40 + 13),
         randRests: umtGetRando(songNumber * 40 + 2),
         randSyms: umtGetRando(songNumber * 40 + 3),
         randTrans: umtGetRando(songNumber * 40 + 4),
-        randScale: umtGetRando(songNumber * 40 + 5),
+        randScale: umtGetRando(songNumber * 40 + 12),
         randTilt: umtGetRando(songNumber * 40 + 6),
         randScrollrhythm: umtGetRando(songNumber * 40 + 7),
         randScrollpitch: umtGetRando(songNumber * 40 + 8),
@@ -1247,7 +1247,7 @@ function umtAddVoice(lpnum, tab, idx, songNumber, rangeMin, rangeMax, instrument
     };
 }
 
-function umtAddNote(lpnum, tab, voicenum, rest, pitch, duration, amplitude, instParams) {
+function umtAddNote(lpnum, tab, voicenum, rest, pitch, duration, amplitude, skew, instParams) {
     "use strict";
     var idx, cursorval;
     idx = voicenum;
@@ -1258,6 +1258,7 @@ function umtAddNote(lpnum, tab, voicenum, rest, pitch, duration, amplitude, inst
         pitch: pitch,
         duration: duration,
         amplitude: amplitude,
+        skew: skew,
         instParams: instParams,
         harmOctave: -1,
         harmNum: -1,
@@ -2438,20 +2439,26 @@ function umtGenerateRhythm(randomObj, minSize, maxSize, chunkSize, totalLength) 
     return rv;
 }
 
-function umtAddSymmetryBaseToVoice(lpnum, tab, vcnum, minSize, maxSize, chunkSize, totalLength, centerOctave, restyness, noteDistance, ampVariation, volume, instrumentName, instrumentParamNames, instSpecificParams) {
+function umtAddSymmetryBaseToVoice(lpnum, tab, vcnum, minSize, maxSize, chunkSize, totalLength, centerOctave, restyness, noteDistance, ampVariation, volume, voiceSkew, instrumentName, instrumentParamNames, instSpecificParams) {
     "use strict";
-    var rhythm, lenRhy, idx, duration, pitch, amplitude, volscalar, instParamCurrent, instParCount, instParamIdx, ourParamName, paramvalue;
+    var rhythm, lenRhy, idx, duration, pitch, amplitude, noteSkew, volscalar, instParamCurrent, instParCount, instParamIdx, ourParamName, paramvalue, halfVoiceSkew;
     volscalar = 2.7;
     volume = Math.exp(volume * volscalar) / Math.exp(volscalar); // this is done to "logarithmize" the volume slider
     rhythm = umtGenerateRhythm(gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].randRhythm, minSize, maxSize, chunkSize, totalLength);
     lenRhy = rhythm.length;
+    halfVoiceSkew = voiceSkew / 2.0;
     for (idx = 0; idx < lenRhy; idx = idx + 1) {
         duration = rhythm[idx];
         pitch = (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].randPitch.genrandReal2() * (2 * noteDistance)) - noteDistance;
         if (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].randRests.genrandReal2() < restyness) {
-            umtAddNote(lpnum, tab, vcnum, true, centerOctave, duration, 1, null);
+            umtAddNote(lpnum, tab, vcnum, true, centerOctave, duration, 1, 0, null);
         } else {
             amplitude = (1.0 - (gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].randAmp.genrandReal2() * ampVariation) * 0.9) * volume;
+            noteSkew = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].randSkew.genrandReal2() * voiceSkew;
+            if (noteSkew > halfVoiceSkew) {
+                // This is so we can get both positive and negative numbers, symmetric around 0, from a single call to genrandReal2()
+                noteSkew = noteSkew - voiceSkew;
+            }
             // The idea here is to go through the param names for this instrument and pull out the corresponding "patterns" value from instSpecificParams
             // We ignore all parameters that don't apply to the current instrument. This way the user can flip between instruments and the system won't forget their previous settings.
             instParamCurrent = {};
@@ -2469,7 +2476,7 @@ function umtAddSymmetryBaseToVoice(lpnum, tab, vcnum, minSize, maxSize, chunkSiz
             if (instParCount === 0) {
                 instParamCurrent = null;
             }
-            umtAddNote(lpnum, tab, vcnum, false, centerOctave + pitch, duration, amplitude, instParamCurrent);
+            umtAddNote(lpnum, tab, vcnum, false, centerOctave + pitch, duration, amplitude, noteSkew, instParamCurrent);
         }
     }
 }
@@ -2535,6 +2542,10 @@ function umtSchedulePlayOfSegment() {
                 for (voicenum = 0; voicenum < numVoices; voicenum = voicenum + 1) {
                     for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].cursor; notenum = notenum + 1) {
                         adjustedStartTime = (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].starttime * tempoScalar);
+                        // adjust for skew
+                        // adjustedStartTime = adjustedStartTime + (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].skew * (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].duration * tempoScalar));
+                        adjustedStartTime = adjustedStartTime + (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].skew * tempoScalar);
+                        // move to tab's position within loop
                         adjustedStartTime = adjustedStartTime + (tabLen * tab);
                         floatLoopTabCycles = (windowStart - adjustedStartTime) / loopLen;
                         numLoopTabCycles = Math.floor(floatLoopTabCycles);
@@ -2542,6 +2553,7 @@ function umtSchedulePlayOfSegment() {
                             numLoopTabCycles = numLoopTabCycles + 1;
                         }
                         adjustedStartTime = adjustedStartTime + (loopLen * numLoopTabCycles);
+                        // play as many times as can fit in the current playback window
                         while (adjustedStartTime < windowStop) {
                             umtSchedulePlayOfNote(lpnum, tab, voicenum, notenum, ampScalar, tempoScalar, center, adjustedStartTime);
                             adjustedStartTime = adjustedStartTime + loopLen;
@@ -2565,12 +2577,17 @@ function umtSchedulePlayOfSegment() {
             for (voicenum = 0; voicenum < numVoices; voicenum = voicenum + 1) {
                 for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].cursor; notenum = notenum + 1) {
                     adjustedStartTime = (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].starttime * tempoScalar);
+                    // adjust for skew
+                    // adjustedStartTime = adjustedStartTime + (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].skew * (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].duration * tempoScalar));
+                    adjustedStartTime = adjustedStartTime + (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].skew * tempoScalar);
+                    // loop is one tab, so move to place within loop
                     floatLoopTabCycles = (windowStart - adjustedStartTime) / loopLen;
                     numLoopTabCycles = Math.floor(floatLoopTabCycles);
                     if (floatLoopTabCycles !== numLoopTabCycles) {
                         numLoopTabCycles = numLoopTabCycles + 1;
                     }
                     adjustedStartTime = adjustedStartTime + (loopLen * numLoopTabCycles);
+                    // schedule for playback just once (or not at all if note is already outside the window)
                     if (adjustedStartTime < windowStop) {
                         umtSchedulePlayOfNote(lpnum, tab, voicenum, notenum, ampScalar, tempoScalar, center, adjustedStartTime);
                     }
@@ -2619,7 +2636,7 @@ function umtAutomaticStop() {
 
 function umtCopyAndTransform(lpnum, tab, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose) {
     "use strict";
-    var segmentStart, ix, segmentEnd, tsRhCursor, tsPiCursor, minPitch, maxPitch, thisPitch, midpointPitch, rhythmCursor, pitchCursor, terminationCursor, rest, duration, amplitude, instParams, percent, bevelAmount, segmentLen, rangeTestStart, rangeTestEnd, rangeTestCursor, rangePitch, rangeMin, rangeMax, rangeScalar, rangeTranspose;
+    var segmentStart, ix, segmentEnd, tsRhCursor, tsPiCursor, minPitch, maxPitch, thisPitch, midpointPitch, rhythmCursor, pitchCursor, terminationCursor, rest, duration, amplitude, skew, instParams, percent, bevelAmount, segmentLen, rangeTestStart, rangeTestEnd, rangeTestCursor, rangePitch, rangeMin, rangeMax, rangeScalar, rangeTranspose;
     // first find the start and end of the segment, and the starting point for the rhythm cursor (tsRhCursor) and pitch cursor (tsPiCursor) which can be different if there is rhythm or pitch scrolling
     segmentStart = -1;
     tsRhCursor = -1; // ts == "time scroll"; rh == "rhythm", pi == "pitch"
@@ -2685,6 +2702,7 @@ function umtCopyAndTransform(lpnum, tab, vcnum, startTime, endTime, rhythmDirect
         thisPitch = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[pitchCursor].pitch;
         duration = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[rhythmCursor].duration;
         amplitude = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[rhythmCursor].amplitude;
+        skew = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[rhythmCursor].skew;
         instParams = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[rhythmCursor].instParams;
         // actual pitch scroll handles "vertical" scrolling
         if (actualPitchScroll !== 0) {
@@ -2712,7 +2730,7 @@ function umtCopyAndTransform(lpnum, tab, vcnum, startTime, endTime, rhythmDirect
         if (pitchTranspose !== 0) {
             thisPitch = thisPitch + pitchTranspose;
         }
-        umtAddNote(lpnum, tab, vcnum, rest, thisPitch, duration, amplitude, instParams);
+        umtAddNote(lpnum, tab, vcnum, rest, thisPitch, duration, amplitude, skew, instParams);
         rhythmCursor = rhythmCursor + rhythmDirection;
         if (rhythmCursor > segmentEnd) {
             rhythmCursor = rhythmCursor - segmentLen;
@@ -2774,12 +2792,12 @@ function umtTestResetCopytransTestSequence() {
     "use strict";
     umtClearLoop(0, 0, 400, 432, "maj7reg", "triad");
     umtAddVoice(0, 0, 0, 0, 4, 6, "tuningfork", false);
-    umtAddNote(0, 0, 0, false, 5.0, 1, 0.99, false);
-    umtAddNote(0, 0, 0, false, 5.1, 1, 0.99, false);
-    umtAddNote(0, 0, 0, false, 5.2, 2, 0.99, false);
-    umtAddNote(0, 0, 0, false, 5.3, 4, 0.99, false);
-    umtAddNote(0, 0, 0, false, 5.4, 8, 0.99, false);
-    umtAddNote(0, 0, 0, false, 5.5, 16, 0.99, false);
+    umtAddNote(0, 0, 0, false, 5.0, 1, 0.99, 0, false);
+    umtAddNote(0, 0, 0, false, 5.1, 1, 0.99, 0, false);
+    umtAddNote(0, 0, 0, false, 5.2, 2, 0.99, 0, false);
+    umtAddNote(0, 0, 0, false, 5.3, 4, 0.99, 0, false);
+    umtAddNote(0, 0, 0, false, 5.4, 8, 0.99, 0, false);
+    umtAddNote(0, 0, 0, false, 5.5, 16, 0.99, 0, false);
 }
 
 function umtTestCheckCopytransPitches(pitchList, startingIndex, failMessage) {
@@ -3160,7 +3178,7 @@ function umtUIIsPartInUI(ptnum) {
 
 function umtComposeTab(lpnum, tab) {
     "use strict";
-    var compositionVoice, UIVoice, songNumber, octave, rangeMin, rangeMax, instrumentName, percussion, minSize, maxSize, chunkSize, totalLength, centerOctave, restyness, ampVariation, volume, noteDistance, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, symmetryPattern, csrPos, csrStart, duration, loopDuration, vcnum, instParamNames, instSpecificParams;
+    var compositionVoice, UIVoice, songNumber, octave, rangeMin, rangeMax, instrumentName, percussion, minSize, maxSize, chunkSize, totalLength, centerOctave, restyness, ampVariation, volume, skew, noteDistance, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, symmetryPattern, csrPos, csrStart, duration, loopDuration, vcnum, instParamNames, instSpecificParams;
     if (gUmt.noReenterAddingVoice) {
         jsabort("umtComposeTab called during add voice");
     }
@@ -3187,9 +3205,10 @@ function umtComposeTab(lpnum, tab) {
             ampVariation = gUmt.UIParams.songTab[tab].voice[UIVoice].ampVariation;
             noteDistance = gUmt.UIParams.songTab[tab].voice[UIVoice].noteDistance;
             volume = gUmt.UIParams.songTab[tab].voice[UIVoice].volume;
+            skew = gUmt.UIParams.songTab[tab].voice[UIVoice].skew;
             instParamNames = gUmt.instrumentParams[instrumentName].parameters;
             instSpecificParams = gUmt.UIParams.songTab[tab].voice[UIVoice].instSpecificParams;
-            umtAddSymmetryBaseToVoice(lpnum, tab, compositionVoice, minSize, maxSize, chunkSize, totalLength, centerOctave, restyness, noteDistance, ampVariation, volume, instrumentName, instParamNames, instSpecificParams);
+            umtAddSymmetryBaseToVoice(lpnum, tab, compositionVoice, minSize, maxSize, chunkSize, totalLength, centerOctave, restyness, noteDistance, ampVariation, volume, skew, instrumentName, instParamNames, instSpecificParams);
             // we have voices and base rhythms; now need symmetry
             startTime = 0;
             csrPos = gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].cursor;
@@ -3922,6 +3941,7 @@ function umtUiCopyTabVoice(fromTab, fromVoice, toTab, toVoice) {
         noteDistance: prev.noteDistance,
         restyness: prev.restyness,
         ampVariation: prev.ampVariation,
+        skew: prev.skew,
         minNote: prev.minNote,
         maxNote: prev.maxNote,
         chunkSize: prev.chunkSize,
@@ -4057,14 +4077,14 @@ function umtUiAddRow(voiceNumber) {
     "use strict";
     var text, i, displayNumber, columnidlist, idx, cellidname, j, rowcontent, y, yyy, currentrowhtml, listenElement;
     // First, add the HTML
-    jQuery('#voices_table > tbody:last').append('<tr id="voice_row_' + voiceNumber + '"><td id="voicedescriptcell' + voiceNumber + '" valign="top"> Voice Description Cell ' + voiceNumber + '</td><td id="voiceplaycell' + voiceNumber + '" valign="top"></td><td id="voiceinstrumentcell' + voiceNumber + '" valign="top"><td id="voicevolumecell' + voiceNumber + '" valign="top"></td><td id="voicesongnumcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceoctavecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicenotedistcell' + voiceNumber + '" valign="top" align="center"></td><td id="voicerestynesscell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceampvariationcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceminnotecell' + voiceNumber + '" valign="top" align="center"><td id="voicemaxnotecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicechunksizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceframesizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicesymmetriescell' + voiceNumber + '" valign="top" align="center"></td><td id="instparameterscell' + voiceNumber + '" valign="top" align="center"></td><td id="voicedeletecell' + voiceNumber + '" valign="top" align="center"></td></tr>');
+    jQuery('#voices_table > tbody:last').append('<tr id="voice_row_' + voiceNumber + '"><td id="voicedescriptcell' + voiceNumber + '" valign="top"> Voice Description Cell ' + voiceNumber + '</td><td id="voiceplaycell' + voiceNumber + '" valign="top"></td><td id="voiceinstrumentcell' + voiceNumber + '" valign="top"><td id="voicevolumecell' + voiceNumber + '" valign="top"></td><td id="voicesongnumcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceoctavecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicenotedistcell' + voiceNumber + '" valign="top" align="center"></td><td id="voicerestynesscell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceampvariationcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceskewcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceminnotecell' + voiceNumber + '" valign="top" align="center"><td id="voicemaxnotecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicechunksizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceframesizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicesymmetriescell' + voiceNumber + '" valign="top" align="center"></td><td id="instparameterscell' + voiceNumber + '" valign="top" align="center"></td><td id="voicedeletecell' + voiceNumber + '" valign="top" align="center"></td></tr>');
     // Then, paste in standard templates for each of the cells
     text = document.getElementById("voicedescriptcellxx").innerHTML;
     displayNumber = voiceNumber + 1;
     i = text.indexOf("XX");
     text = text.substring(0, i) + displayNumber + text.substring(i + 2);
     document.getElementById("voicedescriptcell" + voiceNumber).innerHTML = text;
-    columnidlist = ["voiceplaycell", "voiceinstrumentcell", "voicevolumecell", "voicesongnumcell", "voiceoctavecell", "voicenotedistcell", "voicerestynesscell", "voiceampvariationcell", "voiceminnotecell", "voicemaxnotecell", "voicechunksizecell", "voiceframesizecell", "voicesymmetriescell", "instparameterscell", "voicedeletecell"];
+    columnidlist = ["voiceplaycell", "voiceinstrumentcell", "voicevolumecell", "voicesongnumcell", "voiceoctavecell", "voicenotedistcell", "voicerestynesscell", "voiceampvariationcell", "voiceskewcell", "voiceminnotecell", "voicemaxnotecell", "voicechunksizecell", "voiceframesizecell", "voicesymmetriescell", "instparameterscell", "voicedeletecell"];
     for (idx in columnidlist) {
         if (columnidlist.hasOwnProperty(idx)) {
             cellidname = columnidlist[idx];
@@ -4192,7 +4212,24 @@ function umtUiAddRow(voiceNumber) {
         }
     }
          });
-
+    // Skew
+    jQuery("#slider_skew" + voiceNumber).slider({min: 0, max: 10, step: 1, value: 0, orientation: "vertical", change: function (event, ui) {
+        var tab, newvalue, absvalue, aspercentage;
+        tab = gUmt.UIParams.currentTab;
+        if (gUmt.noReenterAddingVoice === false) {
+            if (event.type === "slidechange") {
+                newvalue = ui.value;
+                absvalue = newvalue / 10;
+                aspercentage = newvalue * 10;
+                window.document.getElementById("display_skew" + voiceNumber).innerHTML = aspercentage + "%";
+                gUmt.UIParams.songTab[tab].voice[voiceNumber].skew = absvalue;
+                if (gUmt.UIParams.songTab[tab].voice[voiceNumber].playing) {
+                    umtAutomaticallyRecomposeLoopFromUIParams();
+                }
+            }
+        }
+    }
+         });
     // Min note
     jQuery("#slider_minnote" + voiceNumber).slider({min: 0, max: 7, step: 1, value: 3, orientation: "vertical", change: function (event, ui) {
         var tab, newvalue;
@@ -4366,6 +4403,11 @@ function umtUiCopyUiParamsToActualUi() {
         window.document.getElementById("display_ampvariation" + i).innerHTML = (absvalue * 100) + "%";
         slidervalue = absvalue * 10;
         jQuery("#slider_ampvariation" + i).slider({ value: slidervalue });
+        // skew
+        absvalue = gUmt.UIParams.songTab[tab].voice[i].skew;
+        window.document.getElementById("display_skew" + i).innerHTML = (absvalue * 100) + "%";
+        slidervalue = absvalue * 10;
+        jQuery("#slider_skew" + i).slider({ value: slidervalue });
         // min note
         absvalue = gUmt.UIParams.songTab[tab].voice[i].minNote;
         window.document.getElementById("display_minnote" + i).innerHTML = absvalue;
@@ -4456,6 +4498,7 @@ function umtExecAddVoice() {
             noteDistance: 0.3,
             restyness: 0.0,
             ampVariation: 0.5,
+            skew: 0.0,
             minNote: 4,
             maxNote: 4,
             chunkSize: 4,
@@ -5177,10 +5220,15 @@ Tab length: <select id="lb_tab_length">
 				Restyness:<br />
 				<div id="slider_restynessxx" class="ddrg" style="height:100px;"></div> <br />
 				<div id="display_restynessxx"></div>
+
 			</td><td id="voiceampvariationcellxx" valign="top" align="center">
 				Ampl. Var.:<br />
 				<div id="slider_ampvariationxx" class="ddrg" style="height:100px;"></div> <br />
 				<div id="display_ampvariationxx"></div>
+			</td><td id="voiceskewcellxx" valign="top" align="center">
+				Skew:<br />
+				<div id="slider_skewxx" class="ddrg" style="height:100px;"></div> <br />
+				<div id="display_skewxx"></div>
 			</td><td id="voiceminnotecellxx" valign="top" align="center">
 				Min Note:<br />
 				<div id="slider_minnotexx" class="ddrg" style="height:100px;"></div> <br />
