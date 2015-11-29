@@ -515,8 +515,6 @@ function umtGenerateANoteFMSynthSquare(frequency, duration, amplitude, startThre
     stopModNum = modList[stopModulator].num;
     stopModDnom = modList[stopModulator].dnom;
     stopModulatorFreq = frequency * (stopModNum / stopModDnom);
-    startBeta = (startBeta * 5.0);
-    stopBeta = (stopBeta * 5.0);
     thresDiff = stopThreshold - startThreshold;
     modulatorDiff = stopModulatorFreq - startModulatorFreq;
     betaDiff = stopBeta - startBeta;
@@ -524,8 +522,8 @@ function umtGenerateANoteFMSynthSquare(frequency, duration, amplitude, startThre
         pctThere = (i / numSamples);
         fade = 1.0 - pctThere;
         currentModulatorFreq = (modulatorDiff * pctThere) + startModulatorFreq;
+        currentBeta = (betaDiff * pctThere) + startBeta;
         currentBeta = currentBeta * Math.exp((currentBeta - 0.7) * 10); // multiplying by beta is kinda hokey but casts 0 to 0 which is what we want.
-        beta = currentBeta * Math.exp((currentBeta - 0.7) * 10); // multiplying by beta is kinda hokey but casts 0 to 0 which is what we want.
         subFrequency = frequency + currentBeta * ((Math.sin((gUmt.TAU * i * (currentModulatorFreq / gUmt.globalCtx.sampleRate)))));
         // sinePart = Math.sin((gUmt.TAU * i * (subFrequency / gUmt.globalCtx.sampleRate)));
         // squarePart = umtFMSquare(i * (subFrequency / gUmt.globalCtx.sampleRate));
@@ -1218,7 +1216,7 @@ function umtClearLoop(lpnum, tab, xTempo, centerNote, xScale, xChord) {
     };
 }
 
-function umtAddVoice(lpnum, tab, idx, songNumber, rangeMin, rangeMax, instrumentName, xPercussion) {
+function umtAddVoice(lpnum, tab, idx, songNumber, rangeMin, rangeMax, instrumentName, xPercussion, xExemptFromHarmonization) {
     "use strict";
     gUmt.loop[lpnum].score.songTab[tab].parts = idx + 1;
     gUmt.loop[lpnum].score.songTab[tab].voice[idx] = {
@@ -1229,6 +1227,7 @@ function umtAddVoice(lpnum, tab, idx, songNumber, rangeMin, rangeMax, instrument
         rangeTop: rangeMax,
         rangeBottom: rangeMin,
         percussion: xPercussion,
+        exemptFromHarmonization: xExemptFromHarmonization,
         notes: [],
         randRhythm: umtGetRando(songNumber * 40),
         randPitch: umtGetRando(songNumber * 40 + 1),
@@ -2185,31 +2184,38 @@ function umtHarmonizeScore(lpnum, tab) {
                 poz = currentPosition[maxIdx];
                 // find all other notes that are turned on at the same time
                 listOfNotesAlreadyPlaying = [];
-                lonapCursr = 0;
-                for (i = 0; i < parts; i = i + 1) {
-                    if (currentPosition[i] < gUmt.loop[lpnum].score.songTab[tab].voice[i].cursor) { // check that we're not off the end
-                        if (gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].harmDnom !== -1) {
-                            // sanity check 2
-                            if (currentTime < gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].starttime) {
-                                jsabort('START TIME IS AFTER CURRENT TIME! OH NO!');
-                            }
-                            if (currentTime >= (gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].starttime + gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].duration)) {
-                                jsabort('START TIME + DURATION IS BEFORE CURRENT TIME!! OH NO!!');
-                            }
-                            if (gUmt.loop[lpnum].score.songTab[tab].voice[i].percussion === false) {
-                                if (gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].rest === false) {
-                                    listOfNotesAlreadyPlaying[lonapCursr] = {
-                                        octave: gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].harmOctave,
-                                        num: gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].harmNum,
-                                        dnom: gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].harmDnom
-                                    };
-                                    lonapCursr = lonapCursr + 1;
+                if ((gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].percussion) || (gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].exemptFromHarmonization)) {
+                    // Brrrrrp -- if percussion or a voice exempt from harmonization, we skip the step of figuring out what other notes are playing, because it doesn't matter!
+                    harmonizedInfo = umtFindMostHarmonicNote(gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[poz].pitch, theScale, listOfNotesAlreadyPlaying, chord);
+                } else {
+                    lonapCursr = 0;
+                    for (i = 0; i < parts; i = i + 1) {
+                        if (currentPosition[i] < gUmt.loop[lpnum].score.songTab[tab].voice[i].cursor) { // check that we're not off the end
+                            if (gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].harmDnom !== -1) {
+                                // sanity check 2
+                                if (currentTime < gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].starttime) {
+                                    jsabort('START TIME IS AFTER CURRENT TIME! OH NO!');
+                                }
+                                if (currentTime >= (gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].starttime + gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].duration)) {
+                                    jsabort('START TIME + DURATION IS BEFORE CURRENT TIME!! OH NO!!');
+                                }
+                                if (gUmt.loop[lpnum].score.songTab[tab].voice[i].percussion === false) {
+                                    if (gUmt.loop[lpnum].score.songTab[tab].voice[i].exemptFromHarmonization === false) {
+                                        if (gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].rest === false) {
+                                            listOfNotesAlreadyPlaying[lonapCursr] = {
+                                                octave: gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].harmOctave,
+                                                num: gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].harmNum,
+                                                dnom: gUmt.loop[lpnum].score.songTab[tab].voice[i].notes[currentPosition[i]].harmDnom
+                                            };
+                                            lonapCursr = lonapCursr + 1;
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
+                    harmonizedInfo = umtFindMostHarmonicNote(gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[poz].pitch, theScale, listOfNotesAlreadyPlaying, chord);
                 }
-                harmonizedInfo = umtFindMostHarmonicNote(gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[poz].pitch, theScale, listOfNotesAlreadyPlaying, chord);
                 // sanity check 1
                 if (currentTime !== gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[currentPosition[maxIdx]].starttime) {
                     cx('START TIMES DO NOT MATCH! OH NO!');
@@ -2791,13 +2797,13 @@ function umtCopyAndTransform(lpnum, tab, vcnum, startTime, endTime, rhythmDirect
 function umtTestResetCopytransTestSequence() {
     "use strict";
     umtClearLoop(0, 0, 400, 432, "maj7reg", "triad");
-    umtAddVoice(0, 0, 0, 0, 4, 6, "tuningfork", false);
-    umtAddNote(0, 0, 0, false, 5.0, 1, 0.99, 0, false);
-    umtAddNote(0, 0, 0, false, 5.1, 1, 0.99, 0, false);
-    umtAddNote(0, 0, 0, false, 5.2, 2, 0.99, 0, false);
-    umtAddNote(0, 0, 0, false, 5.3, 4, 0.99, 0, false);
-    umtAddNote(0, 0, 0, false, 5.4, 8, 0.99, 0, false);
-    umtAddNote(0, 0, 0, false, 5.5, 16, 0.99, 0, false);
+    umtAddVoice(0, 0, 0, 0, 4, 6, "tuningfork", false, false);
+    umtAddNote(0, 0, 0, false, 5.0, 1, 0.99, 0, false, false);
+    umtAddNote(0, 0, 0, false, 5.1, 1, 0.99, 0, false, false);
+    umtAddNote(0, 0, 0, false, 5.2, 2, 0.99, 0, false, false);
+    umtAddNote(0, 0, 0, false, 5.3, 4, 0.99, 0, false, false);
+    umtAddNote(0, 0, 0, false, 5.4, 8, 0.99, 0, false, false);
+    umtAddNote(0, 0, 0, false, 5.5, 16, 0.99, 0, false, false);
 }
 
 function umtTestCheckCopytransPitches(pitchList, startingIndex, failMessage) {
@@ -3178,7 +3184,7 @@ function umtUIIsPartInUI(ptnum) {
 
 function umtComposeTab(lpnum, tab) {
     "use strict";
-    var compositionVoice, UIVoice, songNumber, octave, rangeMin, rangeMax, instrumentName, percussion, minSize, maxSize, chunkSize, totalLength, centerOctave, restyness, ampVariation, volume, skew, noteDistance, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, symmetryPattern, csrPos, csrStart, duration, loopDuration, vcnum, instParamNames, instSpecificParams;
+    var compositionVoice, UIVoice, songNumber, octave, rangeMin, rangeMax, instrumentName, percussion, exemptFromHarmonization, minSize, maxSize, chunkSize, totalLength, centerOctave, restyness, ampVariation, volume, skew, noteDistance, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, symmetryPattern, csrPos, csrStart, duration, loopDuration, vcnum, instParamNames, instSpecificParams;
     if (gUmt.noReenterAddingVoice) {
         jsabort("umtComposeTab called during add voice");
     }
@@ -3195,7 +3201,8 @@ function umtComposeTab(lpnum, tab) {
             rangeMax = octave + 1.25;
             instrumentName = gUmt.UIParams.songTab[tab].voice[UIVoice].instrument;
             percussion = gUmt.instrumentParams[instrumentName].percussion;
-            umtAddVoice(lpnum, tab, compositionVoice, songNumber, rangeMin, rangeMax, instrumentName, percussion);
+            exemptFromHarmonization = gUmt.UIParams.songTab[tab].voice[UIVoice].exemptFromHarmonization;
+            umtAddVoice(lpnum, tab, compositionVoice, songNumber, rangeMin, rangeMax, instrumentName, percussion, exemptFromHarmonization);
             minSize = gUmt.UIParams.songTab[tab].voice[UIVoice].minNote;
             maxSize = gUmt.UIParams.songTab[tab].voice[UIVoice].maxNote;
             chunkSize = gUmt.UIParams.songTab[tab].voice[UIVoice].chunkSize;
@@ -3447,8 +3454,6 @@ function umtExecPlayVoiceChange(event) {
     if (gUmt.noReenterAddingVoice === false) {
         umtAutomaticallyRecomposeLoopFromUIParams();
     }
-    // document.getElementById("start_automatic").disabled = false;
-    // document.getElementById("stop_automatic").disabled = false;
 }
 
 function umtExecSongNumberChange(event) {
@@ -3708,7 +3713,7 @@ function umtUiSetSymmetryListboxAndSlider(row, patternDuration) {
     jQuery("#slider_symmetry_scrollbothParam" + suffix).slider({ value: slidervalue });
 }
 
-var umtUiCascadeFrameSizeChanges, umtUiCascadeChunkSizeChanges, umtUiCascadeMinNoteChanges;
+var umtUiCascadeFrameSizeChanges, umtUiCascadeChunkSizeChanges, umtUiCascadeMaxNoteChanges, umtUiCascadeMinNoteChanges;
 
 umtUiCascadeFrameSizeChanges = function (voiceNumber, newvalue) {
     "use strict";
@@ -3934,6 +3939,7 @@ function umtUiCopyTabVoice(fromTab, fromVoice, toTab, toVoice) {
     pvsym = gUmt.UIParams.songTab[fromTab].voice[fromVoice].symmetry;
     gUmt.UIParams.songTab[toTab].voice[toVoice] = {
         playing: prev.playing,
+        exemptFromHarmonization: prev.exemptFromHarmonization,
         instrument: prev.instrument,
         volume: prev.volume,
         songNumber: prev.songNumber,
@@ -4071,20 +4077,33 @@ function umtUiSetListboxByValue(listbox, value) {
     }
 }
 
+function umtExecVoiceExemptFromHarmonizationChange(event) {
+    "use strict";
+    var elemid, UIVoiceNum, checkd, tab;
+    elemid = event.target.id;
+    UIVoiceNum = Number(elemid.substring(28));
+    checkd = document.getElementById(elemid).checked;
+    tab = gUmt.UIParams.currentTab;
+    gUmt.UIParams.songTab[tab].voice[UIVoiceNum].exemptFromHarmonization = checkd;
+    if (gUmt.noReenterAddingVoice === false) {
+        umtAutomaticallyRecomposeLoopFromUIParams();
+    }
+}
+
 var umtExecDeleteVoiceClick; // has to exist for next function; can't be rearranged because tried that and functions really are circular
 
 function umtUiAddRow(voiceNumber) {
     "use strict";
     var text, i, displayNumber, columnidlist, idx, cellidname, j, rowcontent, y, yyy, currentrowhtml, listenElement;
     // First, add the HTML
-    jQuery('#voices_table > tbody:last').append('<tr id="voice_row_' + voiceNumber + '"><td id="voicedescriptcell' + voiceNumber + '" valign="top"> Voice Description Cell ' + voiceNumber + '</td><td id="voiceplaycell' + voiceNumber + '" valign="top"></td><td id="voiceinstrumentcell' + voiceNumber + '" valign="top"><td id="voicevolumecell' + voiceNumber + '" valign="top"></td><td id="voicesongnumcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceoctavecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicenotedistcell' + voiceNumber + '" valign="top" align="center"></td><td id="voicerestynesscell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceampvariationcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceskewcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceminnotecell' + voiceNumber + '" valign="top" align="center"><td id="voicemaxnotecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicechunksizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceframesizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicesymmetriescell' + voiceNumber + '" valign="top" align="center"></td><td id="instparameterscell' + voiceNumber + '" valign="top" align="center"></td><td id="voicedeletecell' + voiceNumber + '" valign="top" align="center"></td></tr>');
+    jQuery('#voices_table > tbody:last').append('<tr id="voice_row_' + voiceNumber + '"><td id="voicedescriptcell' + voiceNumber + '" valign="top"> Voice Description Cell ' + voiceNumber + '</td><td id="voiceplaycell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceinstrumentcell' + voiceNumber + '" valign="top" align="center"><td id="voicevolumecell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceexemptharmonizationcell' + voiceNumber + '" valign="top" align="center"></td><td id="voicesongnumcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceoctavecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicenotedistcell' + voiceNumber + '" valign="top" align="center"></td><td id="voicerestynesscell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceampvariationcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceskewcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceminnotecell' + voiceNumber + '" valign="top" align="center"><td id="voicemaxnotecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicechunksizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceframesizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicesymmetriescell' + voiceNumber + '" valign="top" align="center"></td><td id="instparameterscell' + voiceNumber + '" valign="top" align="center"></td><td id="voicedeletecell' + voiceNumber + '" valign="top" align="center"></td></tr>');
     // Then, paste in standard templates for each of the cells
     text = document.getElementById("voicedescriptcellxx").innerHTML;
     displayNumber = voiceNumber + 1;
     i = text.indexOf("XX");
     text = text.substring(0, i) + displayNumber + text.substring(i + 2);
     document.getElementById("voicedescriptcell" + voiceNumber).innerHTML = text;
-    columnidlist = ["voiceplaycell", "voiceinstrumentcell", "voicevolumecell", "voicesongnumcell", "voiceoctavecell", "voicenotedistcell", "voicerestynesscell", "voiceampvariationcell", "voiceskewcell", "voiceminnotecell", "voicemaxnotecell", "voicechunksizecell", "voiceframesizecell", "voicesymmetriescell", "instparameterscell", "voicedeletecell"];
+    columnidlist = ["voiceplaycell", "voiceinstrumentcell", "voicevolumecell", "voiceexemptharmonizationcell", "voicesongnumcell", "voiceoctavecell", "voicenotedistcell", "voicerestynesscell", "voiceampvariationcell", "voiceskewcell", "voiceminnotecell", "voicemaxnotecell", "voicechunksizecell", "voiceframesizecell", "voicesymmetriescell", "instparameterscell", "voicedeletecell"];
     for (idx in columnidlist) {
         if (columnidlist.hasOwnProperty(idx)) {
             cellidname = columnidlist[idx];
@@ -4118,6 +4137,9 @@ function umtUiAddRow(voiceNumber) {
     // Play
     listenElement = document.getElementById("playvoice" + voiceNumber);
     listenElement.addEventListener("change", umtExecPlayVoiceChange, true);
+    // Exempt from harmonization
+    listenElement = document.getElementById("voiceexemptfromharmonization" + voiceNumber);
+    listenElement.addEventListener("change", umtExecVoiceExemptFromHarmonizationChange, true);
     // Instrument
     listenElement = document.getElementById("instrument" + voiceNumber);
     listenElement.addEventListener("change", umtExecInstrumentChange, true);
@@ -4368,11 +4390,18 @@ function umtUiCopyUiParamsToActualUi() {
     loopDuration = gUmt.UIParams.loopDuration;
     maxLoopDuration = gUmt.UIParams.maxLoopDuration;
     for (i = 0; i < parts; i = i + 1) {
-        // checkbox
+
+        // play voice checkbox
         if (gUmt.UIParams.songTab[tab].voice[i].playing) {
             document.getElementById("playvoice" + i).checked = true;
         } else {
             document.getElementById("playvoice" + i).checked = false;
+        }
+        // exempt from harmonization
+        if (gUmt.UIParams.songTab[tab].voice[i].exemptFromHarmonization) {
+            document.getElementById("voiceexemptfromharmonization" + i).checked = true;
+        } else {
+            document.getElementById("voiceexemptfromharmonization" + i).checked = false;
         }
         // instrument
         umtUiSetListboxByValue(document.getElementById("instrument" + i), gUmt.UIParams.songTab[tab].voice[i].instrument);
@@ -4491,6 +4520,7 @@ function umtExecAddVoice() {
     if (voiceNum === 0) {
         gUmt.UIParams.songTab[tab].voice[voiceNum] = {
             playing: false,
+            exemptFromHarmonization: false,
             instrument: "tuningfork",
             volume: 1.0,
             songNumber: songnum,
@@ -4611,6 +4641,7 @@ function umtExecAddVoice() {
         for (dup = 0; dup < gUmt.UIParams.numTabs; dup = dup + 1) {
             umtUiCopyTabVoice(tab, voiceNum - 1, dup, voiceNum);
             gUmt.UIParams.songTab[dup].voice[voiceNum].playing = false;
+            gUmt.UIParams.songTab[dup].voice[voiceNum].exemptFromHarmonization = false;
             gUmt.UIParams.songTab[dup].voice[voiceNum].songNumber = songnum;
             if (dup === tab) {
                 gUmt.UIParams.songTab[dup].voice[voiceNum].copyChangesToOtherTabs = true;
@@ -5121,10 +5152,6 @@ Tab length: <select id="lb_tab_length">
 				Play
 				<br />
 				<input type="checkbox" name="playvoicexx" id="playvoicexx">
-			</td><td id="voicevolumecellxx" valign="top" align="center">
-				Volume: <br />
-				<div id="slider_volumexx" class="ddrg" style="height:100px;"></div> <br />
-				<div id="display_volumexx"></div>
 			</td><td id="voiceinstrumentcellxx" valign="top" align="center">
 				Instrument: <br />
 				<select name="instrumentxx" id="instrumentxx">
@@ -5154,6 +5181,14 @@ Tab length: <select id="lb_tab_length">
 					<option value="wadflute">WAD Flute</option>
 					<option value="wadpiano">WAD Piano</option>
 				</select>
+			</td><td id="voiceexemptharmonizationcellxx" valign="top">
+				EFH
+				<br />
+				<input type="checkbox" name="voiceexemptfromharmonizatonxx" id="voiceexemptfromharmonizationxx">
+			</td><td id="voicevolumecellxx" valign="top" align="center">
+				Volume: <br />
+				<div id="slider_volumexx" class="ddrg" style="height:100px;"></div> <br />
+				<div id="display_volumexx"></div>
 			</td><td id="voicesongnumcellxx" valign="top" align="center">
 				Seed: <br />
 				<select name="songnumberxx" id="songnumberxx">
