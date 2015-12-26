@@ -3202,7 +3202,7 @@ function umtExecTestCopyTrans(lpnum) {
     cx('umtExecTestCopyTrans() done');
 }
 
-function umtUIIsPartInUI(ptnum) {
+function umtUiIsPartInUI(ptnum) {
     "use strict";
     if (document.getElementById("voice_row_" + ptnum)) {
         return true;
@@ -3220,7 +3220,7 @@ function umtComposeTab(lpnum, tab) {
     umtClearLoop(lpnum, tab, gUmt.UIParams.tempo, gUmt.UIParams.songTab[tab].centernote, gUmt.UIParams.songTab[tab].scale, gUmt.UIParams.songTab[tab].chord);
     compositionVoice = 0;
     loopDuration = gUmt.UIParams.loopDuration;
-    // while (umtUIIsPartInUI(UIVoice)) {
+    // while (umtUiIsPartInUI(UIVoice)) {
     for (UIVoice = 0; UIVoice < gUmt.UIParams.parts; UIVoice = UIVoice + 1) {
         if (gUmt.UIParams.songTab[tab].voice[UIVoice].playing) {
             songNumber = gUmt.UIParams.songTab[tab].voice[UIVoice].songNumber;
@@ -3499,7 +3499,7 @@ function umtExecSongNumberChange(event) {
     }
 }
 
-function umtUICreateClosureFunctionsForSymmetrySlidersOutsideALoop(voiceNumber, patternSize) {
+function umtUiCreateClosureFunctionsForSymmetrySlidersOutsideALoop(voiceNumber, patternSize) {
     "use strict";
     jQuery("#slider_symmetry_transParam" + voiceNumber + "_" + patternSize).slider({min: 0, max: 10, step: 1, value: 10, orientation: "horizontal", change: function (event, ui) {
         var tab, newvalue, patternDuration;
@@ -3602,7 +3602,7 @@ function umtUICreateClosureFunctionsForSymmetrySlidersOutsideALoop(voiceNumber, 
          });
 }
 
-function umtUIShowOrHideAppropriateSymmetrySliders(symmetrySelected, suffix) {
+function umtUiShowOrHideAppropriateSymmetrySliders(symmetrySelected, suffix) {
     "use strict";
     var displayTrans, displayScale, displayTilt, displayScrollrhythm, displayScrollpitch, displayScrollboth;
     displayTrans = "none";
@@ -3663,7 +3663,7 @@ function umtExecPervoiceSymmetryChange(event) {
     listbox = event.target;
     selectedvalue = listbox.options[listbox.selectedIndex].value;
     elemid = elemid.substring(12);
-    umtUIShowOrHideAppropriateSymmetrySliders(selectedvalue, elemid);
+    umtUiShowOrHideAppropriateSymmetrySliders(selectedvalue, elemid);
     i = elemid.indexOf("_");
     voiceNumber = elemid.substring(0, i);
     symSize = elemid.substring(i + 1);
@@ -3768,7 +3768,7 @@ umtUiCascadeFrameSizeChanges = function (voiceNumber, newvalue) {
                 umtUiSetSymmetryListboxAndSlider(voiceNumber, symSize);
                 umtUiTurnOnSymmetryPatterns(voiceNumber, symSize, true);
                 symmetryPattern = gUmt.UIParams.songTab[tab].voice[voiceNumber].symmetry[symSize].pattern;
-                umtUIShowOrHideAppropriateSymmetrySliders(symmetryPattern, voiceNumber + "_" + symSize);
+                umtUiShowOrHideAppropriateSymmetrySliders(symmetryPattern, voiceNumber + "_" + symSize);
             }
         } else {
             umtUiTurnOnSymmetryPatterns(voiceNumber, symSize, false);
@@ -3840,7 +3840,7 @@ umtUiCascadeMinNoteChanges = function (voiceNumber, newvalue) {
     }
 };
 
-function umtUISetDefaultInstSpecificParamsForNewInstrument(voiceNumber, instrumentName) {
+function umtUiSetDefaultInstSpecificParamsForNewInstrument(voiceNumber, instrumentName) {
     "use strict";
     var tab, instParameters, instParamIdx, instParamSet, paramName;
     tab = gUmt.UIParams.currentTab;
@@ -3856,7 +3856,7 @@ function umtUISetDefaultInstSpecificParamsForNewInstrument(voiceNumber, instrume
     }
 }
 
-function umtUICreateClosureFunctionsForInstrumentSpecificParametersOutsideALoop(instrumentName, paramName, voiceNumber) {
+function umtUiCreateClosureFunctionsForInstrumentSpecificParametersOutsideALoop(instrumentName, paramName, voiceNumber) {
     "use strict";
     jQuery("#slider_instr_" + instrumentName + "_" + paramName + "_" + voiceNumber + "_patterns").slider({min: 0, max: 10, step: 1, value: 0, orientation: "vertical", change: function (event, ui) {
         var tab, newvalue, absvalue, aspercentage;
@@ -3919,7 +3919,7 @@ function umtCreateInstrumentSpecificParameterControls(voiceNumber, instrumentNam
     for (idx in parameters) {
         if (parameters.hasOwnProperty(idx)) {
             instpar = parameters[idx];
-            umtUICreateClosureFunctionsForInstrumentSpecificParametersOutsideALoop(instrumentName, instpar.name, voiceNumber);
+            umtUiCreateClosureFunctionsForInstrumentSpecificParametersOutsideALoop(instrumentName, instpar.name, voiceNumber);
         }
     }
 }
@@ -3951,7 +3951,7 @@ function umtExecInstrumentChange() {
     newinstr = listbox.options[listbox.selectedIndex].value;
     tab = gUmt.UIParams.currentTab;
     gUmt.UIParams.songTab[tab].voice[UIVoiceNum].instrument = newinstr;
-    umtUISetDefaultInstSpecificParamsForNewInstrument(UIVoiceNum, newinstr);
+    umtUiSetDefaultInstSpecificParamsForNewInstrument(UIVoiceNum, newinstr);
     umtCreateInstrumentSpecificParameterControls(UIVoiceNum, newinstr);
     umtUiSetInstrumentSpecificSliders(UIVoiceNum);
     if (gUmt.noReenterAddingVoice === false) {
@@ -4120,6 +4120,16 @@ function umtExecVoiceExemptFromHarmonizationChange(event) {
 
 var umtExecDeleteVoiceClick; // has to exist for next function; can't be rearranged because tried that and functions really are circular
 
+function umtUiTimeDivIdxToMult(tdvidx) {
+    "use strict";
+    var mult, i;
+    mult = 1;
+    for (i = 0; i < tdvidx; i = i + 1) {
+        mult = mult * gUmt.UIParams.timeDivisions[i];
+    }
+    return mult;
+}
+
 function umtUiAddRow(voiceNumber) {
     "use strict";
     var text, i, displayNumber, columnidlist, idx, cellidname, j, rowcontent, y, yyy, currentrowhtml, listenElement;
@@ -4287,7 +4297,8 @@ function umtUiAddRow(voiceNumber) {
         if (gUmt.noReenterAddingVoice === false) {
             if (event.type === "slidechange") {
                 newvalue = ui.value;
-                newvalue = Math.pow(2, newvalue);
+                // newvalue = Math.pow(2, newvalue);
+                newvalue = umtUiTimeDivIdxToMult(newvalue);
                 window.document.getElementById("display_minnote" + voiceNumber).innerHTML = newvalue;
                 gUmt.UIParams.songTab[tab].voice[voiceNumber].minNote = newvalue;
                 gUmt.noReenterAddingVoice = true;
@@ -4366,16 +4377,105 @@ function umtUiAddRow(voiceNumber) {
         yyy = Math.pow(2, y);
         listenElement = document.getElementById("sel_symmetry" + voiceNumber + "_" + yyy);
         listenElement.addEventListener("change", umtExecPervoiceSymmetryChange, true);
-        umtUICreateClosureFunctionsForSymmetrySlidersOutsideALoop(voiceNumber, yyy);
+        umtUiCreateClosureFunctionsForSymmetrySlidersOutsideALoop(voiceNumber, yyy);
     }
     // Close box
     listenElement = document.getElementById("deletevoice" + voiceNumber);
     listenElement.addEventListener("click", umtExecDeleteVoiceClick, true);
 }
 
+function umtUiTimeDivisionListboxExists(tdvidx) {
+    "use strict";
+    if (document.getElementById("lb_time_division_" + tdvidx)) {
+        return true;
+    }
+    return false;
+}
+
+var umtExecTimeDivisionChange;
+
+function umtUiCreateTimeDivisionListbox(tdvidx) {
+    "use strict";
+    var text, i, listenElement;
+    // grab template, stick in our time division index number (tdvidx),
+    // addpend to the div that has the list of time division listboxes
+    text = document.getElementById("time_division_template").innerHTML;
+    i = text.indexOf("xx");
+    text = text.substring(0, i) + tdvidx + text.substring(i + 2);
+    jQuery('#time_division_list').append(text);
+    // Add event listeners
+    listenElement = document.getElementById("lb_time_division_" + tdvidx);
+    listenElement.addEventListener("change", umtExecTimeDivisionChange, true);
+}
+
+function umtUiDestroyTimeDivisionListbox(tdvidx) {
+    "use strict";
+    jQuery("#lb_time_division_" + tdvidx).remove();
+}
+
+function umtUiSetTimeDivisionListbox(tdvidx, choice) {
+    "use strict";
+    umtUiSetListboxByValue(document.getElementById("lb_time_division_" + tdvidx), choice);
+}
+
+function umtUiSetTimeDivisionListboxes() {
+    "use strict";
+    // the idea here is to use *either* a "1" or going off the end of the list as
+    // the end of the list, and to put a listbox with "1" (which will display the text "stop")
+    // at the end in either case. If a "1" occurs in the list, we set the "pastend" variable
+    var count, tdvidx, choice, pastend;
+    count = 0;
+    pastend = false;
+    for (tdvidx in gUmt.UIParams.timeDivisions) {
+        if (gUmt.UIParams.timeDivisions.hasOwnProperty(tdvidx)) {
+            count = count + 1;
+            choice = gUmt.UIParams.timeDivisions[tdvidx];
+            if (pastend) {
+                if (umtUiTimeDivisionListboxExists(tdvidx)) {
+                    umtUiDestroyTimeDivisionListbox(tdvidx);
+                }
+            } else {
+                if (!umtUiTimeDivisionListboxExists(tdvidx)) {
+                    umtUiCreateTimeDivisionListbox(tdvidx);
+                    umtUiSetTimeDivisionListbox(tdvidx, choice);
+                }
+                if (choice === 1) {
+                    pastend = true;
+                }
+            }
+        }
+    }
+    if (!pastend) {
+        if (!umtUiTimeDivisionListboxExists(count)) {
+            umtUiCreateTimeDivisionListbox(count);
+            umtUiSetTimeDivisionListbox(count, 1);
+        }
+        count = count + 1;
+    }
+    while (umtUiTimeDivisionListboxExists(count)) {
+        umtUiDestroyTimeDivisionListbox(count);
+        count = count + 1;
+    }
+}
+
+function umtUiGetTimeDivisionCount() {
+    "use strict";
+    var tdvidx, count;
+    count = 0;
+    for (tdvidx in gUmt.UIParams.timeDivisions) {
+        if (gUmt.UIParams.timeDivisions.hasOwnProperty(tdvidx)) {
+            if (gUmt.UIParams.timeDivisions[tdvidx] === 1) {
+                return count;
+            }
+            count = count + 1;
+        }
+    }
+    return count;
+}
+
 function umtUiCopyUiParamsToActualUi() {
     "use strict";
-    var parts, tab, i, absvalue, slidervalue, loopDuration, maxLoopDuration, frameSize, symSize, symmetryPattern;
+    var parts, tab, i, absvalue, slidervalue, timeDivCount, loopDuration, maxLoopDuration, frameSize, symSize, symmetryPattern;
     // Important note: This function does not copy the tabs! It copies all the values outside the tabs, and all the values inside the tab *for the current tab* but does not change or configure the tabs themselves!!
     gUmt.noReenterAddingVoice = true;
     // tempo
@@ -4395,7 +4495,9 @@ function umtUiCopyUiParamsToActualUi() {
         document.getElementById("loop_tabs_one").checked = true;
     }
     // Loop length
-    umtUiSetListboxByValue(document.getElementById("lb_tab_length"), gUmt.UIParams.loopDuration);
+    // umtUiSetListboxByValue(document.getElementById("lb_tab_length"), gUmt.UIParams.loopDuration);
+    // Time divisions
+    umtUiSetTimeDivisionListboxes();
     // current tab
     tab = gUmt.UIParams.currentTab;
     // scale
@@ -4411,14 +4513,13 @@ function umtUiCopyUiParamsToActualUi() {
     // now we loop through each part
     parts = gUmt.UIParams.parts;
     for (i = 0; i < parts; i = i + 1) {
-        if (!umtUIIsPartInUI(i)) {
+        if (!umtUiIsPartInUI(i)) {
             umtUiAddRow(i);
         }
     }
     loopDuration = gUmt.UIParams.loopDuration;
     maxLoopDuration = gUmt.UIParams.maxLoopDuration;
     for (i = 0; i < parts; i = i + 1) {
-
         // play voice checkbox
         if (gUmt.UIParams.songTab[tab].voice[i].playing) {
             document.getElementById("playvoice" + i).checked = true;
@@ -4466,6 +4567,8 @@ function umtUiCopyUiParamsToActualUi() {
         slidervalue = absvalue * 10;
         jQuery("#slider_skew" + i).slider({ value: slidervalue });
         // min note
+        timeDivCount = umtUiGetTimeDivisionCount();
+        jQuery("#slider_minnote" + i).slider({ max: timeDivCount });
         absvalue = gUmt.UIParams.songTab[tab].voice[i].minNote;
         window.document.getElementById("display_minnote" + i).innerHTML = absvalue;
         slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
@@ -4502,19 +4605,101 @@ function umtUiCopyUiParamsToActualUi() {
                     symmetryPattern = gUmt.UIParams.songTab[tab].voice[i].symmetry[symSize].pattern;
                     // symmetry listbox
                     umtUiSetListboxByValue(document.getElementById("sel_symmetry" + i + "_" + symSize), symmetryPattern);
-                    umtUIShowOrHideAppropriateSymmetrySliders(symmetryPattern, i + "_" + symSize);
+                    umtUiShowOrHideAppropriateSymmetrySliders(symmetryPattern, i + "_" + symSize);
                 }
             }
             symSize = symSize * 2;
         }
     }
     i = parts;
-    while (umtUIIsPartInUI(i)) {
+    while (umtUiIsPartInUI(i)) {
         jQuery("#voice_row_" + i).remove();
         i = i + 1;
     }
     gUmt.noReenterAddingVoice = false;
 }
+
+function umtMakeTimeDivMultipliedList() {
+    "use strict";
+    var tdvidx, choice, pastend, count, mult, result;
+    count = 0;
+    mult = 1;
+    result = [ 1 ];
+    for (tdvidx in gUmt.UIParams.timeDivisions) {
+        if (gUmt.UIParams.timeDivisions.hasOwnProperty(tdvidx)) {
+            choice = gUmt.UIParams.timeDivisions[tdvidx];
+            if (choice === 1) {
+                pastend = true;
+            }
+            if (!pastend) {
+                count = count + 1;
+                mult = mult * choice;
+                result[count] = mult;
+            }
+        }
+    }
+    return result;
+}
+
+function umtUiFindInTimeDivMultList(multList, value) {
+    "use strict";
+    var idx;
+    for (idx in multList) {
+        if (multList.hasOwnProperty(idx)) {
+            if (multList[idx] === value) {
+                return idx;
+            }
+        }
+    }
+    // We should never reach this point. If we do, blow up with an error.
+    jsabort("We tried to find a value in a time division multiples list but the value was not found");
+}
+
+function umtUiFindNewTimeDivisionValue(before, after, value) {
+    "use strict";
+    var idx;
+    idx = umtUiFindInTimeDivMultList(before, value);
+    return after[idx];
+}
+
+function umtUiRecalculateAllTimeDivisions(tdvidx, choice) {
+    "use strict";
+    // the idea here is to make one list of all the multiplications of the time
+    // divisions from *before* the choice is changed, then change it, then make
+    // a 2nd list, then use the two lists to "fix" all the rhythm (min note, max
+    // note, chunk size, frame size) values, then the entire UI is redrawn,
+    // fixing both those and the symmetry pattern section.
+    var before, after, tab, vcnum;
+    before = umtMakeTimeDivMultipliedList();
+    gUmt.UIParams.timeDivisions[tdvidx] = choice;
+    after = umtMakeTimeDivMultipliedList();
+    for (tab in gUmt.UIParams.songTab) {
+        if (gUmt.UIParams.songTab.hasOwnProperty(tab)) {
+            for (vcnum in gUmt.UIParams.songTab[tab].voice) {
+                if (gUmt.UIParams.songTab[tab].voice.hasOwnProperty(vcnum)) {
+                    gUmt.UIParams.songTab[tab].voice[vcnum].minNote = umtUiFindNewTimeDivisionValue(before, after, gUmt.UIParams.songTab[tab].voice[vcnum].minNote);
+                    gUmt.UIParams.songTab[tab].voice[vcnum].maxNote = umtUiFindNewTimeDivisionValue(before, after, gUmt.UIParams.songTab[tab].voice[vcnum].maxNote);
+                    gUmt.UIParams.songTab[tab].voice[vcnum].chunkSize = umtUiFindNewTimeDivisionValue(before, after, gUmt.UIParams.songTab[tab].voice[vcnum].chunkSize);
+                    gUmt.UIParams.songTab[tab].voice[vcnum].frameSize = umtUiFindNewTimeDivisionValue(before, after, gUmt.UIParams.songTab[tab].voice[vcnum].frameSize);
+                }
+            }
+        }
+    }
+}
+
+umtExecTimeDivisionChange = function () {
+    "use strict";
+    var elemid, tdvidx, listbox, choice;
+    elemid = event.target.id;
+    tdvidx = Number(elemid.substring(17));
+    listbox = window.document.getElementById("lb_time_division_" + tdvidx);
+    choice = Number(listbox.options[listbox.selectedIndex].value);
+    umtUiRecalculateAllTimeDivisions(tdvidx, choice);
+    umtUiCopyUiParamsToActualUi();
+    if (gUmt.noReenterAddingVoice === false) {
+        umtAutomaticallyRecomposeLoopFromUIParams();
+    }
+};
 
 function umtUiDeleteVoice(voiceNum) {
     "use strict";
@@ -4557,10 +4742,10 @@ function umtExecAddVoice() {
             restyness: 0.0,
             ampVariation: 0.5,
             skew: 0.0,
-            minNote: 4,
-            maxNote: 4,
-            chunkSize: 4,
-            frameSize: 16,
+            minNote: 6,
+            maxNote: 6,
+            chunkSize: 18,
+            frameSize: 18,
             symmetry: {
                 1: {
                     pattern: "trans",
@@ -4676,14 +4861,14 @@ function umtExecAddVoice() {
             }
         }
     }
-    umtUISetDefaultInstSpecificParamsForNewInstrument(voiceNum, gUmt.UIParams.songTab[tab].voice[voiceNum].instrument);
+    umtUiSetDefaultInstSpecificParamsForNewInstrument(voiceNum, gUmt.UIParams.songTab[tab].voice[voiceNum].instrument);
     gUmt.UIParams.parts = gUmt.UIParams.parts + 1;
     umtUiCopyUiParamsToActualUi();
 }
 
 function umtExecTestDumtGmt() {
     "use strict";
-    // cx("gUmt = " + ctstr(gUmt));
+    // cx("gUmt  = " + ctstr(gUmt));
     console.log(gUmt);
 }
 
@@ -4805,19 +4990,19 @@ function umtUiClipChunkSizeAndFrameSizeAtLoopLength() {
     }
 }
 
-function umtExecLoopLengthChange() {
-    "use strict";
-    var listbox, looplenparam;
-    listbox = window.document.getElementById("lb_tab_length");
-    looplenparam = Number(listbox.options[listbox.selectedIndex].value);
-    gUmt.UIParams.loopDuration = looplenparam;
-    if (gUmt.noReenterAddingVoice === false) {
-        umtUiClipChunkSizeAndFrameSizeAtLoopLength();
-        umtUiCopyUiParamsToActualUi();
-        umtSetAllTabsAllLoopsToRecompose();
-        umtAutomaticallyRecomposeLoopFromUIParams();
-    }
-}
+// function umtExecLoopLengthChange() {
+//     "use strict";
+//     var listbox, looplenparam;
+//     listbox = window.document.getElementById("lb_tab_length");
+//     looplenparam = Number(listbox.options[listbox.selectedIndex].value);
+//     gUmt.UIParams.loopDuration = looplenparam;
+//     if (gUmt.noReenterAddingVoice === false) {
+//         umtUiClipChunkSizeAndFrameSizeAtLoopLength();
+//         umtUiCopyUiParamsToActualUi();
+//         umtSetAllTabsAllLoopsToRecompose();
+//         umtAutomaticallyRecomposeLoopFromUIParams();
+//     }
+// }
 
 // main
 
@@ -4853,7 +5038,8 @@ gUmt = {
         parts: 0,
         currentTab: 0,
         numTabs: 1,
-        playAllTabs: false
+        playAllTabs: false,
+        timeDivisions: [ 2, 3, 3, 5, 7 ]
     },
     tabRecomposeFlags: []
 };
@@ -5081,19 +5267,35 @@ jQuery(function () {
 
 <button id="add_tab">Add Tab</button>
 
-Tab length: <select id="lb_tab_length">
-    <option value="1">1</option>
-    <option value="2">2</option>
-    <option value="4">4</option>
-    <option value="8">8</option>
-    <option value="16">16</option>
-    <option value="32">32</option>
-    <option value="64">64</option>
-    <option value="128">128</option>
-    <option value="256">256</option>
-    <option value="512">512</option>
-    <option value="1024">1024</option>
-</select>
+<!-- select id="lb_tab_length"
+    option value="1" 1 /option
+    option value="2" 2 /option
+    option value="4" 4 /option
+    option value="8" 8 /option
+    option value="16" 16 /option
+    option value="32" 32 /option
+    option value="64" 64 /option
+    option value="128" 128 /option
+    option value="256" 256 /option
+    option value="512" 512 /option
+    option value="1024" 1024 /option
+/select -->
+
+Tab time divisions:
+
+<div id="time_division_list" style="display:inline;">
+</div>
+
+<div id="time_division_template" style="display:none;">
+	<select id="lb_time_division_xx">
+		<option value="1">stop</option>
+		<option value="2">2</option>
+		<option value="3">3</option>
+		<option value="5">5</option>
+		<option value="7">7</option>
+		<option value="11">11</option>
+	</select>
+</div>
 
 <div id="tabs">
 	<ul>
@@ -5404,8 +5606,8 @@ umtListenElement.addEventListener("click", umtExecLoopTabsOne, true);
 umtListenElement = document.getElementById("loop_tabs_all");
 umtListenElement.addEventListener("click", umtExecLoopTabsAll, true);
 
-umtListenElement = document.getElementById("lb_tab_length");
-umtListenElement.addEventListener("change", umtExecLoopLengthChange, true);
+// umtListenElement = document.getElementById("lb_tab_length");
+// umtListenElement.addEventListener("change", umtExecLoopLengthChange, true);
 
 // umtListenElement = document.getElementById("test_play_raw");
 // umtListenElement.addEventListener("click", umtExecPlayRawScore, true);
