@@ -2230,7 +2230,7 @@ function umtHarmonizeScore(lpnum, tab) {
                 gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[currentPosition[maxIdx]].harmOctave = harmonizedInfo.octave;
                 gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[currentPosition[maxIdx]].harmNum = harmonizedInfo.num;
                 gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[currentPosition[maxIdx]].harmDnom = harmonizedInfo.dnom;
-                // umtSanitTestEntireScore(lpnum, false);
+                umtSanitTestEntireScore(lpnum, false);
             }
             // end of actual "harmonization" code"
             stillUnfoundMaxes = false; // this loop could no doubt be optimized
@@ -2288,8 +2288,8 @@ function umtHarmonizeScore(lpnum, tab) {
             }
         }
     }
-    // umtSanitTestEntireScore(lpnum, true);
-    // cx('umtHarmonizeScore(lpnum) done');
+    umtSanitTestEntireScore(lpnum, true);
+    cx('umtHarmonizeScore(lpnum) done');
 }
 
 function umtExecHarmonizeScore() {
@@ -2358,12 +2358,6 @@ function umtDumpHarmonized(lpnum) {
 function umtExecPlayHarmonized() {
     "use strict";
     umtPlayHarmonized(0);
-}
-
-function umtExecRunTests() {
-    "use strict";
-    umtTestIsConsonant();
-    window.alert('Tests passed.');
 }
 
 function umtExecDisonanceTest() {
@@ -4122,12 +4116,106 @@ var umtExecDeleteVoiceClick; // has to exist for next function; can't be rearran
 
 function umtUiTimeDivIdxToMult(tdvidx) {
     "use strict";
-    var mult, i;
+    var mult, i, thisTimeDiv;
     mult = 1;
     for (i = 0; i < tdvidx; i = i + 1) {
-        mult = mult * gUmt.UIParams.timeDivisions[i];
+        if (gUmt.UIParams.timeDivisions.hasOwnProperty(i)) {
+            thisTimeDiv = gUmt.UIParams.timeDivisions[i];
+            if (thisTimeDiv === 1) {
+                return mult;
+            }
+            mult = mult * gUmt.UIParams.timeDivisions[i];
+        }
     }
     return mult;
+}
+
+function umtTestUiTimeDivIdxToMult() {
+    "use strict";
+    var result;
+    cx("checking umtTestUiTimeDivIdxToMult");
+    gUmt.UIParams.timeDivisions = [ 2, 5, 3, 7, 13, 11 ];
+    result = umtUiTimeDivIdxToMult(0);
+    if (result !== 1) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 0");
+    }
+    result = umtUiTimeDivIdxToMult(1);
+    if (result !== 2) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 1");
+    }
+    result = umtUiTimeDivIdxToMult(2);
+    if (result !== 10) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 2");
+    }
+    result = umtUiTimeDivIdxToMult(3);
+    if (result !== 30) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 3");
+    }
+    result = umtUiTimeDivIdxToMult(4);
+    if (result !== 210) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 4");
+    }
+    result = umtUiTimeDivIdxToMult(5);
+    if (result !== 2730) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 5");
+    }
+    result = umtUiTimeDivIdxToMult(6);
+    if (result !== 30030) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 6");
+    }
+    result = umtUiTimeDivIdxToMult(7);
+    if (result !== 30030) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 7");
+    }
+    result = umtUiTimeDivIdxToMult(8);
+    if (result !== 30030) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 8");
+    }
+    result = umtUiTimeDivIdxToMult(9);
+    if (result !== 30030) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 9");
+    }
+    gUmt.UIParams.timeDivisions = [ 2, 5, 3, 1, 13, 11 ];
+    result = umtUiTimeDivIdxToMult(0);
+    if (result !== 1) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 0");
+    }
+    result = umtUiTimeDivIdxToMult(1);
+    if (result !== 2) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 1");
+    }
+    result = umtUiTimeDivIdxToMult(2);
+    if (result !== 10) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 2");
+    }
+    result = umtUiTimeDivIdxToMult(3);
+    if (result !== 30) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 3");
+    }
+    result = umtUiTimeDivIdxToMult(4);
+    if (result !== 30) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 4");
+    }
+    result = umtUiTimeDivIdxToMult(5);
+    if (result !== 30) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 5");
+    }
+    result = umtUiTimeDivIdxToMult(6);
+    if (result !== 30) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 6");
+    }
+    result = umtUiTimeDivIdxToMult(7);
+    if (result !== 30) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 7");
+    }
+    result = umtUiTimeDivIdxToMult(8);
+    if (result !== 30) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 8");
+    }
+    result = umtUiTimeDivIdxToMult(9);
+    if (result !== 30) {
+        jsabort("umtTestUiTimeDivIdxToMult failed on 9");
+    }
 }
 
 function umtUiAddRow(voiceNumber) {
@@ -4318,7 +4406,8 @@ function umtUiAddRow(voiceNumber) {
         if (gUmt.noReenterAddingVoice === false) {
             if (event.type === "slidechange") {
                 newvalue = ui.value;
-                newvalue = Math.pow(2, newvalue);
+                // newvalue = Math.pow(2, newvalue);
+                newvalue = umtUiTimeDivIdxToMult(newvalue);
                 window.document.getElementById("display_maxnote" + voiceNumber).innerHTML = newvalue;
                 gUmt.UIParams.songTab[tab].voice[voiceNumber].maxNote = newvalue;
                 gUmt.noReenterAddingVoice = true;
@@ -4338,7 +4427,8 @@ function umtUiAddRow(voiceNumber) {
         if (gUmt.noReenterAddingVoice === false) {
             if (event.type === "slidechange") {
                 newvalue = ui.value;
-                newvalue = Math.pow(2, newvalue);
+                // newvalue = Math.pow(2, newvalue);
+                newvalue = umtUiTimeDivIdxToMult(newvalue);
                 window.document.getElementById("display_chunksize" + voiceNumber).innerHTML = newvalue;
                 gUmt.UIParams.songTab[tab].voice[voiceNumber].chunkSize = newvalue;
                 gUmt.noReenterAddingVoice = true;
@@ -4359,7 +4449,8 @@ function umtUiAddRow(voiceNumber) {
         if (gUmt.noReenterAddingVoice === false) {
             if (event.type === "slidechange") {
                 newvalue = ui.value;
-                newvalue = Math.pow(2, newvalue);
+                // newvalue = Math.pow(2, newvalue);
+                newvalue = umtUiTimeDivIdxToMult(newvalue);
                 window.document.getElementById("display_framesize" + voiceNumber).innerHTML = newvalue;
                 gUmt.UIParams.songTab[tab].voice[voiceNumber].frameSize = newvalue;
                 gUmt.noReenterAddingVoice = true;
@@ -4456,6 +4547,142 @@ function umtUiSetTimeDivisionListboxes() {
         umtUiDestroyTimeDivisionListbox(count);
         count = count + 1;
     }
+}
+
+function umtUiGetTimeDivisionCount() {
+    "use strict";
+    var tdvidx, count;
+    count = 0;
+    for (tdvidx in gUmt.UIParams.timeDivisions) {
+        if (gUmt.UIParams.timeDivisions.hasOwnProperty(tdvidx)) {
+            if (gUmt.UIParams.timeDivisions[tdvidx] === 1) {
+                return count;
+            }
+            count = count + 1;
+        }
+    }
+    return count;
+}
+
+function umtTestUiGetTimeDivisionCount() {
+    "use strict";
+    var result;
+    cx("checking umtTestUiGetTimeDivisionCount");
+    gUmt.UIParams.timeDivisions = [ 2, 5, 3, 7, 13, 11 ];
+    result = umtUiGetTimeDivisionCount();
+    if (result !== 6) {
+        jsabort("umtUiGetTimeDivisionCount test failed, should have been 6.");
+    }
+    gUmt.UIParams.timeDivisions = [ 2, 5, 3, 1, 13, 11 ];
+    result = umtUiGetTimeDivisionCount();
+    if (result !== 3) {
+        jsabort("umtUiGetTimeDivisionCount test failed, should have been 3.");
+    }
+}
+
+function umtUiTimeDivMultToIdx(value) {
+    "use strict";
+    var tdvidx, count, thisTimeDiv, mult;
+    count = 0;
+    mult = 1;
+    if (mult === value) {
+        return count;
+    }
+    for (tdvidx in gUmt.UIParams.timeDivisions) {
+        if (gUmt.UIParams.timeDivisions.hasOwnProperty(tdvidx)) {
+            thisTimeDiv = gUmt.UIParams.timeDivisions[tdvidx];
+            if (thisTimeDiv === 1) {
+                return count;
+            }
+            mult = mult * thisTimeDiv;
+            count = count + 1;
+            if (mult === value) {
+                return count;
+            }
+        }
+    }
+    return count;
+}
+
+function umtTestUiTimeDivMultToIdx() {
+    "use strict";
+    var result;
+    cx("checking umtTestUiTimeDivMultToIdx");
+    gUmt.UIParams.timeDivisions = [ 2, 5, 3, 7, 13, 11 ];
+    result = umtUiTimeDivMultToIdx(1);
+    if (result !== 0) {
+        jsabort("umtUiTimeDivMultToIdx failed on 1");
+    }
+    result = umtUiTimeDivMultToIdx(2);
+    if (result !== 1) {
+        jsabort("umtUiTimeDivMultToIdx failed on 2");
+    }
+    result = umtUiTimeDivMultToIdx(10);
+    if (result !== 2) {
+        jsabort("umtUiTimeDivMultToIdx failed on 10");
+    }
+    result = umtUiTimeDivMultToIdx(30);
+    if (result !== 3) {
+        jsabort("umtUiTimeDivMultToIdx failed on 30");
+    }
+    result = umtUiTimeDivMultToIdx(210);
+    if (result !== 4) {
+        jsabort("umtUiTimeDivMultToIdx failed on 210");
+    }
+    result = umtUiTimeDivMultToIdx(2730);
+    if (result !== 5) {
+        jsabort("umtUiTimeDivMultToIdx failed on 2730");
+    }
+    result = umtUiTimeDivMultToIdx(30030);
+    if (result !== 6) {
+        jsabort("umtUiTimeDivMultToIdx failed on 30030");
+    }
+    result = umtUiTimeDivMultToIdx(99999);
+    if (result !== 6) {
+        jsabort("umtUiTimeDivMultToIdx failed on 99999");
+    }
+    gUmt.UIParams.timeDivisions = [ 2, 5, 3, 1, 13, 11 ];
+    result = umtUiTimeDivMultToIdx(1);
+    if (result !== 0) {
+        jsabort("umtUiTimeDivMultToIdx failed on 1");
+    }
+    result = umtUiTimeDivMultToIdx(2);
+    if (result !== 1) {
+        jsabort("umtUiTimeDivMultToIdx failed on 2");
+    }
+    result = umtUiTimeDivMultToIdx(10);
+    if (result !== 2) {
+        jsabort("umtUiTimeDivMultToIdx failed on 10");
+    }
+    result = umtUiTimeDivMultToIdx(30);
+    if (result !== 3) {
+        jsabort("umtUiTimeDivMultToIdx failed on 30");
+    }
+    result = umtUiTimeDivMultToIdx(210);
+    if (result !== 3) {
+        jsabort("umtUiTimeDivMultToIdx failed on 210");
+    }
+    result = umtUiTimeDivMultToIdx(2730);
+    if (result !== 3) {
+        jsabort("umtUiTimeDivMultToIdx failed on 2730");
+    }
+    result = umtUiTimeDivMultToIdx(30030);
+    if (result !== 3) {
+        jsabort("umtUiTimeDivMultToIdx failed on 30030");
+    }
+    result = umtUiTimeDivMultToIdx(99999);
+    if (result !== 3) {
+        jsabort("umtUiTimeDivMultToIdx failed on 99999");
+    }
+}
+
+function umtExecRunTests() {
+    "use strict";
+    umtTestIsConsonant();
+    umtTestUiTimeDivIdxToMult();
+    umtTestUiTimeDivMultToIdx();
+    umtTestUiGetTimeDivisionCount();
+    window.alert('Tests passed.');
 }
 
 function umtUiGetTimeDivisionCount() {
@@ -4571,22 +4798,29 @@ function umtUiCopyUiParamsToActualUi() {
         jQuery("#slider_minnote" + i).slider({ max: timeDivCount });
         absvalue = gUmt.UIParams.songTab[tab].voice[i].minNote;
         window.document.getElementById("display_minnote" + i).innerHTML = absvalue;
-        slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
+        // slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
+        slidervalue = umtUiTimeDivMultToIdx(absvalue);
         jQuery("#slider_minnote" + i).slider({ value: slidervalue });
         // max note
+        jQuery("#slider_maxnote" + i).slider({ max: timeDivCount });
         absvalue = gUmt.UIParams.songTab[tab].voice[i].maxNote;
         window.document.getElementById("display_maxnote" + i).innerHTML = absvalue;
-        slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
+        // slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
+        slidervalue = umtUiTimeDivMultToIdx(absvalue);
         jQuery("#slider_maxnote" + i).slider({ value: slidervalue });
         // chunk size
+        jQuery("#slider_chunksize" + i).slider({ max: timeDivCount });
         absvalue = gUmt.UIParams.songTab[tab].voice[i].chunkSize;
         window.document.getElementById("display_chunksize" + i).innerHTML = absvalue;
-        slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
+        // slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
+        slidervalue = umtUiTimeDivMultToIdx(absvalue);
         jQuery("#slider_chunksize" + i).slider({ value: slidervalue });
         // frame size
+        jQuery("#slider_framesize" + i).slider({ max: timeDivCount });
         absvalue = gUmt.UIParams.songTab[tab].voice[i].frameSize;
         window.document.getElementById("display_framesize" + i).innerHTML = absvalue;
-        slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
+        // slidervalue = Math.floor((Math.log(absvalue) / Math.log(2)) + 0.01);
+        slidervalue = umtUiTimeDivMultToIdx(absvalue);
         jQuery("#slider_framesize" + i).slider({ value: slidervalue });
         // symmetry patterns and parameters
         umtCreateInstrumentSpecificParameterControls(i, gUmt.UIParams.songTab[tab].voice[i].instrument);
@@ -5237,9 +5471,10 @@ jQuery(function () {
 <p>
     <input type="button" id="start_automatic" value="Start Music" />
     <input type="button" id="stop_automatic" value="Stop Music" />
-    <!-- input type="button" id="test_play_raw" value="Test Play Raw" / -->
-    <!--input type="button" id="test_dump_gumt" value="Test Dump gUmt" / -->
-    <!-- input type="button" id="test_symmetry_system" value="Test Symmetry System" / -->
+    <input type="button" id="test_play_raw" value="Test Play Raw" />
+    <input type="button" id="test_dump_gumt" value="Test Dump gUmt" />
+    <input type="button" id="test_run_tests" value="Run Tests" />
+    <input type="button" id="test_symmetry_system" value="Test Symmetry System" />
     Composition time (RA) <input type="text" id="test_composition_time" value="0" />
 </p>
 
@@ -5609,14 +5844,17 @@ umtListenElement.addEventListener("click", umtExecLoopTabsAll, true);
 // umtListenElement = document.getElementById("lb_tab_length");
 // umtListenElement.addEventListener("change", umtExecLoopLengthChange, true);
 
-// umtListenElement = document.getElementById("test_play_raw");
-// umtListenElement.addEventListener("click", umtExecPlayRawScore, true);
+umtListenElement = document.getElementById("test_play_raw");
+umtListenElement.addEventListener("click", umtExecPlayRawScore, true);
 
-// umtListenElement = document.getElementById("test_dump_gumt");
-// umtListenElement.addEventListener("click", umtExecTestDumtGmt, true);
+umtListenElement = document.getElementById("test_dump_gumt");
+umtListenElement.addEventListener("click", umtExecTestDumtGmt, true);
 
-// umtListenElement = document.getElementById("test_symmetry_system");
-// umtListenElement.addEventListener("click", umtTestSetupCopyTransTestSection, true);
+umtListenElement = document.getElementById("test_run_tests");
+umtListenElement.addEventListener("click", umtExecRunTests, true);
+
+umtListenElement = document.getElementById("test_symmetry_system");
+umtListenElement.addEventListener("click", umtTestSetupCopyTransTestSection, true);
 
 </script>
 
