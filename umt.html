@@ -1910,8 +1910,8 @@ function umtFindMostHarmonicNote(pitch, scale, listOfNotesAlreadyPlaying, chord)
 function umtSanitTestEntireScore(lpnum, doOutput, chord) {
     "use strict";
     var parts, tab, currentTime, beyondAll, stillGoing, bustOutCount, playingNow, pncount, vcnum, notenum, partlen, i, x, y, result, xnum, ynum, xdnom, ydnom, xrest, yrest, descrip;
-    parts = gUmt.loop[lpnum].score.songTab[tab].parts;
     tab = gUmt.UIParams.currentTab;
+    parts = gUmt.loop[lpnum].score.songTab[tab].parts;
     currentTime = 0;
     stillGoing = true;
     bustOutCount = 0;
@@ -2230,7 +2230,7 @@ function umtHarmonizeScore(lpnum, tab) {
                 gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[currentPosition[maxIdx]].harmOctave = harmonizedInfo.octave;
                 gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[currentPosition[maxIdx]].harmNum = harmonizedInfo.num;
                 gUmt.loop[lpnum].score.songTab[tab].voice[maxIdx].notes[currentPosition[maxIdx]].harmDnom = harmonizedInfo.dnom;
-                umtSanitTestEntireScore(lpnum, false);
+                // umtSanitTestEntireScore(lpnum, false);
             }
             // end of actual "harmonization" code"
             stillUnfoundMaxes = false; // this loop could no doubt be optimized
@@ -2288,7 +2288,7 @@ function umtHarmonizeScore(lpnum, tab) {
             }
         }
     }
-    umtSanitTestEntireScore(lpnum, true);
+    // umtSanitTestEntireScore(lpnum, true);
     cx('umtHarmonizeScore(lpnum) done');
 }
 
@@ -3206,15 +3206,35 @@ function umtUiIsPartInUI(ptnum) {
 
 function umtComposeTab(lpnum, tab) {
     "use strict";
-    var compositionVoice, UIVoice, songNumber, octave, rangeMin, rangeMax, instrumentName, percussion, exemptFromHarmonization, minSize, maxSize, chunkSize, totalLength, centerOctave, restyness, ampVariation, volume, skew, noteDistance, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, symmetryPattern, csrPos, csrStart, duration, loopDuration, vcnum, instParamNames, instSpecificParams;
+    var compositionVoice, UIVoice, songNumber, octave, rangeMin, rangeMax, instrumentName, percussion, exemptFromHarmonization, minSize, maxSize, chunkSize, totalLength, centerOctave, restyness, ampVariation, volume, skew, noteDistance, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose, symmetryPattern, csrPos, csrStart, duration, tdvidx, currentTimeDiv, keepGoing, loopDuration, symSwitchPoint, sspidx, symPoint, vcnum, instParamNames, instSpecificParams;
     if (gUmt.noReenterAddingVoice) {
         jsabort("umtComposeTab called during add voice");
     }
     cx("Composing tab " + ctstr(tab) + " to loop " + ctstr(lpnum));
     umtClearLoop(lpnum, tab, gUmt.UIParams.tempo, gUmt.UIParams.songTab[tab].centernote, gUmt.UIParams.songTab[tab].scale, gUmt.UIParams.songTab[tab].chord);
     compositionVoice = 0;
-    loopDuration = gUmt.UIParams.loopDuration;
-    // while (umtUiIsPartInUI(UIVoice)) {
+    // calculate the loop duration
+    loopDuration = 1;
+    symSwitchPoint = []; // we keep track of the symmetry pattern switching
+    // points to use below, since they now vary depending on time divisions
+    sspidx = 0;
+    keepGoing = true;
+    for (tdvidx in gUmt.UIParams.timeDivisions) {
+        if (gUmt.UIParams.timeDivisions.hasOwnProperty(tdvidx)) {
+            currentTimeDiv = gUmt.UIParams.timeDivisions[tdvidx];
+            if (currentTimeDiv === 1) {
+                keepGoing = false;
+            }
+            if (keepGoing) {
+                symSwitchPoint[sspidx] = loopDuration;
+                loopDuration = loopDuration * currentTimeDiv;
+                sspidx = sspidx + 1;
+            }
+        }
+    }
+    symSwitchPoint[sspidx] = loopDuration; // we tack on the last time, even
+    // though it's not a symmetry pattern switch point, just so the code below
+    // that checks for the end doesn't have to treat the end as a special case
     for (UIVoice = 0; UIVoice < gUmt.UIParams.parts; UIVoice = UIVoice + 1) {
         if (gUmt.UIParams.songTab[tab].voice[UIVoice].playing) {
             songNumber = gUmt.UIParams.songTab[tab].voice[UIVoice].songNumber;
@@ -3244,6 +3264,11 @@ function umtComposeTab(lpnum, tab) {
             csrStart = gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].notes[csrPos - 1].starttime; // can eliminate intermediaries
             duration = gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].notes[csrPos - 1].duration;
             endTime = csrStart + duration;
+            sspidx = 0;
+            while (symSwitchPoint[sspidx] !== endTime) {
+                sspidx = sspidx + 1;
+            }
+            symPoint = endTime;
             while (endTime < loopDuration) {
                 // set default parameters, then modify defaults according to UI
                 rhythmDirection = 1;
@@ -3254,19 +3279,19 @@ function umtComposeTab(lpnum, tab) {
                 pitchScale = 1.0;
                 pitchBevel = 0;
                 pitchTranspose = 0;
-                symmetryPattern = gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[endTime].pattern;
+                symmetryPattern = gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[symPoint].pattern;
                 switch (symmetryPattern) {
                 case 'trans':
-                    pitchTranspose = (2 * gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[endTime].transParam) * (gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTrans.genrandReal1() - 0.5);
+                    pitchTranspose = (2 * gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[symPoint].transParam) * (gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTrans.genrandReal1() - 0.5);
                     break;
                 case 'invert':
                     pitchScale = -1.0;
                     break;
                 case 'scale':
-                    pitchScale = gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[endTime].scaleParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randScale.genrandReal1();
+                    pitchScale = gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[symPoint].scaleParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randScale.genrandReal1();
                     break;
                 case 'tilt':
-                    pitchBevel = gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[endTime].tiltParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTilt.genrandReal1();
+                    pitchBevel = gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[symPoint].tiltParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTilt.genrandReal1();
                     pitchTranspose = -(pitchBevel / 2);
                     break;
                 case 'reverserhythm':
@@ -3280,13 +3305,13 @@ function umtComposeTab(lpnum, tab) {
                     pitchesDirection = -1;
                     break;
                 case 'scrollrhythm':
-                    timeRhythmScroll = (gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[endTime].scrollbothParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTilt.genrandReal1()) * (endTime - startTime);
+                    timeRhythmScroll = (gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[symPoint].scrollbothParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTilt.genrandReal1()) * (symPoint - startTime);
                     break;
                 case 'scrollpitch':
-                    timePitchScroll = (gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[endTime].scrollbothParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTilt.genrandReal1()) * (endTime - startTime);
+                    timePitchScroll = (gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[symPoint].scrollbothParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTilt.genrandReal1()) * (symPoint - startTime);
                     break;
                 case 'scrollboth':
-                    timeRhythmScroll = (gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[endTime].scrollbothParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTilt.genrandReal1()) * (endTime - startTime);
+                    timeRhythmScroll = (gUmt.UIParams.songTab[tab].voice[UIVoice].symmetry[symPoint].scrollbothParam * gUmt.loop[lpnum].score.songTab[tab].voice[compositionVoice].randTilt.genrandReal1()) * (symPoint - startTime);
                     timePitchScroll = timeRhythmScroll;
                     break;
                 default:
@@ -3294,12 +3319,16 @@ function umtComposeTab(lpnum, tab) {
                     break;
                 }
                 vcnum = compositionVoice;
-                umtCopyAndTransform(lpnum, tab, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
+                umtCopyAndTransform(lpnum, tab, vcnum, startTime, symPoint, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose);
                 startTime = 0;
                 csrPos = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].cursor;
                 csrStart = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[csrPos - 1].starttime;
                 duration = gUmt.loop[lpnum].score.songTab[tab].voice[vcnum].notes[csrPos - 1].duration;
                 endTime = csrStart + duration;
+                if (endTime === symSwitchPoint[sspidx + 1]) {
+                    sspidx = sspidx + 1;
+                    symPoint = endTime;
+                }
             }
             compositionVoice = compositionVoice + 1;
         }
@@ -3735,11 +3764,130 @@ function umtUiSetSymmetryListboxAndSlider(row, patternDuration) {
     jQuery("#slider_symmetry_scrollbothParam" + suffix).slider({ value: slidervalue });
 }
 
+function umtUiTimeDivMultToIdx(value) {
+    "use strict";
+    var tdvidx, count, thisTimeDiv, mult;
+    count = 0;
+    mult = 1;
+    if (mult === value) {
+        return count;
+    }
+    for (tdvidx in gUmt.UIParams.timeDivisions) {
+        if (gUmt.UIParams.timeDivisions.hasOwnProperty(tdvidx)) {
+            thisTimeDiv = gUmt.UIParams.timeDivisions[tdvidx];
+            if (thisTimeDiv === 1) {
+                return count;
+            }
+            mult = mult * thisTimeDiv;
+            count = count + 1;
+            if (mult === value) {
+                return count;
+            }
+        }
+    }
+    return count;
+}
+
+function umtUiGetSymmetryAlreadyThere(voiceNumber) {
+    "use strict";
+    gUmt.temp.alreadySym = []; // we have to use a global because iterating calls
+    // a function and we need a way to get the data out of the function
+    jQuery('#voicesymmetriescell' + voiceNumber).children().each(function () {
+        var elemid, symSize, i;
+        elemid = this.id;
+        if (elemid.substring(0, 12) === "tbl_symmetry") {
+            elemid = elemid.substring(12);
+            i = elemid.indexOf("_");
+            if (i > 0) {
+                symSize = Number(elemid.substring(i + 1));
+                gUmt.temp.alreadySym.push(symSize);
+            }
+        }
+    });
+}
+
+function umtUiSetListboxByValue(listbox, value) {
+    "use strict";
+    var options, i, valstr;
+    options = listbox.options;
+    valstr = value.toString();
+    for (i = 0; i < options.length; i = i + 1) {
+        if (options[i].value === valstr) {
+            options[i].selected = true;
+        }
+    }
+}
+
+function umtUiSetSymmetrySliders(tab, voiceNumber, frameSize) {
+    "use strict";
+    var keepGoing, mult, tdvidx, currentTimeDiv, alreadyIdx, alreadyOffEnd, match, symmetryPattern;
+    keepGoing = true;
+    mult = 1;
+    umtUiGetSymmetryAlreadyThere(voiceNumber);
+    alreadyIdx = 0;
+    if (gUmt.temp.alreadySym.length === 0) {
+        alreadyOffEnd = true;
+    } else {
+        alreadyOffEnd = false;
+    }
+    for (tdvidx in gUmt.UIParams.timeDivisions) {
+        if (gUmt.UIParams.timeDivisions.hasOwnProperty(tdvidx)) {
+            currentTimeDiv = gUmt.UIParams.timeDivisions[tdvidx];
+            if (currentTimeDiv === 1) {
+                keepGoing = false;
+            }
+            if (keepGoing) {
+                match = false;
+                while ((!alreadyOffEnd) && (mult > gUmt.temp.alreadySym[alreadyIdx])) {
+                    umtUiTurnOnSymmetryPatterns(voiceNumber, gUmt.temp.alreadySym[alreadyIdx], false);
+                    alreadyIdx = alreadyIdx + 1;
+                    if (alreadyIdx === gUmt.temp.alreadySym.length) {
+                        alreadyOffEnd = true;
+                    }
+                }
+                if (!alreadyOffEnd) {
+                    if (mult === gUmt.temp.alreadySym[alreadyIdx]) {
+                        match = true;
+                        alreadyIdx = alreadyIdx + 1; // we put this here so that
+                        // the +1 8 lines above will catch entries that need to
+                        // be shut off
+                        if (alreadyIdx === gUmt.temp.alreadySym.length) {
+                            alreadyOffEnd = true;
+                        }
+                    }
+                }
+                if (match) {
+                    if (mult < frameSize) {
+                        umtUiTurnOnSymmetryPatterns(voiceNumber, mult, false);
+                    } else {
+                        umtUiTurnOnSymmetryPatterns(voiceNumber, mult, true);
+                        umtUiSetSymmetryListboxAndSlider(voiceNumber, mult);
+                        symmetryPattern = gUmt.UIParams.songTab[tab].voice[voiceNumber].symmetry[mult].pattern;
+                        // symmetry listbox
+                        umtUiSetListboxByValue(document.getElementById("sel_symmetry" + voiceNumber + "_" + mult), symmetryPattern);
+                        umtUiShowOrHideAppropriateSymmetrySliders(symmetryPattern, voiceNumber + "_" + mult);
+                    }
+                } else {
+                    umtUiTurnOnSymmetryPatterns(voiceNumber, mult, false);
+                }
+                mult = mult * currentTimeDiv;
+            }
+        }
+    }
+    while (!alreadyOffEnd) {
+        umtUiTurnOnSymmetryPatterns(voiceNumber, gUmt.temp.alreadySym[alreadyIdx], false);
+        alreadyIdx = alreadyIdx + 1;
+        if (alreadyIdx === gUmt.temp.alreadySym.length) {
+            alreadyOffEnd = true;
+        }
+    }
+}
+
 var umtUiCascadeFrameSizeChanges, umtUiCascadeChunkSizeChanges, umtUiCascadeMaxNoteChanges, umtUiCascadeMinNoteChanges;
 
 umtUiCascadeFrameSizeChanges = function (voiceNumber, newvalue) {
     "use strict";
-    var tab, chunkSize, loopDuration, maxLoopDuration, symSize, slidervalue, symmetryPattern;
+    var tab, chunkSize, slidervalue;
     tab = gUmt.UIParams.currentTab;
     chunkSize = gUmt.UIParams.songTab[tab].voice[voiceNumber].chunkSize;
     if (newvalue < chunkSize) {
@@ -3752,25 +3900,7 @@ umtUiCascadeFrameSizeChanges = function (voiceNumber, newvalue) {
         // cx("voiceNumber" + ctstr(voiceNumber) + " chunkSize" + ctstr(chunkSize));
         umtUiCascadeChunkSizeChanges(voiceNumber, chunkSize);
     }
-    loopDuration = gUmt.UIParams.loopDuration;
-    maxLoopDuration = gUmt.UIParams.maxLoopDuration;
-    symSize = 1;
-    while (symSize < maxLoopDuration) {
-        if (symSize < loopDuration) {
-            if (symSize < newvalue) {
-                // qz
-                // umtUiTurnOnSymmetryPatterns(voiceNumber, symSize, false);
-            } else {
-                // umtUiSetSymmetryListboxAndSlider(voiceNumber, symSize);
-                // umtUiTurnOnSymmetryPatterns(voiceNumber, symSize, true);
-                // symmetryPattern = gUmt.UIParams.songTab[tab].voice[voiceNumber].symmetry[symSize].pattern;
-                // umtUiShowOrHideAppropriateSymmetrySliders(symmetryPattern, voiceNumber + "_" + symSize);
-            }
-        } else {
-            // umtUiTurnOnSymmetryPatterns(voiceNumber, symSize, false);
-        }
-        symSize = symSize * 2;
-    }
+    umtUiSetSymmetrySliders(tab, voiceNumber, newvalue);
 };
 
 umtUiCascadeChunkSizeChanges = function (voiceNumber, newvalue) {
@@ -3960,19 +4090,27 @@ function umtExecInstrumentChange() {
     }
 }
 
-function umtUiCopySymmetryPatterns(fromTab, fromVoice, toTab, toVoice) {
+function umtUiCopySymmetry(fromTab, fromVoice, fromSymSize, toTab, toVoice, toSymSize) {
     "use strict";
-    var pvsym, mult;
+    var pvsym, newPattern;
     pvsym = gUmt.UIParams.songTab[fromTab].voice[fromVoice].symmetry;
-
+    newPattern = {
+        pattern: pvsym[fromSymSize].pattern,
+        transParam: pvsym[fromSymSize].transParam,
+        scaleParam: pvsym[fromSymSize].scaleParam,
+        tiltParam: pvsym[fromSymSize].tiltParam,
+        scrollrhythmParam: pvsym[fromSymSize].scrollrhythmParam,
+        scrollpitchParam: pvsym[fromSymSize].scrollpitchParam,
+        scrollbothParam: pvsym[fromSymSize].scrollbothParam
+    };
+    gUmt.UIParams.songTab[toTab].voice[toVoice].symmetry[toSymSize] = newPattern;
 }
 
 // universal voice copy function -- used by both Add Voice and Add Tab
 function umtUiCopyTabVoice(fromTab, fromVoice, toTab, toVoice) {
     "use strict";
-    var prev, pvsym, pvinstspec, currentinstspec, instParamName, mult, keepGoing, tdvidx, currentTimeDiv, newPattern;
+    var prev, pvinstspec, currentinstspec, instParamName, mult, keepGoing, tdvidx, currentTimeDiv;
     prev = gUmt.UIParams.songTab[fromTab].voice[fromVoice];
-    pvsym = gUmt.UIParams.songTab[fromTab].voice[fromVoice].symmetry;
     gUmt.UIParams.songTab[toTab].voice[toVoice] = {
         playing: prev.playing,
         exemptFromHarmonization: prev.exemptFromHarmonization,
@@ -4001,16 +4139,7 @@ function umtUiCopyTabVoice(fromTab, fromVoice, toTab, toVoice) {
                 keepGoing = false;
             }
             if (keepGoing) {
-                newPattern = {
-                    pattern: pvsym[mult].pattern,
-                    transParam: pvsym[mult].transParam,
-                    scaleParam: pvsym[mult].scaleParam,
-                    tiltParam: pvsym[mult].tiltParam,
-                    scrollrhythmParam: pvsym[mult].scrollrhythmParam,
-                    scrollpitchParam: pvsym[mult].scrollpitchParam,
-                    scrollbothParam: pvsym[mult].scrollbothParam
-                }
-                gUmt.UIParams.songTab[toTab].voice[toVoice].symmetry[mult] = newPattern;
+                umtUiCopySymmetry(fromTab, fromVoice, mult, toTab, toVoice, mult);
                 mult = mult * currentTimeDiv;
             }
         }
@@ -4020,18 +4149,6 @@ function umtUiCopyTabVoice(fromTab, fromVoice, toTab, toVoice) {
     for (instParamName in pvinstspec) {
         if (pvinstspec.hasOwnProperty(instParamName)) {
             currentinstspec[instParamName] = pvinstspec[instParamName];
-        }
-    }
-}
-
-function umtUiSetListboxByValue(listbox, value) {
-    "use strict";
-    var options, i, valstr;
-    options = listbox.options;
-    valstr = value.toString();
-    for (i = 0; i < options.length; i = i + 1) {
-        if (options[i].value === valstr) {
-            options[i].selected = true;
         }
     }
 }
@@ -4155,79 +4272,12 @@ function umtTestUiTimeDivIdxToMult() {
     }
 }
 
-function umtUiInsertSymmetryThings() {
-
-if (cellidname === "voicesymmetriescell") {
-i = text.indexOf("<tr>");
-j = text.indexOf("</tr>");
-rowcontent = text.substring(i, j + 6);
-text = text.substring(0, i) + text.substring(j + 5); // cut
-for (y = 0; y <= 10; y = y + 1) { // BUGBUG 10 is hard-coded
-currentrowhtml = rowcontent;
-i = currentrowhtml.indexOf("yyy");
-while (i >= 0) {
-yyy = Math.pow(2, y);
-currentrowhtml = currentrowhtml.substring(0, i) + yyy + currentrowhtml.substring(i + 3);
-i = currentrowhtml.indexOf("yyy");
-}
-// how the heck are we going to do this ??????
-keepGoing = true;
-for (tdvidx in gUmt.UIParams.timeDivisions) {
-if (gUmt.UIParams.timeDivisions.hasOwnProperty(tdvidx)) {
-currentTimeDiv = gUmt.UIParams.timeDivisions[tdvidx];
-if (currentTimeDiv === 1) {
-keepGoing = false;
-}
-if (keepGoing) {
-// qz
-if (symSize < frameSize) {
-umtUiTurnOnSymmetryPatterns(vcnum, symSize, false);
-} else {
-umtUiTurnOnSymmetryPatterns(vcnum, symSize, true);
-umtUiSetSymmetryListboxAndSlider(vcnum, symSize);
-symmetryPattern = gUmt.UIParams.songTab[tab].voice[vcnum].symmetry[symSize].pattern;
-// symmetry listbox
-umtUiSetListboxByValue(document.getElementById("sel_symmetry" + vcnum + "_" + symSize), symmetryPattern);
-umtUiShowOrHideAppropriateSymmetrySliders(symmetryPattern, vcnum + "_" + symSize);
-}
-}
-}
-// qz
-symSize = symSize * currentTimeDiv
-}
-}
-}
-// qz
-i = text.indexOf("<!-- insertion_point -->");
-text = text.substring(0, i) + currentrowhtml + text.substring(i); // paste
-}
-
-function umtUiGetSymmetryAlreadyThere(voiceNumber) {
-    "use strict";
-    gUmt.temp.alreadySym = []; // we have to use a global because iterating calls
-    // a function and we need a way to get the data out of the function
-    jQuery('#voicesymmetriescell' + voiceNumber).children().each(function () {
-        var elemid, symSize, i;
-        elemid = this.id;
-        if (elemid.substring(0, 12) === "tbl_symmetry") {
-            elemid = elemid.substring(12);
-            i = elemid.indexOf("_");
-            if (i > 0) {
-                symSize = Number(elemid.substring(i + 1));
-                console.log(symSize);
-                gUmt.temp.alreadySym.push(symSize);
-            }
-        }
-    });
-}
-
 function umtUiInsertSymmetrySliders(voiceNumber) {
     "use strict";
     var keepGoing, mult, tdvidx, currentTimeDiv, alreadyIdx, alreadyOffEnd, needToInsert, text, i;
     keepGoing = true;
     mult = 1;
     umtUiGetSymmetryAlreadyThere(voiceNumber);
-    cx(gUmt.temp.alreadySym);
     alreadyIdx = 0;
     if (gUmt.temp.alreadySym.length === 0) {
         alreadyOffEnd = true;
@@ -4244,7 +4294,7 @@ function umtUiInsertSymmetrySliders(voiceNumber) {
                 needToInsert = true;
                 while ((!alreadyOffEnd) && (mult > gUmt.temp.alreadySym[alreadyIdx])) {
                     alreadyIdx = alreadyIdx + 1;
-                    if (alreadyIdx === gUmt.temp.length) {
+                    if (alreadyIdx === gUmt.temp.alreadySym.length) {
                         alreadyOffEnd = true;
                     }
                 }
@@ -4277,9 +4327,48 @@ function umtUiInsertSymmetrySliders(voiceNumber) {
     }
 }
 
+function umtUiInsertAllSymmetrySliders() {
+    "use strict";
+    var parts, vcnum;
+    parts = gUmt.UIParams.parts;
+    for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
+        umtUiInsertSymmetrySliders(vcnum);
+    }
+}
+
+function umtUiAttachSymmetryEventListenerForVoice(voiceNumber) {
+    "use strict";
+    var mult, tdvidx, keepGoing, currentTimeDiv, listenElement;
+    mult = 1;
+    keepGoing = true;
+    for (tdvidx in gUmt.UIParams.timeDivisions) {
+        if (gUmt.UIParams.timeDivisions.hasOwnProperty(tdvidx)) {
+            currentTimeDiv = gUmt.UIParams.timeDivisions[tdvidx];
+            if (currentTimeDiv === 1) {
+                keepGoing = false;
+            }
+            if (keepGoing) {
+                listenElement = document.getElementById("sel_symmetry" + voiceNumber + "_" + mult);
+                listenElement.addEventListener("change", umtExecPervoiceSymmetryChange, true);
+                umtUiCreateClosureFunctionsForSymmetrySlidersOutsideALoop(voiceNumber, mult);
+                mult = mult * currentTimeDiv;
+            }
+        }
+    }
+}
+
+function umtUiAttachSymmetryEventListeners() {
+    "use strict";
+    var vcnum, parts;
+    parts = gUmt.UIParams.parts;
+    for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
+        umtUiAttachSymmetryEventListenerForVoice(vcnum);
+    }
+}
+
 function umtUiAddRow(voiceNumber) {
     "use strict";
-    var text, i, displayNumber, columnidlist, idx, cellidname, j, rowcontent, y, currentrowhtml, listenElement, mult, currentTimeDiv, tdvidx, keepGoing;
+    var text, i, displayNumber, columnidlist, idx, cellidname, listenElement;
     // First, add the HTML
     jQuery('#voices_table > tbody:last').append('<tr id="voice_row_' + voiceNumber + '"><td id="voicedescriptcell' + voiceNumber + '" valign="top"> Voice Description Cell ' + voiceNumber + '</td><td id="voiceplaycell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceinstrumentcell' + voiceNumber + '" valign="top" align="center"><td id="voicevolumecell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceexemptharmonizationcell' + voiceNumber + '" valign="top" align="center"></td><td id="voicesongnumcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceoctavecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicenotedistcell' + voiceNumber + '" valign="top" align="center"></td><td id="voicerestynesscell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceampvariationcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceskewcell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceminnotecell' + voiceNumber + '" valign="top" align="center"><td id="voicemaxnotecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicechunksizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voiceframesizecell' + voiceNumber + '" valign="top" align="center"></td><td id="voicesymmetriescell' + voiceNumber + '" valign="top" align="center"></td><td id="instparameterscell' + voiceNumber + '" valign="top" align="center"></td><td id="voicedeletecell' + voiceNumber + '" valign="top" align="center"></td></tr>');
     // Then, paste in standard templates for each of the cells
@@ -4507,22 +4596,7 @@ function umtUiAddRow(voiceNumber) {
     }
          });
     // Symmetries
-    mult = 1;
-    keepGoing = true;
-    for (tdvidx in gUmt.UIParams.timeDivisions) {
-        if (gUmt.UIParams.timeDivisions.hasOwnProperty(tdvidx)) {
-            currentTimeDiv = gUmt.UIParams.timeDivisions[tdvidx];
-            if (currentTimeDiv === 1) {
-                keepGoing = false;
-            }
-            if (keepGoing) {
-                listenElement = document.getElementById("sel_symmetry" + voiceNumber + "_" + mult);
-                listenElement.addEventListener("change", umtExecPervoiceSymmetryChange, true);
-                umtUiCreateClosureFunctionsForSymmetrySlidersOutsideALoop(voiceNumber, mult);
-                mult = mult * currentTimeDiv;
-            }
-        }
-    }
+    umtUiAttachSymmetryEventListenerForVoice(voiceNumber);
     // for (y = 0; y < 10; y = y + 1) {
     //     yyy = Math.pow(2, y);
     //     listenElement = document.getElementById("sel_symmetry" + voiceNumber + "_" + yyy);
@@ -4639,30 +4713,6 @@ function umtTestUiGetTimeDivisionCount() {
     }
 }
 
-function umtUiTimeDivMultToIdx(value) {
-    "use strict";
-    var tdvidx, count, thisTimeDiv, mult;
-    count = 0;
-    mult = 1;
-    if (mult === value) {
-        return count;
-    }
-    for (tdvidx in gUmt.UIParams.timeDivisions) {
-        if (gUmt.UIParams.timeDivisions.hasOwnProperty(tdvidx)) {
-            thisTimeDiv = gUmt.UIParams.timeDivisions[tdvidx];
-            if (thisTimeDiv === 1) {
-                return count;
-            }
-            mult = mult * thisTimeDiv;
-            count = count + 1;
-            if (mult === value) {
-                return count;
-            }
-        }
-    }
-    return count;
-}
-
 function umtTestUiTimeDivMultToIdx() {
     "use strict";
     var result;
@@ -4761,7 +4811,7 @@ function umtUiGetTimeDivisionCount() {
 
 function umtUiCopyUiParamsToActualUi() {
     "use strict";
-    var parts, tab, vcnum, absvalue, slidervalue, timeDivCount, loopDuration, maxLoopDuration, frameSize, symSize, symmetryPattern, keepGoing, tdvidx, currentTimeDiv;
+    var parts, tab, vcnum, absvalue, slidervalue, timeDivCount, frameSize;
     // Important note: This function does not copy the tabs! It copies all the values outside the tabs, and all the values inside the tab *for the current tab* but does not change or configure the tabs themselves!!
     gUmt.noReenterAddingVoice = true;
     // tempo
@@ -4780,8 +4830,6 @@ function umtUiCopyUiParamsToActualUi() {
     } else {
         document.getElementById("loop_tabs_one").checked = true;
     }
-    // Loop length
-    // umtUiSetListboxByValue(document.getElementById("lb_tab_length"), gUmt.UIParams.loopDuration);
     // Time divisions
     umtUiSetTimeDivisionListboxes();
     // current tab
@@ -4803,8 +4851,6 @@ function umtUiCopyUiParamsToActualUi() {
             umtUiAddRow(vcnum);
         }
     }
-    loopDuration = gUmt.UIParams.loopDuration;
-    maxLoopDuration = gUmt.UIParams.maxLoopDuration;
     for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
         // play voice checkbox
         if (gUmt.UIParams.songTab[tab].voice[vcnum].playing) {
@@ -4884,61 +4930,8 @@ function umtUiCopyUiParamsToActualUi() {
         // symmetry patterns and parameters
         umtCreateInstrumentSpecificParameterControls(vcnum, gUmt.UIParams.songTab[tab].voice[vcnum].instrument);
         umtUiSetInstrumentSpecificSliders(vcnum);
-        symSize = 1;
         frameSize = gUmt.UIParams.songTab[tab].voice[vcnum].frameSize;
-        // while (symSize <= maxLoopDuration) {
-        //     if (symSize < frameSize) {
-        //         umtUiTurnOnSymmetryPatterns(vcnum, symSize, false);
-        //     } else {
-        //         if (symSize >= loopDuration) {
-        //             umtUiTurnOnSymmetryPatterns(vcnum, symSize, false);
-        //         } else {
-        //             umtUiTurnOnSymmetryPatterns(vcnum, symSize, true);
-        //             umtUiSetSymmetryListboxAndSlider(vcnum, symSize);
-        //             symmetryPattern = gUmt.UIParams.songTab[tab].voice[vcnum].symmetry[symSize].pattern;
-        //             // symmetry listbox
-        //             umtUiSetListboxByValue(document.getElementById("sel_symmetry" + vcnum + "_" + symSize), symmetryPattern);
-        //             umtUiShowOrHideAppropriateSymmetrySliders(symmetryPattern, vcnum + "_" + symSize);
-        //         }
-        //     }
-        //     symSize = symSize * 2;
-        // }
-        // qz
-
-        // keepGoing = true;
-        // for (tdvidx in gUmt.UIParams.timeDivisions) {
-        //     if (gUmt.UIParams.timeDivisions.hasOwnProperty(tdvidx)) {
-        //         currentTimeDiv = gUmt.UIParams.timeDivisions[tdvidx];
-        //         if (currentTimeDiv === 1) {
-        //             keepGoing = false;
-        //         }
-        //         if (keepGoing) {
-        //             // qz
-        //             if (symSize < frameSize) {
-        //                 umtUiTurnOnSymmetryPatterns(vcnum, symSize, false);
-        //             } else {
-        //                 umtUiTurnOnSymmetryPatterns(vcnum, symSize, true);
-        //                 umtUiSetSymmetryListboxAndSlider(vcnum, symSize);
-        //                 symmetryPattern = gUmt.UIParams.songTab[tab].voice[vcnum].symmetry[symSize].pattern;
-        //                 // symmetry listbox
-        //                 umtUiSetListboxByValue(document.getElementById("sel_symmetry" + vcnum + "_" + symSize), symmetryPattern);
-        //                 umtUiShowOrHideAppropriateSymmetrySliders(symmetryPattern, vcnum + "_" + symSize);
-        //             }
-        //             // qz
-        //             symSize = symSize * currentTimeDiv
-        //         }
-        //     }
-        // }
-
-        if (symSize > maxLoopDuration) {
-            gUmt.UIParams.maxLoopDuration = symSize;
-        }
-        // for (clearSize = symSize; clearSize <= maxWhatever; clearSize = clearSize + 1) {
-        //     if (document.getElementById("display_symmetrylevel" + vcnum + "_" + clearSize)) {
-        //         umtUiTurnOnSymmetryPatterns(vcnum, clearSize, false);
-        //     }
-        //     symSize = symSize + 1;
-        // }
+        umtUiSetSymmetrySliders(tab, vcnum, frameSize);
     }
     vcnum = parts;
     while (umtUiIsPartInUI(vcnum)) {
@@ -4998,7 +4991,7 @@ function umtUiRecalculateAllTimeDivisions(tdvidx, choice) {
     // a 2nd list, then use the two lists to "fix" all the rhythm (min note, max
     // note, chunk size, frame size) values, then the entire UI is redrawn,
     // fixing both those and the symmetry pattern section.
-    var before, after, tab, vcnum;
+    var before, after, tab, vcnum, bidx, mapFrom, mapTo;
     before = umtMakeTimeDivMultipliedList();
     gUmt.UIParams.timeDivisions[tdvidx] = choice;
     after = umtMakeTimeDivMultipliedList();
@@ -5010,25 +5003,23 @@ function umtUiRecalculateAllTimeDivisions(tdvidx, choice) {
                     gUmt.UIParams.songTab[tab].voice[vcnum].maxNote = umtUiFindNewTimeDivisionValue(before, after, gUmt.UIParams.songTab[tab].voice[vcnum].maxNote);
                     gUmt.UIParams.songTab[tab].voice[vcnum].chunkSize = umtUiFindNewTimeDivisionValue(before, after, gUmt.UIParams.songTab[tab].voice[vcnum].chunkSize);
                     gUmt.UIParams.songTab[tab].voice[vcnum].frameSize = umtUiFindNewTimeDivisionValue(before, after, gUmt.UIParams.songTab[tab].voice[vcnum].frameSize);
+                    // This section copies the symmetry pattern sections as a default setting, but doesn't override if already existing
+                    for (bidx in before) {
+                        if (before.hasOwnProperty(bidx)) {
+                            mapFrom = before[bidx];
+                            if (gUmt.UIParams.songTab[tab].voice[vcnum].symmetry.hasOwnProperty(mapFrom)) {
+                                mapTo = after[bidx];
+                                if (!gUmt.UIParams.songTab[tab].voice[vcnum].symmetry.hasOwnProperty(mapTo)) {
+                                    umtUiCopySymmetry(tab, vcnum, mapFrom, tab, vcnum, mapTo);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
-
-umtExecTimeDivisionChange = function () {
-    "use strict";
-    var elemid, tdvidx, listbox, choice;
-    elemid = event.target.id;
-    tdvidx = Number(elemid.substring(17));
-    listbox = document.getElementById("lb_time_division_" + tdvidx);
-    choice = Number(listbox.options[listbox.selectedIndex].value);
-    umtUiRecalculateAllTimeDivisions(tdvidx, choice);
-    umtUiCopyUiParamsToActualUi();
-    if (gUmt.noReenterAddingVoice === false) {
-        umtAutomaticallyRecomposeLoopFromUIParams();
-    }
-};
 
 function umtUiDeleteVoice(voiceNum) {
     "use strict";
@@ -5074,12 +5065,41 @@ function umtUiSetDefaultsForSymmetryForTabAndVoice(tab, voiceNum) {
                     scrollpitchParam: 0,
                     scrollbothParam: 0
                 };
-                gUmt.UIParams.songTab[tab].voice[voiceNum].symmetry[mult] = newPattern
+                if (!gUmt.UIParams.songTab[tab].voice[voiceNum].symmetry.hasOwnProperty(mult)) {
+                    gUmt.UIParams.songTab[tab].voice[voiceNum].symmetry[mult] = newPattern;
+                }
                 mult = mult * currentTimeDiv;
             }
         }
     }
 }
+
+function umtUiSetDefaultsForSymmetryForAllTabsVoices() {
+    "use strict";
+    var tab, vcnum;
+    for (tab = 0; tab < gUmt.UIParams.numTabs; tab = tab + 1) {
+        for (vcnum = 0; vcnum < gUmt.UIParams.parts; vcnum = vcnum + 1) {
+            umtUiSetDefaultsForSymmetryForTabAndVoice(tab, vcnum);
+        }
+    }
+}
+
+umtExecTimeDivisionChange = function () {
+    "use strict";
+    var elemid, tdvidx, listbox, choice;
+    elemid = event.target.id;
+    tdvidx = Number(elemid.substring(17));
+    listbox = document.getElementById("lb_time_division_" + tdvidx);
+    choice = Number(listbox.options[listbox.selectedIndex].value);
+    umtUiRecalculateAllTimeDivisions(tdvidx, choice);
+    umtUiSetDefaultsForSymmetryForAllTabsVoices();
+    umtUiInsertAllSymmetrySliders();
+    umtUiAttachSymmetryEventListeners();
+    umtUiCopyUiParamsToActualUi();
+    if (gUmt.noReenterAddingVoice === false) {
+        umtAutomaticallyRecomposeLoopFromUIParams();
+    }
+};
 
 function umtExecAddVoice() {
     "use strict";
@@ -5224,44 +5244,6 @@ function umtExecLoopTabsAll() {
     umtAutomaticallyRecomposeLoopFromUIParams();
 }
 
-function umtUiClipChunkSizeAndFrameSizeAtLoopLength() {
-    "use strict";
-    var tab, numTabs, vcnum, numVoices, loopDuration;
-    numTabs = gUmt.UIParams.numTabs;
-    numVoices = gUmt.UIParams.parts;
-    loopDuration = gUmt.UIParams.loopDuration;
-    for (tab = 0; tab < numTabs; tab = tab + 1) {
-        for (vcnum = 0; vcnum < numVoices; vcnum = vcnum + 1) {
-            if (gUmt.UIParams.songTab[tab].voice[vcnum].minNote > loopDuration) {
-                gUmt.UIParams.songTab[tab].voice[vcnum].minNote = loopDuration;
-            }
-            if (gUmt.UIParams.songTab[tab].voice[vcnum].maxNote > loopDuration) {
-                gUmt.UIParams.songTab[tab].voice[vcnum].maxNote = loopDuration;
-            }
-            if (gUmt.UIParams.songTab[tab].voice[vcnum].chunkSize > loopDuration) {
-                gUmt.UIParams.songTab[tab].voice[vcnum].chunkSize = loopDuration;
-            }
-            if (gUmt.UIParams.songTab[tab].voice[vcnum].frameSize > loopDuration) {
-                gUmt.UIParams.songTab[tab].voice[vcnum].frameSize = loopDuration;
-            }
-        }
-    }
-}
-
-// function umtExecLoopLengthChange() {
-//     "use strict";
-//     var listbox, looplenparam;
-//     listbox = document.getElementById("lb_tab_length");
-//     looplenparam = Number(listbox.options[listbox.selectedIndex].value);
-//     gUmt.UIParams.loopDuration = looplenparam;
-//     if (gUmt.noReenterAddingVoice === false) {
-//         umtUiClipChunkSizeAndFrameSizeAtLoopLength();
-//         umtUiCopyUiParamsToActualUi();
-//         umtSetAllTabsAllLoopsToRecompose();
-//         umtAutomaticallyRecomposeLoopFromUIParams();
-//     }
-// }
-
 // main
 
 gUmt = {
@@ -5291,8 +5273,6 @@ gUmt = {
                 voice: []
             }
         ],
-        loopDuration: 128,
-        maxLoopDuration: 1024,
         parts: 0,
         currentTab: 0,
         numTabs: 1,
@@ -5372,7 +5352,6 @@ jQuery(function () {
         li = jQuery(tabTemplate.replace(/#\{href\}/g, "#" + id).replace(/#\{label\}/g, label));
         tabContentHtml = tabContent.val() || "Tab " + tabCounter + " content.";
         tabContentHtml = "";
-
         tabs.find(".ui-tabs-nav").append(li);
         tabs.append("<div id='" + id + "'><p>" + tabContentHtml + "</p></div>");
         tabs.tabs("refresh");
@@ -5787,9 +5766,9 @@ Tab time divisions:
 	<table border="0" id="tbl_symmetryxx_yyy">
 		<tr>
 			<td valign="center" align="right">
-				<span id="display_symmetrylevelxx_yyy">1</span>
+				<span id="display_symmetrylevelxx_yyy" style="display:none;">1</span>
 			</td><td valign="top">
-				<select name="sel_symmetryxx_yyy" id="sel_symmetryxx_yyy">
+				<select name="sel_symmetryxx_yyy" id="sel_symmetryxx_yyy" style="display:none;">
 					<option value="trans">Transpose</option>
 					<option value="invert">Invert</option>
 					<option value="scale">Scale</option>
@@ -5802,18 +5781,18 @@ Tab time divisions:
 					<option value="scrollpitch">Scroll-pitch</option>
 				</select>
 			</td><td valign="top" align="center">
-				<div id="slider_symmetry_transParamxx_yyy" class="ddrg" style="width:100px;"></div>
-				<span id="display_symmetry_transParamxx_yyy">readout</span>
-				<div id="slider_symmetry_scaleParamxx_yyy" class="ddrg" style="width:100px;"></div>
-				<span id="display_symmetry_scaleParamxx_yyy">readout</span>
-				<div id="slider_symmetry_tiltParamxx_yyy" class="ddrg" style="width:100px;"></div>
-				<span id="display_symmetry_tiltParamxx_yyy">readout</span>
-				<div id="slider_symmetry_scrollrhythmParamxx_yyy" class="ddrg" style="width:100px;"></div>
-				<span id="display_symmetry_scrollrhythmParamxx_yyy">readout</span>
-				<div id="slider_symmetry_scrollpitchParamxx_yyy" class="ddrg" style="width:100px;"></div>
-				<span id="display_symmetry_scrollpitchParamxx_yyy">readout</span>
-				<div id="slider_symmetry_scrollbothParamxx_yyy" class="ddrg" style="width:100px;"></div>
-				<span id="display_symmetry_scrollbothParamxx_yyy">readout</span>
+				<div id="slider_symmetry_transParamxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
+				<span id="display_symmetry_transParamxx_yyy" style="display:none;">readout</span>
+				<div id="slider_symmetry_scaleParamxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
+				<span id="display_symmetry_scaleParamxx_yyy" style="display:none;">readout</span>
+				<div id="slider_symmetry_tiltParamxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
+				<span id="display_symmetry_tiltParamxx_yyy" style="display:none;">readout</span>
+				<div id="slider_symmetry_scrollrhythmParamxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
+				<span id="display_symmetry_scrollrhythmParamxx_yyy" style="display:none;">readout</span>
+				<div id="slider_symmetry_scrollpitchParamxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
+				<span id="display_symmetry_scrollpitchParamxx_yyy" style="display:none;">readout</span>
+				<div id="slider_symmetry_scrollbothParamxx_yyy" class="ddrg" style="width:100px;display:none;"></div>
+				<span id="display_symmetry_scrollbothParamxx_yyy" style="display:none;">readout</span>
 			</td>
 		</tr>
 	</table>
