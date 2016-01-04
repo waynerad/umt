@@ -3464,7 +3464,11 @@ function umtAutomaticallyRecomposeLoopFromUIParams() {
     umtEnableUI();
     stopTime = gUmt.globalCtx.currentTime;
     diffTime = stopTime - startTime;
-    gUmt.compositionLag = diffTime;
+    if (diffTime > gUmt.compositionLag) {
+        gUmt.compositionLag = diffTime;
+    } else {
+        gUmt.compositionLag = (0.9 * gUmt.compositionLag) + (0.1 * diffTime);
+    }
     document.getElementById("test_composition_time").value = diffTime;
     // cx("gUmt.compositionLag = " + ctstr(gUmt.compositionLag));
     // cx("gUmt.compositionLag = " + ctstr(gUmt.compositionLag));
@@ -3790,8 +3794,10 @@ function umtUiTimeDivMultToIdx(value) {
 
 function umtUiGetSymmetryAlreadyThere(voiceNumber) {
     "use strict";
-    gUmt.temp.alreadySym = []; // we have to use a global because iterating calls
-    // a function and we need a way to get the data out of the function
+    var alreadySym; // name has to be fixed because this is actually a return
+    // value; we're using a closure to get a return value out of a callback
+    // function in order to avoid using a global variable.
+    alreadySym = [];
     jQuery('#voicesymmetriescell' + voiceNumber).children().each(function () {
         var elemid, symSize, i;
         elemid = this.id;
@@ -3800,10 +3806,11 @@ function umtUiGetSymmetryAlreadyThere(voiceNumber) {
             i = elemid.indexOf("_");
             if (i > 0) {
                 symSize = Number(elemid.substring(i + 1));
-                gUmt.temp.alreadySym.push(symSize);
+                alreadySym.push(symSize);
             }
         }
     });
+    return alreadySym;
 }
 
 function umtUiSetListboxByValue(listbox, value) {
@@ -3820,12 +3827,12 @@ function umtUiSetListboxByValue(listbox, value) {
 
 function umtUiSetSymmetrySliders(tab, voiceNumber, frameSize) {
     "use strict";
-    var keepGoing, mult, tdvidx, currentTimeDiv, alreadyIdx, alreadyOffEnd, match, symmetryPattern;
+    var keepGoing, mult, tdvidx, currentTimeDiv, alreadySym, alreadyIdx, alreadyOffEnd, match, symmetryPattern;
     keepGoing = true;
     mult = 1;
-    umtUiGetSymmetryAlreadyThere(voiceNumber);
+    alreadySym = umtUiGetSymmetryAlreadyThere(voiceNumber);
     alreadyIdx = 0;
-    if (gUmt.temp.alreadySym.length === 0) {
+    if (alreadySym.length === 0) {
         alreadyOffEnd = true;
     } else {
         alreadyOffEnd = false;
@@ -3838,20 +3845,20 @@ function umtUiSetSymmetrySliders(tab, voiceNumber, frameSize) {
             }
             if (keepGoing) {
                 match = false;
-                while ((!alreadyOffEnd) && (mult > gUmt.temp.alreadySym[alreadyIdx])) {
-                    umtUiTurnOnSymmetryPatterns(voiceNumber, gUmt.temp.alreadySym[alreadyIdx], false);
+                while ((!alreadyOffEnd) && (mult > alreadySym[alreadyIdx])) {
+                    umtUiTurnOnSymmetryPatterns(voiceNumber, alreadySym[alreadyIdx], false);
                     alreadyIdx = alreadyIdx + 1;
-                    if (alreadyIdx === gUmt.temp.alreadySym.length) {
+                    if (alreadyIdx === alreadySym.length) {
                         alreadyOffEnd = true;
                     }
                 }
                 if (!alreadyOffEnd) {
-                    if (mult === gUmt.temp.alreadySym[alreadyIdx]) {
+                    if (mult === alreadySym[alreadyIdx]) {
                         match = true;
                         alreadyIdx = alreadyIdx + 1; // we put this here so that
                         // the +1 8 lines above will catch entries that need to
                         // be shut off
-                        if (alreadyIdx === gUmt.temp.alreadySym.length) {
+                        if (alreadyIdx === alreadySym.length) {
                             alreadyOffEnd = true;
                         }
                     }
@@ -3875,9 +3882,9 @@ function umtUiSetSymmetrySliders(tab, voiceNumber, frameSize) {
         }
     }
     while (!alreadyOffEnd) {
-        umtUiTurnOnSymmetryPatterns(voiceNumber, gUmt.temp.alreadySym[alreadyIdx], false);
+        umtUiTurnOnSymmetryPatterns(voiceNumber, alreadySym[alreadyIdx], false);
         alreadyIdx = alreadyIdx + 1;
-        if (alreadyIdx === gUmt.temp.alreadySym.length) {
+        if (alreadyIdx === alreadySym.length) {
             alreadyOffEnd = true;
         }
     }
@@ -4274,12 +4281,12 @@ function umtTestUiTimeDivIdxToMult() {
 
 function umtUiInsertSymmetrySliders(voiceNumber) {
     "use strict";
-    var keepGoing, mult, tdvidx, currentTimeDiv, alreadyIdx, alreadyOffEnd, needToInsert, text, i;
+    var keepGoing, mult, tdvidx, currentTimeDiv, alreadySym, alreadyIdx, alreadyOffEnd, needToInsert, text, i;
     keepGoing = true;
     mult = 1;
-    umtUiGetSymmetryAlreadyThere(voiceNumber);
+    alreadySym = umtUiGetSymmetryAlreadyThere(voiceNumber);
     alreadyIdx = 0;
-    if (gUmt.temp.alreadySym.length === 0) {
+    if (alreadySym.length === 0) {
         alreadyOffEnd = true;
     } else {
         alreadyOffEnd = false;
@@ -4292,14 +4299,14 @@ function umtUiInsertSymmetrySliders(voiceNumber) {
             }
             if (keepGoing) {
                 needToInsert = true;
-                while ((!alreadyOffEnd) && (mult > gUmt.temp.alreadySym[alreadyIdx])) {
+                while ((!alreadyOffEnd) && (mult > alreadySym[alreadyIdx])) {
                     alreadyIdx = alreadyIdx + 1;
-                    if (alreadyIdx === gUmt.temp.alreadySym.length) {
+                    if (alreadyIdx === alreadySym.length) {
                         alreadyOffEnd = true;
                     }
                 }
                 if (!alreadyOffEnd) {
-                    if (mult === gUmt.temp.alreadySym[alreadyIdx]) {
+                    if (mult === alreadySym[alreadyIdx]) {
                         needToInsert = false;
                     }
                 }
@@ -4318,7 +4325,7 @@ function umtUiInsertSymmetrySliders(voiceNumber) {
                     if (alreadyOffEnd) {
                         jQuery('#voicesymmetriescell' + voiceNumber).append(text);
                     } else {
-                        jQuery('#tbl_symmetry' + voiceNumber + '_' + gUmt.temp.alreadySym[alreadyIdx]).before(text);
+                        jQuery('#tbl_symmetry' + voiceNumber + '_' + alreadySym[alreadyIdx]).before(text);
                     }
                 }
                 mult = mult * currentTimeDiv;
@@ -5093,12 +5100,16 @@ umtExecTimeDivisionChange = function () {
     choice = Number(listbox.options[listbox.selectedIndex].value);
     umtUiRecalculateAllTimeDivisions(tdvidx, choice);
     umtUiSetDefaultsForSymmetryForAllTabsVoices();
+    if (gUmt.noReenterAddingVoice) {
+        jsabort("gUmt.noReenterAddingVoice is already set to true (point 5097)");
+    }
+    gUmt.noReenterAddingVoice = true;
     umtUiInsertAllSymmetrySliders();
     umtUiAttachSymmetryEventListeners();
     umtUiCopyUiParamsToActualUi();
-    if (gUmt.noReenterAddingVoice === false) {
-        umtAutomaticallyRecomposeLoopFromUIParams();
-    }
+    umtSetAllTabsAllLoopsToRecompose();
+    umtAutomaticallyRecomposeLoopFromUIParams();
+    gUmt.noReenterAddingVoice = false;
 };
 
 function umtExecAddVoice() {
@@ -5119,10 +5130,10 @@ function umtExecAddVoice() {
             restyness: 0.0,
             ampVariation: 0.5,
             skew: 0.0,
-            minNote: 6,
-            maxNote: 6,
-            chunkSize: 18,
-            frameSize: 18,
+            minNote: 4,
+            maxNote: 4,
+            chunkSize: 4,
+            frameSize: 16,
             symmetry: {},
             instSpecificParams: {},
             copyChangesToOtherTabs: true
@@ -5277,10 +5288,9 @@ gUmt = {
         currentTab: 0,
         numTabs: 1,
         playAllTabs: false,
-        timeDivisions: [ 2, 3, 3, 5, 7 ]
+        timeDivisions: [ 2, 2, 2, 2, 2, 2 ]
     },
-    tabRecomposeFlags: [],
-    temp: {}
+    tabRecomposeFlags: []
 };
 // for fixing duplicate notes bug
 // testDupDetectSet: {}
