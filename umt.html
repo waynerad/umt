@@ -523,7 +523,7 @@ function umtGenerateANoteFMSynthSquare(frequency, duration, amplitude, startThre
         fade = 1.0 - pctThere;
         currentModulatorFreq = (modulatorDiff * pctThere) + startModulatorFreq;
         currentBeta = (betaDiff * pctThere) + startBeta;
-        currentBeta = currentBeta * Math.exp((currentBeta - 0.7) * 10); // multiplying by beta is kinda hokey but casts 0 to 0 which is what we want.
+        currentBeta = currentBeta * Math.exp((currentBeta - 0.5) * 10); // multiplying by beta is kinda hokey but casts 0 to 0 which is what we want.
         subFrequency = frequency + currentBeta * ((Math.sin((gUmt.TAU * i * (currentModulatorFreq / gUmt.globalCtx.sampleRate)))));
         // sinePart = Math.sin((gUmt.TAU * i * (subFrequency / gUmt.globalCtx.sampleRate)));
         // squarePart = umtFMSquare(i * (subFrequency / gUmt.globalCtx.sampleRate));
@@ -4954,6 +4954,7 @@ function umtMakeTimeDivMultipliedList() {
     count = 0;
     mult = 1;
     result = [ 1 ];
+    pastend = false;
     for (tdvidx in gUmt.UIParams.timeDivisions) {
         if (gUmt.UIParams.timeDivisions.hasOwnProperty(tdvidx)) {
             choice = gUmt.UIParams.timeDivisions[tdvidx];
@@ -4988,6 +4989,13 @@ function umtUiFindNewTimeDivisionValue(before, after, value) {
     "use strict";
     var idx;
     idx = umtUiFindInTimeDivMultList(before, value);
+    if (after.hasOwnProperty(idx)) {
+        return after[idx];
+    }
+    idx = idx - 1; // there's an invisible typecast from string to int on this statement
+    while (!after.hasOwnProperty(idx)) {
+        idx = idx - 1;
+    }
     return after[idx];
 }
 
@@ -5015,9 +5023,11 @@ function umtUiRecalculateAllTimeDivisions(tdvidx, choice) {
                         if (before.hasOwnProperty(bidx)) {
                             mapFrom = before[bidx];
                             if (gUmt.UIParams.songTab[tab].voice[vcnum].symmetry.hasOwnProperty(mapFrom)) {
-                                mapTo = after[bidx];
-                                if (!gUmt.UIParams.songTab[tab].voice[vcnum].symmetry.hasOwnProperty(mapTo)) {
-                                    umtUiCopySymmetry(tab, vcnum, mapFrom, tab, vcnum, mapTo);
+                                if (after.hasOwnProperty(bidx)) {
+                                    mapTo = after[bidx];
+                                    if (!gUmt.UIParams.songTab[tab].voice[vcnum].symmetry.hasOwnProperty(mapTo)) {
+                                        umtUiCopySymmetry(tab, vcnum, mapFrom, tab, vcnum, mapTo);
+                                    }
                                 }
                             }
                         }
@@ -5106,10 +5116,10 @@ umtExecTimeDivisionChange = function () {
     gUmt.noReenterAddingVoice = true;
     umtUiInsertAllSymmetrySliders();
     umtUiAttachSymmetryEventListeners();
-    umtUiCopyUiParamsToActualUi();
+    umtUiCopyUiParamsToActualUi(); // this call will clear gUmt.noReenterAddingVoice
+    gUmt.noReenterAddingVoice = false; // redundant because umtUiCopyUiParamsToActualUi clears it
     umtSetAllTabsAllLoopsToRecompose();
     umtAutomaticallyRecomposeLoopFromUIParams();
-    gUmt.noReenterAddingVoice = false;
 };
 
 function umtExecAddVoice() {
