@@ -19,7 +19,7 @@
 <script src="mt19937class.js" ></script>
 <script>
 
-// (C) 2011-2015 Wayne Radinsky
+// (C) 2011-2016 Wayne Radinsky
 
 /*jslint browser: true, devel: true, passfail: true */
 /*global MersenneTwister19937 */
@@ -1199,15 +1199,13 @@ function umtClearLoop(lpnum, tab, xTempo, centerNote, xScale, xChord) {
     if (!gUmt.loop.hasOwnProperty(lpnum)) {
         gUmt.loop[lpnum] = {
             score: {
-                tempo: xTempo,
                 playbackTimeOffset: 0,
                 songTab: []
             }
         };
-    } else {
-        gUmt.loop[lpnum].score.tempo = xTempo;
     }
     gUmt.loop[lpnum].score.songTab[tab] = {
+        tempo: xTempo,
         centernoteLog: (Math.log(centerNote) / gUmt.LOG2) - 5,
         scale: xScale,
         chord: xChord,
@@ -1274,7 +1272,7 @@ function umtTestPlayRawScore(lpnum) {
     tab = gUmt.UIParams.currentTab;
     fromMoment = gUmt.globalCtx.currentTime + 1;
     center = gUmt.loop[lpnum].score.songTab[tab].centernoteLog;
-    tempoScalar = 60 / gUmt.loop[lpnum].score.tempo;
+    tempoScalar = 60 / gUmt.loop[lpnum].score.songTab[tab].tempo;
     numVoices = gUmt.loop[lpnum].score.songTab[tab].parts;
     for (voicenum = 0; voicenum < numVoices; voicenum = voicenum + 1) {
         for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].cursor; notenum = notenum + 1) {
@@ -2303,7 +2301,7 @@ function umtPlayHarmonized(lpnum) {
     tab = gUmt.UIParams.currentTab;
     fromMoment = gUmt.globalCtx.currentTime + 1;
     center = gUmt.loop[lpnum].score.songTab[tab].centernoteLog;
-    tempoScalar = 60 / gUmt.loop[lpnum].score.tempo;
+    tempoScalar = 60 / gUmt.loop[lpnum].score.songTab[tab].tempo;
     numVoices = gUmt.loop[lpnum].score.songTab[tab].parts;
     for (voicenum = 0; voicenum < numVoices; voicenum = voicenum + 1) {
         for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].cursor; notenum = notenum + 1) {
@@ -2510,11 +2508,40 @@ function umtSchedulePlayOfNote(lpnum, tab, voicenum, notenum, ampScalar, tempoSc
     }
 }
 
+function umtCalculateMultiTabLoopLength(lpnum) {
+    "use strict";
+    var total, tab, numTabs, nxtTab, tabUnitLen, tempoScalarThisTab, tempoScalarNextTab, k1;
+    numTabs = gUmt.loop[lpnum].score.numTabs;
+    total = 0;
+    gUmt.loop[lpnum].score.tabStartTimeOffsets = [];
+    for (tab = 0; tab < numTabs; tab = tab + 1) {
+        // in addition to calculating the total, we store where we are at each
+        // tab as we go along, so that we don't have to recalculate it later for
+        // every single note
+        gUmt.loop[lpnum].score.tabStartTimeOffsets[tab] = total;
+        tabUnitLen = gUmt.loop[lpnum].score.songTab[tab].voice[0].nextStart; // a bit of a hack, grabbing the start position of the next note, were we to compose one
+        tempoScalarThisTab = 60 / gUmt.loop[lpnum].score.songTab[tab].tempo;
+        nxtTab = tab + 1;
+        if (nxtTab === numTabs) {
+            nxtTab = 0;
+        }
+        tempoScalarNextTab = 60 / gUmt.loop[lpnum].score.songTab[nxtTab].tempo;
+        if (tempoScalarThisTab === tempoScalarNextTab) {
+            total = total + (tempoScalarThisTab * tabUnitLen);
+        } else {
+            // a bit of calculus to handle gradual tempo change
+            k1 = (tempoScalarNextTab - tempoScalarThisTab) / tabUnitLen;
+            total = total + ((k1 * tabUnitLen * tabUnitLen) / 2.0) + (tempoScalarThisTab * tabUnitLen);
+        }
+    }
+    return total;
+}
+
 var umtExecReSeed;
 
 function umtSchedulePlayOfSegment() {
     "use strict";
-    var tab, lpnum, currentTime, compositonlag, windowStart, windowStop, loopUnitLen, loopLen, numLoopTabCycles, center, tempoScalar, numVoices, voicenum, notenum, adjustedStartTime, masterVolScaler, ampScalar, regularTime, timeInMs, interval, numTabs, floatLoopTabCycles, tabUnitLen, tabLen;
+    var tab, nxTab, lpnum, currentTime, compositonlag, windowStart, windowStop, loopUnitLen, loopLen, numLoopTabCycles, center, tempoScalar, tempoThisScalar, tempoNextScalar, k1, numVoices, voicenum, notenum, adjustedStartTime, masterVolScaler, ampScalar, regularTime, timeInMs, interval, numTabs, floatLoopTabCycles, tabUnitLen;
     lpnum = gUmt.currentlyPlayingLoop;
     currentTime = gUmt.globalCtx.currentTime;
     // figure out our playback window for the segment we are going to play in this timer callback
@@ -2541,15 +2568,22 @@ function umtSchedulePlayOfSegment() {
         }
         // stuff that applies to all notes
         masterVolScaler = gUmt.UIParams.mastervol; // Math.exp((gUmt.UIParams.mastervol - 1.0) * 2.0);
-        tempoScalar = 60 / gUmt.loop[lpnum].score.tempo;
         // now we fork off "all tabs" vs "current tab"
         if (gUmt.loop[lpnum].score.playAllTabs) {
             numTabs = gUmt.loop[lpnum].score.numTabs;
+            loopLen = umtCalculateMultiTabLoopLength(lpnum); // qx tabLen * numTabs;
             for (tab = 0; tab < numTabs; tab = tab + 1) {
                 if (gUmt.loop[gUmt.currentlyPlayingLoop].score.songTab[tab].parts > 0) {
                     tabUnitLen = gUmt.loop[lpnum].score.songTab[tab].voice[0].nextStart; // a bit of a hack, grabbing the start position of the next note, were we to compose one
-                    tabLen = tabUnitLen * tempoScalar;
-                    loopLen = tabLen * numTabs;
+                    nxTab = tab + 1;
+                    if (nxTab === numTabs) {
+                        nxTab = 0;
+                    }
+                    tempoThisScalar = 60 / gUmt.loop[lpnum].score.songTab[tab].tempo;
+                    tempoNextScalar = 60 / gUmt.loop[lpnum].score.songTab[nxTab].tempo;
+                    // do a little calculus to get the tempo to transition smoothly from one tab to the next
+                    k1 = ((tempoNextScalar - tempoThisScalar) / tabUnitLen) / 2.0;
+                    // note time is returned by (k1 * tnote * tnote) + (tempoThisScalar * tnote);
                     center = gUmt.loop[lpnum].score.songTab[tab].centernoteLog;
                     numVoices = gUmt.loop[lpnum].score.songTab[tab].parts;
                     if (numVoices === 1) {
@@ -2559,12 +2593,13 @@ function umtSchedulePlayOfSegment() {
                     }
                     for (voicenum = 0; voicenum < numVoices; voicenum = voicenum + 1) {
                         for (notenum = 0; notenum < gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].cursor; notenum = notenum + 1) {
-                            adjustedStartTime = (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].starttime * tempoScalar);
+                            adjustedStartTime = gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].starttime;
+                            tempoScalar = (adjustedStartTime * (k1 * 2)) + tempoThisScalar;
+                            adjustedStartTime = (k1 * adjustedStartTime * adjustedStartTime) + (tempoThisScalar * adjustedStartTime);
                             // adjust for skew
-                            // adjustedStartTime = adjustedStartTime + (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].skew * (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].duration * tempoScalar));
                             adjustedStartTime = adjustedStartTime + (gUmt.loop[lpnum].score.songTab[tab].voice[voicenum].notes[notenum].skew * tempoScalar);
-                            // move to tab's position within loop
-                            adjustedStartTime = adjustedStartTime + (tabLen * tab);
+                            // adjustedStartTime = adjustedStartTime + (tabLen * tab);
+                            adjustedStartTime = gUmt.loop[lpnum].score.tabStartTimeOffsets[tab] + adjustedStartTime;
                             floatLoopTabCycles = (windowStart - adjustedStartTime) / loopLen;
                             numLoopTabCycles = Math.floor(floatLoopTabCycles);
                             if (numLoopTabCycles === undefined) {
@@ -2591,6 +2626,7 @@ function umtSchedulePlayOfSegment() {
             }
         } else {
             tab = gUmt.UIParams.currentTab;
+            tempoScalar = 60 / gUmt.loop[lpnum].score.songTab[tab].tempo;
             if (gUmt.loop[gUmt.currentlyPlayingLoop].score.songTab[tab].parts > 0) {
                 numVoices = gUmt.loop[lpnum].score.songTab[tab].parts;
                 loopUnitLen = gUmt.loop[lpnum].score.songTab[tab].voice[0].nextStart; // a bit of a hack, grabbing the start position of the next note, were we to compose one
@@ -3211,7 +3247,7 @@ function umtComposeTab(lpnum, tab) {
         jsabort("umtComposeTab called during add voice");
     }
     cx("Composing tab " + ctstr(tab) + " to loop " + ctstr(lpnum));
-    umtClearLoop(lpnum, tab, gUmt.UIParams.tempo, gUmt.UIParams.songTab[tab].centernote, gUmt.UIParams.songTab[tab].scale, gUmt.UIParams.songTab[tab].chord);
+    umtClearLoop(lpnum, tab, gUmt.UIParams.songTab[tab].tempo, gUmt.UIParams.songTab[tab].centernote, gUmt.UIParams.songTab[tab].scale, gUmt.UIParams.songTab[tab].chord);
     compositionVoice = 0;
     // calculate the loop duration
     loopDuration = 1;
@@ -3430,8 +3466,6 @@ function umtAutomaticallyRecomposeLoopFromUIParams() {
     if (gUmt.timerIsOn) {
         oldLoop = gUmt.currentlyPlayingLoop;
         newLoop = 1 - oldLoop;
-        // old_tempoScalar = 60 / gUmt.loop[oldLoop].score.tempo;
-        // old_offset = gUmt.loop[oldLoop].score.playbackTimeOffset;
     } else {
         return;
     }
@@ -3450,16 +3484,6 @@ function umtAutomaticallyRecomposeLoopFromUIParams() {
         umtComposeTab(newLoop, tab);
         gUmt.loop[newLoop].score.playAllTabs = false;
     }
-    // new_tempoScalar = 60 / gUmt.loop[newLoop].score.tempo;
-    // currentTime = gUmt.globalCtx.currentTime + old_offset;
-    // current_units = currentTime / old_tempoScalar;
-    // virtual_new_time = current_units * new_tempoScalar;
-    // offset_difference = currentTime - virtual_new_time;
-    // loopUnitLen = gUmt.loop[newLoop].score.songTab[tab].voice[0].nextStart;
-    // loopLen = loopUnitLen * new_tempoScalar;
-    // offset_difference = offset_difference - (Math.floor(offset_difference / loopLen) * loopLen);  // modulo
-    // gUmt.loop[newLoop].score.playbackTimeOffset = offset_difference;
-    // gUmt.loop[newLoop].score.playbackTimeOffset = 0;
     umtAutomaticStart(newLoop);
     umtEnableUI();
     stopTime = gUmt.globalCtx.currentTime;
@@ -3470,8 +3494,6 @@ function umtAutomaticallyRecomposeLoopFromUIParams() {
         gUmt.compositionLag = (0.9 * gUmt.compositionLag) + (0.1 * diffTime);
     }
     document.getElementById("test_composition_time").value = diffTime;
-    // cx("gUmt.compositionLag = " + ctstr(gUmt.compositionLag));
-    // cx("gUmt.compositionLag = " + ctstr(gUmt.compositionLag));
 }
 
 function umtExecScaleChange() {
@@ -4821,11 +4843,6 @@ function umtUiCopyUiParamsToActualUi() {
     var parts, tab, vcnum, absvalue, slidervalue, timeDivCount, frameSize;
     // Important note: This function does not copy the tabs! It copies all the values outside the tabs, and all the values inside the tab *for the current tab* but does not change or configure the tabs themselves!!
     gUmt.noReenterAddingVoice = true;
-    // tempo
-    absvalue = gUmt.UIParams.tempo;
-    document.getElementById("display_tempo_value").innerHTML = absvalue;
-    slidervalue = absvalue; // no translation for tempo!
-    jQuery("#slider_tempo").slider({ value: slidervalue });
     // master volume
     absvalue = gUmt.UIParams.mastervol;
     document.getElementById("display_mastervol_value").innerHTML = (absvalue * 100) + "%";
@@ -4851,6 +4868,11 @@ function umtUiCopyUiParamsToActualUi() {
     slidervalue = (Math.log(absvalue / 432) / Math.log(1.25)) + 5.0;
     slidervalue = Math.floor(slidervalue + 0.1); // in case of rounding error on the logarithm
     jQuery("#slider_centernote").slider({ value: slidervalue });
+    // tempo
+    absvalue = gUmt.UIParams.songTab[tab].tempo;
+    document.getElementById("display_tempo_value").innerHTML = absvalue;
+    slidervalue = absvalue; // no translation for tempo!
+    jQuery("#slider_tempo").slider({ value: slidervalue });
     // now we loop through each part
     parts = gUmt.UIParams.parts;
     for (vcnum = 0; vcnum < parts; vcnum = vcnum + 1) {
@@ -5195,6 +5217,7 @@ function umtUiCopyTabAll(fromTab, toTab) {
     "use strict";
     var vcnum;
     gUmt.UIParams.songTab[toTab] = {
+        tempo: gUmt.UIParams.songTab[fromTab].tempo,
         centernote: gUmt.UIParams.songTab[fromTab].centernote,
         chord: gUmt.UIParams.songTab[fromTab].chord,
         scale: gUmt.UIParams.songTab[fromTab].scale,
@@ -5284,10 +5307,10 @@ gUmt = {
     noReenterCompose: false,
     noReenterAddingVoice: false,
     UIParams: {
-        tempo: 360,
         mastervol: 0.9,
         songTab: [
             {
+                tempo: 360,
                 scale: 'maj7reg',
                 chord: "triad",
                 centernote: 432,
@@ -5311,12 +5334,13 @@ jQuery(function () {
     "use strict";
     var tabContent, tabTemplate, tabCounter, tabs, dialog, form;
     jQuery("#slider_tempo").slider({min: 60, max: 960, step: 30, value: 360, orientation: "horizontal", change: function (event, ui) {
-        var newvalue;
+        var tab, newvalue;
+        tab = gUmt.UIParams.currentTab;
         if (gUmt.noReenterAddingVoice === false) {
             if (event.type === "slidechange") {
                 newvalue = ui.value;
                 document.getElementById("display_tempo_value").innerHTML = newvalue;
-                gUmt.UIParams.tempo = newvalue;
+                gUmt.UIParams.songTab[tab].tempo = newvalue;
                 umtSetAllTabsAllLoopsToRecompose();
                 umtAutomaticallyRecomposeLoopFromUIParams();
             }
@@ -5504,16 +5528,6 @@ jQuery(function () {
 
 <hr />
 
-<p> Stuff that applies to whole score </p>
-
-<p> Tempo:
-
-<div id="slider_tempo" class="ddrg" style="width:200px;"></div>
-
-<div id="display_tempo_value">360</div>
-
-</p>
-
 <p> Master volume control:
 
 <div id="slider_mastervol" class="ddrg" style="width:200px;"></div>
@@ -5620,6 +5634,16 @@ Tab time divisions:
 <div id="slider_centernote" class="ddrg" style="width:200px;"></div>
 
 <div id="display_centernote_value">432</div>
+
+</p>
+
+<p>
+
+<p> Tempo:
+
+<div id="slider_tempo" class="ddrg" style="width:200px;"></div>
+
+<div id="display_tempo_value">360</div>
 
 </p>
 
