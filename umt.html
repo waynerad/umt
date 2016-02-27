@@ -2696,6 +2696,7 @@ function umtAutomaticStart(lpnum) {
 function umtAutomaticStop() {
     "use strict";
     gUmt.timerIsOn = false;
+    gUmt.compositionLag = 0.0;
 }
 
 function umtCopyAndTransform(lpnum, tab, vcnum, startTime, endTime, rhythmDirection, pitchesDirection, timeRhythmScroll, timePitchScroll, actualPitchScroll, pitchScale, pitchBevel, pitchTranspose) {
@@ -4865,7 +4866,7 @@ function umtUiCopyUiParamsToActualUi() {
     // center note
     absvalue = gUmt.UIParams.songTab[tab].centernote;
     document.getElementById("display_centernote_value").innerHTML = absvalue;
-    slidervalue = (Math.log(absvalue / 432) / Math.log(1.25)) + 5.0;
+    slidervalue = (Math.log(absvalue / gUmt.calibration) / Math.log(1.25)) + 5.0;
     slidervalue = Math.floor(slidervalue + 0.1); // in case of rounding error on the logarithm
     jQuery("#slider_centernote").slider({ value: slidervalue });
     // tempo
@@ -5290,9 +5291,11 @@ function umtExecLoopTabsAll() {
 
 // main
 
+// calibration and centernote need to be the same
 gUmt = {
     TAU: Math.PI * 2,
     LOG2: Math.log(2),
+    calibration: 440,
     globalCtx: umtGetAudioContext(),
     globalRng: umtGetRando(0),
     cachedNotes: {},
@@ -5313,7 +5316,7 @@ gUmt = {
                 tempo: 360,
                 scale: 'maj7reg',
                 chord: "triad",
-                centernote: 432,
+                centernote: 440,
                 voice: []
             }
         ],
@@ -5353,7 +5356,7 @@ jQuery(function () {
         if (gUmt.noReenterAddingVoice === false) {
             if (event.type === "slidechange") {
                 newvalue = ui.value;
-                newvalue = Math.pow((4 / 3), newvalue - 5) * 432;
+                newvalue = Math.pow((4 / 3), newvalue - 5) * gUmt.calibration;
                 document.getElementById("display_centernote_value").innerHTML = newvalue;
                 gUmt.UIParams.songTab[tab].centernote = newvalue;
                 umtAutomaticallyRecomposeLoopFromUIParams();
@@ -5633,7 +5636,7 @@ Tab time divisions:
 
 <div id="slider_centernote" class="ddrg" style="width:200px;"></div>
 
-<div id="display_centernote_value">432</div>
+<div id="display_centernote_value">X</div>
 
 </p>
 
